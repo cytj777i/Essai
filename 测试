@@ -1,0 +1,815 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 馃帹 鍒涘缓涓籙I
+local MainUI = Instance.new("ScreenGui")
+MainUI.Name = "AllInOneScript"
+MainUI.Parent = playerGui
+MainUI.ResetOnSpawn = false
+
+-- 馃彈锔� 涓诲鍣�
+local MainContainer = Instance.new("Frame")
+MainContainer.Name = "MainContainer"
+MainContainer.Size = UDim2.new(0, 350, 0, 400)
+MainContainer.Position = UDim2.new(0.5, -175, 0.5, -200)
+MainContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MainContainer.BorderSizePixel = 0
+MainContainer.Parent = MainUI
+
+-- 鍦嗚
+local ContainerCorner = Instance.new("UICorner")
+ContainerCorner.CornerRadius = UDim.new(0, 12)
+ContainerCorner.Parent = MainContainer
+
+-- 闃村奖
+local ContainerShadow = Instance.new("UIStroke")
+ContainerShadow.Color = Color3.fromRGB(80, 80, 80)
+ContainerShadow.Thickness = 2
+ContainerShadow.Parent = MainContainer
+
+-- 馃幆 鏍囬鏍�
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+TitleBar.Position = UDim2.new(0, 0, 0, 0)
+TitleBar.BackgroundColor3 = Color3.fromRGB(30, 144, 255)  -- 閬撳钃�
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainContainer
+
+-- 鏍囬鏍忓渾瑙�
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleBar
+
+-- 鏍囬鏂囧瓧
+local TitleText = Instance.new("TextLabel")
+TitleText.Name = "TitleText"
+TitleText.Size = UDim2.new(0.7, 0, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "馃幃 鑴氭湰鍚堥泦 v2.0"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.TextSize = 14
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TitleBar
+
+-- 鎺у埗鎸夐挳瀹瑰櫒
+local ControlButtons = Instance.new("Frame")
+ControlButtons.Name = "ControlButtons"
+ControlButtons.Size = UDim2.new(0, 80, 1, 0)
+ControlButtons.Position = UDim2.new(1, -80, 0, 0)
+ControlButtons.BackgroundTransparency = 1
+ControlButtons.Parent = TitleBar
+
+-- 鏈€灏忓寲鎸夐挳
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Name = "MinimizeBtn"
+MinimizeBtn.Size = UDim2.new(0, 20, 0, 20)
+MinimizeBtn.Position = UDim2.new(0, 5, 0.5, -10)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Text = "_"
+MinimizeBtn.TextSize = 12
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Parent = ControlButtons
+
+-- 鍏抽棴鎸夐挳
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "CloseBtn"
+CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+CloseBtn.Position = UDim2.new(0, 30, 0.5, -10)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Text = "X"
+CloseBtn.TextSize = 12
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = ControlButtons
+
+-- 璁剧疆鎸夐挳
+local SettingsBtn = Instance.new("TextButton")
+SettingsBtn.Name = "SettingsBtn"
+SettingsBtn.Size = UDim2.new(0, 20, 0, 20)
+SettingsBtn.Position = UDim2.new(0, 55, 0.5, -10)
+SettingsBtn.BackgroundColor3 = Color3.fromRGB(108, 117, 125)
+SettingsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SettingsBtn.Text = "鈿�"
+SettingsBtn.TextSize = 10
+SettingsBtn.Font = Enum.Font.GothamBold
+SettingsBtn.Parent = ControlButtons
+
+-- 鎸夐挳鍦嗚
+for _, btn in pairs({MinimizeBtn, CloseBtn, SettingsBtn}) do
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+end
+
+-- 馃摑 鍐呭鍖哄煙
+local ContentArea = Instance.new("Frame")
+ContentArea.Name = "ContentArea"
+ContentArea.Size = UDim2.new(1, 0, 1, -35)
+ContentArea.Position = UDim2.new(0, 0, 0, 35)
+ContentArea.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ContentArea.BorderSizePixel = 0
+ContentArea.Parent = MainContainer
+
+-- 鍐呭鍦嗚
+local ContentCorner = Instance.new("UICorner")
+ContentCorner.CornerRadius = UDim.new(0, 12)
+ContentCorner.Parent = ContentArea
+
+-- 馃搼 鏍囩椤靛鍣�
+local TabContainer = Instance.new("Frame")
+TabContainer.Name = "TabContainer"
+TabContainer.Size = UDim2.new(1, 0, 0, 30)
+TabContainer.Position = UDim2.new(0, 0, 0, 0)
+TabContainer.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+TabContainer.BorderSizePixel = 0
+TabContainer.Parent = ContentArea
+
+-- 鏍囩鎸夐挳瀹瑰櫒
+local TabButtons = Instance.new("Frame")
+TabButtons.Name = "TabButtons"
+TabButtons.Size = UDim2.new(1, -10, 1, 0)
+TabButtons.Position = UDim2.new(0, 5, 0, 0)
+TabButtons.BackgroundTransparency = 1
+TabButtons.Parent = TabContainer
+
+-- 椤甸潰瀹瑰櫒
+local PageContainer = Instance.new("Frame")
+PageContainer.Name = "PageContainer"
+PageContainer.Size = UDim2.new(1, -10, 1, -40)
+PageContainer.Position = UDim2.new(0, 5, 0, 35)
+PageContainer.BackgroundTransparency = 1
+PageContainer.Parent = ContentArea
+
+-- 馃幆 鍒涘缓鏍囩椤电郴缁�
+local currentTab = "player"
+local tabs = {}
+
+-- 鍒涘缓鏍囩鎸夐挳鍑芥暟
+local function createTabButton(name, displayName, position)
+    local tabBtn = Instance.new("TextButton")
+    tabBtn.Name = name .. "Tab"
+    tabBtn.Size = UDim2.new(0, 80, 1, -4)
+    tabBtn.Position = position
+    tabBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    tabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    tabBtn.Text = displayName
+    tabBtn.TextSize = 11
+    tabBtn.Font = Enum.Font.Gotham
+    tabBtn.Parent = TabButtons
+    
+    local tabCorner = Instance.new("UICorner")
+    tabCorner.CornerRadius = UDim.new(0, 6)
+    tabCorner.Parent = tabBtn
+    
+    -- 鍒涘缓椤甸潰
+    local tabPage = Instance.new("ScrollingFrame")
+    tabPage.Name = name .. "Page"
+    tabPage.Size = UDim2.new(1, 0, 1, 0)
+    tabPage.Position = UDim2.new(0, 0, 0, 0)
+    tabPage.BackgroundTransparency = 1
+    tabPage.ScrollBarThickness = 4
+    tabPage.Visible = false
+    tabPage.Parent = PageContainer
+    
+    local uiListLayout = Instance.new("UIListLayout")
+    uiListLayout.Padding = UDim.new(0, 5)
+    uiListLayout.Parent = tabPage
+    
+    tabs[name] = {
+        button = tabBtn,
+        page = tabPage
+    }
+    
+    -- 鐐瑰嚮浜嬩欢
+    tabBtn.MouseButton1Click:Connect(function()
+        -- 闅愯棌鎵€鏈夐〉闈�
+        for tabName, tabData in pairs(tabs) do
+            tabData.page.Visible = false
+            tabData.button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        end
+        
+        -- 鏄剧ず褰撳墠椤甸潰
+        tabPage.Visible = true
+        tabBtn.BackgroundColor3 = Color3.fromRGB(30, 144, 255)
+        currentTab = name
+    end)
+    
+    return tabPage
+end
+
+-- 鍒涘缓鏍囩椤�
+local playerPage = createTabButton("player", "鐜╁鍔熻兘", UDim2.new(0, 0, 0, 2))
+local visualPage = createTabButton("visual", "瑙嗚鍔熻兘", UDim2.new(0, 82, 0, 2))
+local movementPage = createTabButton("movement", "绉诲姩鍔熻兘", UDim2.new(0, 164, 0, 2))
+local otherPage = createTabButton("other", "鍏朵粬鍔熻兘", UDim2.new(0, 246, 0, 2))
+
+-- 榛樿鏄剧ず鐜╁椤甸潰
+tabs.player.page.Visible = true
+tabs.player.button.BackgroundColor3 = Color3.fromRGB(30, 144, 255)
+
+-- 馃洜锔� 鍒涘缓鎺т欢鍑芥暟
+local function createSection(parent, title)
+    local section = Instance.new("Frame")
+    section.Name = title .. "Section"
+    section.Size = UDim2.new(1, 0, 0, 30)
+    section.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+    section.BorderSizePixel = 0
+    section.Parent = parent
+    
+    local sectionCorner = Instance.new("UICorner")
+    sectionCorner.CornerRadius = UDim.new(0, 6)
+    sectionCorner.Parent = section
+    
+    local sectionLabel = Instance.new("TextLabel")
+    sectionLabel.Name = "SectionLabel"
+    sectionLabel.Size = UDim2.new(1, -10, 1, 0)
+    sectionLabel.Position = UDim2.new(0, 5, 0, 0)
+    sectionLabel.BackgroundTransparency = 1
+    sectionLabel.Text = "馃搶 " .. title
+    sectionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sectionLabel.TextSize = 12
+    sectionLabel.Font = Enum.Font.GothamBold
+    sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+    sectionLabel.Parent = section
+    
+    return section
+end
+
+local function createButton(parent, text, callback)
+    local button = Instance.new("TextButton")
+    button.Name = text .. "Btn"
+    button.Size = UDim2.new(1, 0, 0, 25)
+    button.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Text = text
+    button.TextSize = 12
+    button.Font = Enum.Font.Gotham
+    button.Parent = parent
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 6)
+    buttonCorner.Parent = button
+    
+    button.MouseButton1Click:Connect(callback)
+    
+    -- 鎮仠鏁堟灉
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(100, 149, 237)
+    end)
+    
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+    end)
+    
+    return button
+end
+
+local function createToggle(parent, text, default, callback)
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Name = text .. "Toggle"
+    toggleFrame.Size = UDim2.new(1, 0, 0, 25)
+    toggleFrame.BackgroundTransparency = 1
+    toggleFrame.Parent = parent
+    
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "ToggleBtn"
+    toggleButton.Size = UDim2.new(1, 0, 1, 0)
+    toggleButton.BackgroundColor3 = default and Color3.fromRGB(86, 207, 225) or Color3.fromRGB(120, 120, 120)
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.Text = "鈼� " .. text .. ": " .. (default and "寮€" or "鍏�")
+    toggleButton.TextSize = 12
+    toggleButton.Font = Enum.Font.Gotham
+    toggleButton.TextXAlignment = Enum.TextXAlignment.Left
+    toggleButton.Parent = toggleFrame
+    
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(0, 6)
+    toggleCorner.Parent = toggleButton
+    
+    local isEnabled = default
+    
+    toggleButton.MouseButton1Click:Connect(function()
+        isEnabled = not isEnabled
+        toggleButton.BackgroundColor3 = isEnabled and Color3.fromRGB(86, 207, 225) or Color3.fromRGB(120, 120, 120)
+        toggleButton.Text = "鈼� " .. text .. ": " .. (isEnabled and "寮€" or "鍏�")
+        callback(isEnabled)
+    end)
+    
+    return {frame = toggleFrame, setState = function(state)
+        isEnabled = state
+        toggleButton.BackgroundColor3 = isEnabled and Color3.fromRGB(86, 207, 225) or Color3.fromRGB(120, 120, 120)
+        toggleButton.Text = "鈼� " .. text .. ": " .. (isEnabled and "寮€" or "鍏�")
+        callback(isEnabled)
+    end}
+end
+
+local function createSlider(parent, text, min, max, default, callback)
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Name = text .. "Slider"
+    sliderFrame.Size = UDim2.new(1, 0, 0, 40)
+    sliderFrame.BackgroundTransparency = 1
+    sliderFrame.Parent = parent
+    
+    local sliderLabel = Instance.new("TextLabel")
+    sliderLabel.Name = "SliderLabel"
+    sliderLabel.Size = UDim2.new(1, 0, 0, 15)
+    sliderLabel.Position = UDim2.new(0, 0, 0, 0)
+    sliderLabel.BackgroundTransparency = 1
+    sliderLabel.Text = text .. ": " .. default
+    sliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sliderLabel.TextSize = 11
+    sliderLabel.Font = Enum.Font.Gotham
+    sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+    sliderLabel.Parent = sliderFrame
+    
+    local sliderBackground = Instance.new("Frame")
+    sliderBackground.Name = "SliderBackground"
+    sliderBackground.Size = UDim2.new(1, 0, 0, 10)
+    sliderBackground.Position = UDim2.new(0, 0, 0, 20)
+    sliderBackground.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    sliderBackground.BorderSizePixel = 0
+    sliderBackground.Parent = sliderFrame
+    
+    local bgCorner = Instance.new("UICorner")
+    bgCorner.CornerRadius = UDim.new(0, 5)
+    bgCorner.Parent = sliderBackground
+    
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Name = "SliderFill"
+    sliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    sliderFill.Position = UDim2.new(0, 0, 0, 0)
+    sliderFill.BackgroundColor3 = Color3.fromRGB(86, 207, 225)
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Parent = sliderBackground
+    
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 5)
+    fillCorner.Parent = sliderFill
+    
+    local sliding = false
+    
+    sliderBackground.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            sliding = true
+            updateSlider(input)
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateSlider(input)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            sliding = false
+        end
+    end)
+    
+    local function updateSlider(input)
+        local xPos = input.Position.X - sliderBackground.AbsolutePosition.X
+        local fillWidth = math.clamp(xPos, 0, sliderBackground.AbsoluteSize.X)
+        local value = min + (fillWidth / sliderBackground.AbsoluteSize.X) * (max - min)
+        value = math.floor(value)
+        
+        sliderFill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
+        sliderLabel.Text = text .. ": " .. value
+        callback(value)
+    end
+    
+    return sliderFrame
+end
+
+-- 馃幃 鐜╁鍔熻兘椤甸潰
+local playerSection1 = createSection(playerPage, "鍩虹灞炴€�")
+createSlider(playerSection1, "绉诲姩閫熷害", 16, 200, 16, function(value)
+    local character = player.Character
+    if character and character:FindFirstChildOfClass("Humanoid") then
+        character:FindFirstChildOfClass("Humanoid").WalkSpeed = value
+    end
+end)
+
+createSlider(playerSection1, "璺宠穬楂樺害", 50, 200, 50, function(value)
+    local character = player.Character
+    if character and character:FindFirstChildOfClass("Humanoid") then
+        character:FindFirstChildOfClass("Humanoid").JumpPower = value
+    end
+end)
+
+createSlider(playerSection1, "閲嶅姏璁剧疆", 0, 500, 196, function(value)
+    workspace.Gravity = value
+end)
+
+local playerSection2 = createSection(playerPage, "鐘舵€佹帶鍒�")
+local flyToggle = createToggle(playerSection2, "椋炶妯″紡", false, function(enabled)
+    -- 椋炶鍔熻兘瀹炵幇
+    if enabled then
+        -- 鍚敤椋炶
+        local character = player.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            
+            if humanoid and rootPart then
+                -- 鍒涘缓椋炶鎺у埗鍣�
+                local bodyVelocity = Instance.new("BodyVelocity")
+                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+                bodyVelocity.Parent = rootPart
+                
+                local bodyGyro = Instance.new("BodyGyro")
+                bodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
+                bodyGyro.Parent = rootPart
+                
+                humanoid.PlatformStand = true
+                
+                -- 瀛樺偍寮曠敤
+                flyToggle.bodyVelocity = bodyVelocity
+                flyToggle.bodyGyro = bodyGyro
+                
+                -- 椋炶鎺у埗
+                local flyConnection
+                flyConnection = RunService.Heartbeat:Connect(function()
+                    if not flyToggle.bodyVelocity then
+                        flyConnection:Disconnect()
+                        return
+                    end
+                    
+                    local camera = workspace.CurrentCamera
+                    local direction = Vector3.new(0, 0, 0)
+                    
+                    -- 閿洏鎺у埗
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                        direction = direction + camera.CFrame.LookVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                        direction = direction - camera.CFrame.LookVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                        direction = direction - camera.CFrame.RightVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                        direction = direction + camera.CFrame.RightVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                        direction = direction + Vector3.new(0, 1, 0)
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                        direction = direction + Vector3.new(0, -1, 0)
+                    end
+                    
+                    if direction.Magnitude > 0 then
+                        bodyVelocity.Velocity = direction.Unit * 50
+                    else
+                        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                    end
+                    
+                    bodyGyro.CFrame = camera.CFrame
+                end)
+                
+                flyToggle.connection = flyConnection
+            end
+        end
+    else
+        -- 绂佺敤椋炶
+        if flyToggle.bodyVelocity then
+            flyToggle.bodyVelocity:Destroy()
+            flyToggle.bodyVelocity = nil
+        end
+        if flyToggle.bodyGyro then
+            flyToggle.bodyGyro:Destroy()
+            flyToggle.bodyGyro = nil
+        end
+        if flyToggle.connection then
+            flyToggle.connection:Disconnect()
+            flyToggle.connection = nil
+        end
+        
+        local character = player.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.PlatformStand = false
+            end
+        end
+    end
+end)
+
+local noclipToggle = createToggle(playerSection2, "绌垮妯″紡", false, function(enabled)
+    -- 绌垮鍔熻兘瀹炵幇
+    if enabled then
+        noclipToggle.connection = RunService.Stepped:Connect(function()
+            if player.Character then
+                for _, part in pairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    else
+        if noclipToggle.connection then
+            noclipToggle.connection:Disconnect()
+            noclipToggle.connection = nil
+        end
+        
+        if player.Character then
+            for _, part in pairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+end)
+
+-- 馃憗锔� 瑙嗚鍔熻兘椤甸潰
+local visualSection1 = createSection(visualPage, "鐜瑙嗚")
+local espToggle = createToggle(visualSection1, "鐜╁閫忚", false, function(enabled)
+    -- ESP鍔熻兘瀹炵幇
+    if enabled then
+        local function createESP(targetPlayer)
+            if targetPlayer == player then return end
+            
+            local character = targetPlayer.Character
+            if not character then return end
+            
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "ESPHighlight"
+            highlight.FillColor = Color3.fromRGB(255, 0, 0)
+            highlight.FillTransparency = 0.7
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.OutlineTransparency = 0
+            highlight.Adornee = character
+            highlight.Parent = character
+        end
+        
+        -- 涓虹幇鏈夌帺瀹跺垱寤篍SP
+        for _, otherPlayer in pairs(Players:GetPlayers()) do
+            if otherPlayer ~= player then
+                createESP(otherPlayer)
+                otherPlayer.CharacterAdded:Connect(function(character)
+                    wait(1) -- 绛夊緟瑙掕壊鍔犺浇
+                    createESP(otherPlayer)
+                end)
+            end
+        end
+        
+        -- 涓烘柊鐜╁鍒涘缓ESP
+        espToggle.playerAdded = Players.PlayerAdded:Connect(function(newPlayer)
+            newPlayer.CharacterAdded:Connect(function(character)
+                wait(1)
+                createESP(newPlayer)
+            end)
+        end)
+    else
+        -- 绉婚櫎鎵€鏈塃SP
+        for _, otherPlayer in pairs(Players:GetPlayers()) do
+            if otherPlayer.Character then
+                local highlight = otherPlayer.Character:FindFirstChild("ESPHighlight")
+                if highlight then
+                    highlight:Destroy()
+                end
+            end
+        end
+        
+        if espToggle.playerAdded then
+            espToggle.playerAdded:Disconnect()
+            espToggle.playerAdded = nil
+        end
+    end
+end)
+
+local nightVisionToggle = createToggle(visualSection1, "澶滆妯″紡", false, function(enabled)
+    if enabled then
+        game.Lighting.Ambient = Color3.new(1, 1, 1)
+        game.Lighting.Brightness = 2
+    else
+        game.Lighting.Ambient = Color3.new(0, 0, 0)
+        game.Lighting.Brightness = 1
+    end
+end)
+
+-- 馃弮 绉诲姩鍔熻兘椤甸潰
+local movementSection1 = createSection(movementPage, "绉诲姩澧炲己")
+local infiniteJumpToggle = createToggle(movementSection1, "鏃犻檺璺宠穬", false, function(enabled)
+    if enabled then
+        infiniteJumpToggle.connection = UserInputService.JumpRequest:Connect(function()
+            if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+                player.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+            end
+        end)
+    else
+        if infiniteJumpToggle.connection then
+            infiniteJumpToggle.connection:Disconnect()
+            infiniteJumpToggle.connection = nil
+        end
+    end
+end)
+
+createButton(movementSection1, "浼犻€佸埌鍑虹敓鐐�", function()
+    if player.Character then
+        player.Character:FindFirstChild("HumanoidRootPart").CFrame = CFrame.new(0, 10, 0)
+    end
+end)
+
+-- 馃敡 鍏朵粬鍔熻兘椤甸潰
+local otherSection1 = createSection(otherPage, "宸ュ叿鍔熻兘")
+createButton(otherSection1, "鏄剧ずFPS", function()
+    -- FPS鏄剧ず鍔熻兘
+    local fpsGui = Instance.new("ScreenGui")
+    fpsGui.Name = "FPSDisplay"
+    fpsGui.Parent = playerGui
+    
+    local fpsLabel = Instance.new("TextLabel")
+    fpsLabel.Size = UDim2.new(0, 100, 0, 30)
+    fpsLabel.Position = UDim2.new(0, 10, 0, 50)
+    fpsLabel.BackgroundTransparency = 0.5
+    fpsLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    fpsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fpsLabel.Text = "FPS: 0"
+    fpsLabel.Parent = fpsGui
+    
+    local fps = 0
+    local lastTime = tick()
+    local frameCount = 0
+    
+    RunService.Heartbeat:Connect(function()
+        frameCount = frameCount + 1
+        local currentTime = tick()
+        
+        if currentTime - lastTime >= 1 then
+            fps = frameCount
+            frameCount = 0
+            lastTime = currentTime
+            fpsLabel.Text = "FPS: " .. fps
+        end
+    end)
+end)
+
+createButton(otherSection1, "鐜╁淇℃伅", function()
+    -- 鐜╁淇℃伅鏄剧ず
+    local infoGui = Instance.new("ScreenGui")
+    infoGui.Name = "PlayerInfo"
+    infoGui.Parent = playerGui
+    
+    local infoFrame = Instance.new("Frame")
+    infoFrame.Size = UDim2.new(0, 200, 0, 120)
+    infoFrame.Position = UDim2.new(0, 10, 0, 90)
+    infoFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    infoFrame.Parent = infoGui
+    
+    local infoCorner = Instance.new("UICorner")
+    infoCorner.CornerRadius = UDim.new(0, 8)
+    infoCorner.Parent = infoFrame
+    
+    local infoLabel = Instance.new("TextLabel")
+    infoLabel.Size = UDim2.new(1, -10, 1, -10)
+    infoLabel.Position = UDim2.new(0, 5, 0, 5)
+    infoLabel.BackgroundTransparency = 1
+    infoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    infoLabel.TextSize = 12
+    infoLabel.TextWrapped = true
+    infoLabel.Font = Enum.Font.Gotham
+    infoLabel.Parent = infoFrame
+    
+    local info = string.format(
+        "鐢ㄦ埛鍚�: %s\n璐﹀彿骞撮緞: %d澶‐n鐢ㄦ埛ID: %d\n娓告垙ID: %d",
+        player.Name,
+        player.AccountAge,
+        player.UserId,
+        game.PlaceId
+    )
+    infoLabel.Text = info
+end)
+
+-- 馃幆 UI鎺у埗鍔熻兘
+-- 鎷栧姩鍔熻兘
+local dragging = false
+local dragInput
+local dragStart
+local startPos
+
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainContainer.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainContainer.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- 鎸夐挳鍔熻兘
+CloseBtn.MouseButton1Click:Connect(function()
+    local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+    local tween = TweenService:Create(MainContainer, tweenInfo, {Size = UDim2.new(0, 0, 0, 0)})
+    tween:Play()
+    tween.Completed:Wait()
+    MainUI:Destroy()
+end)
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    if ContentArea.Visible then
+        -- 鏈€灏忓寲
+        MainContainer.Size = UDim2.new(0, 350, 0, 35)
+        ContentArea.Visible = false
+        MinimizeBtn.Text = "+"
+    else
+        -- 鎭㈠
+        MainContainer.Size = UDim2.new(0, 350, 0, 400)
+        ContentArea.Visible = true
+        MinimizeBtn.Text = "_"
+    end
+end)
+
+SettingsBtn.MouseButton1Click:Connect(function()
+    -- 绠€鍗曡缃姛鑳� - 鍒囨崲涓婚
+    local currentBg = MainContainer.BackgroundColor3
+    if currentBg == Color3.fromRGB(40, 40, 40) then
+        -- 鍒囨崲鍒版繁鑹蹭富棰�
+        MainContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+        ContentArea.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    else
+        -- 鍒囨崲鍥為粯璁や富棰�
+        MainContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        ContentArea.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end
+end)
+
+-- 鎸夐挳鎮仠鏁堟灉
+local function setupHoverEffects()
+    local buttons = {CloseBtn, MinimizeBtn, SettingsBtn}
+    
+    for _, btn in pairs(buttons) do
+        btn.MouseEnter:Connect(function()
+            local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local tween = TweenService:Create(btn, tweenInfo, {Size = UDim2.new(0, 22, 0, 22)})
+            tween:Play()
+        end)
+        
+        btn.MouseLeave:Connect(function()
+            local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local tween = TweenService:Create(btn, tweenInfo, {Size = UDim2.new(0, 20, 0, 20)})
+            tween:Play()
+        end)
+    end
+    
+    TitleBar.MouseEnter:Connect(function()
+        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(TitleBar, tweenInfo, {BackgroundColor3 = Color3.fromRGB(50, 164, 255)})
+        tween:Play()
+    end)
+    
+    TitleBar.MouseLeave:Connect(function()
+        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(TitleBar, tweenInfo, {BackgroundColor3 = Color3.fromRGB(30, 144, 255)})
+        tween:Play()
+    end)
+end
+
+setupHoverEffects()
+
+-- 璋冩暣椤甸潰澶у皬
+playerPage.CanvasSize = UDim2.new(0, 0, 0, 300)
+visualPage.CanvasSize = UDim2.new(0, 0, 0, 200)
+movementPage.CanvasSize = UDim2.new(0, 0, 0, 150)
+otherPage.CanvasSize = UDim2.new(0, 0, 0, 200)
+
+print("馃幃 澶氬姛鑳借剼鏈悎闆嗗凡鍔犺浇锛�")
+print("馃摑 鍔熻兘鍖呮嫭: 椋炶銆佺┛澧欍€丒SP銆佸瑙嗐€佹棤闄愯烦绛�")
+print("馃柋锔�  鎷栧姩鏍囬鏍忕Щ鍔║I")
+print("鈿欙笍  浣跨敤鎺у埗鎸夐挳绠＄悊绐楀彛")
