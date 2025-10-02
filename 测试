@@ -1,3 +1,7 @@
+-- 🔥 Roblox Lua 脚本合集 - 多功能集成
+-- 作者: AI助手
+-- 功能: 飞行、穿墙、ESP、自瞄、玩家信息等
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -7,13 +11,13 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- 馃帹 鍒涘缓涓籙I
+-- 🎨 创建主UI
 local MainUI = Instance.new("ScreenGui")
 MainUI.Name = "AllInOneScript"
 MainUI.Parent = playerGui
 MainUI.ResetOnSpawn = false
 
--- 馃彈锔� 涓诲鍣�
+-- 🏗️ 主容器
 local MainContainer = Instance.new("Frame")
 MainContainer.Name = "MainContainer"
 MainContainer.Size = UDim2.new(0, 350, 0, 400)
@@ -22,45 +26,45 @@ MainContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 MainContainer.BorderSizePixel = 0
 MainContainer.Parent = MainUI
 
--- 鍦嗚
+-- 圆角
 local ContainerCorner = Instance.new("UICorner")
 ContainerCorner.CornerRadius = UDim.new(0, 12)
 ContainerCorner.Parent = MainContainer
 
--- 闃村奖
+-- 阴影
 local ContainerShadow = Instance.new("UIStroke")
 ContainerShadow.Color = Color3.fromRGB(80, 80, 80)
 ContainerShadow.Thickness = 2
 ContainerShadow.Parent = MainContainer
 
--- 馃幆 鏍囬鏍�
+-- 🎯 标题栏
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
 TitleBar.Size = UDim2.new(1, 0, 0, 35)
 TitleBar.Position = UDim2.new(0, 0, 0, 0)
-TitleBar.BackgroundColor3 = Color3.fromRGB(30, 144, 255)  -- 閬撳钃�
+TitleBar.BackgroundColor3 = Color3.fromRGB(30, 144, 255)  -- 道奇蓝
 TitleBar.BorderSizePixel = 0
 TitleBar.Parent = MainContainer
 
--- 鏍囬鏍忓渾瑙�
+-- 标题栏圆角
 local TitleCorner = Instance.new("UICorner")
 TitleCorner.CornerRadius = UDim.new(0, 12)
 TitleCorner.Parent = TitleBar
 
--- 鏍囬鏂囧瓧
+-- 标题文字
 local TitleText = Instance.new("TextLabel")
 TitleText.Name = "TitleText"
 TitleText.Size = UDim2.new(0.7, 0, 1, 0)
 TitleText.Position = UDim2.new(0, 10, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "馃幃 鑴氭湰鍚堥泦 v2.0"
+TitleText.Text = "🎮 脚本合集 v2.0"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.TextSize = 14
 TitleText.Font = Enum.Font.GothamBold
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Parent = TitleBar
 
--- 鎺у埗鎸夐挳瀹瑰櫒
+-- 控制按钮容器
 local ControlButtons = Instance.new("Frame")
 ControlButtons.Name = "ControlButtons"
 ControlButtons.Size = UDim2.new(0, 80, 1, 0)
@@ -68,7 +72,7 @@ ControlButtons.Position = UDim2.new(1, -80, 0, 0)
 ControlButtons.BackgroundTransparency = 1
 ControlButtons.Parent = TitleBar
 
--- 鏈€灏忓寲鎸夐挳
+-- 最小化按钮
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Name = "MinimizeBtn"
 MinimizeBtn.Size = UDim2.new(0, 20, 0, 20)
@@ -80,7 +84,7 @@ MinimizeBtn.TextSize = 12
 MinimizeBtn.Font = Enum.Font.GothamBold
 MinimizeBtn.Parent = ControlButtons
 
--- 鍏抽棴鎸夐挳
+-- 关闭按钮
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Name = "CloseBtn"
 CloseBtn.Size = UDim2.new(0, 20, 0, 20)
@@ -92,26 +96,26 @@ CloseBtn.TextSize = 12
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.Parent = ControlButtons
 
--- 璁剧疆鎸夐挳
+-- 设置按钮
 local SettingsBtn = Instance.new("TextButton")
 SettingsBtn.Name = "SettingsBtn"
 SettingsBtn.Size = UDim2.new(0, 20, 0, 20)
 SettingsBtn.Position = UDim2.new(0, 55, 0.5, -10)
 SettingsBtn.BackgroundColor3 = Color3.fromRGB(108, 117, 125)
 SettingsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SettingsBtn.Text = "鈿�"
+SettingsBtn.Text = "⚙"
 SettingsBtn.TextSize = 10
 SettingsBtn.Font = Enum.Font.GothamBold
 SettingsBtn.Parent = ControlButtons
 
--- 鎸夐挳鍦嗚
+-- 按钮圆角
 for _, btn in pairs({MinimizeBtn, CloseBtn, SettingsBtn}) do
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = btn
 end
 
--- 馃摑 鍐呭鍖哄煙
+-- 📝 内容区域
 local ContentArea = Instance.new("Frame")
 ContentArea.Name = "ContentArea"
 ContentArea.Size = UDim2.new(1, 0, 1, -35)
@@ -120,12 +124,12 @@ ContentArea.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 ContentArea.BorderSizePixel = 0
 ContentArea.Parent = MainContainer
 
--- 鍐呭鍦嗚
+-- 内容圆角
 local ContentCorner = Instance.new("UICorner")
 ContentCorner.CornerRadius = UDim.new(0, 12)
 ContentCorner.Parent = ContentArea
 
--- 馃搼 鏍囩椤靛鍣�
+-- 📑 标签页容器
 local TabContainer = Instance.new("Frame")
 TabContainer.Name = "TabContainer"
 TabContainer.Size = UDim2.new(1, 0, 0, 30)
@@ -134,7 +138,7 @@ TabContainer.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 TabContainer.BorderSizePixel = 0
 TabContainer.Parent = ContentArea
 
--- 鏍囩鎸夐挳瀹瑰櫒
+-- 标签按钮容器
 local TabButtons = Instance.new("Frame")
 TabButtons.Name = "TabButtons"
 TabButtons.Size = UDim2.new(1, -10, 1, 0)
@@ -142,7 +146,7 @@ TabButtons.Position = UDim2.new(0, 5, 0, 0)
 TabButtons.BackgroundTransparency = 1
 TabButtons.Parent = TabContainer
 
--- 椤甸潰瀹瑰櫒
+-- 页面容器
 local PageContainer = Instance.new("Frame")
 PageContainer.Name = "PageContainer"
 PageContainer.Size = UDim2.new(1, -10, 1, -40)
@@ -150,11 +154,11 @@ PageContainer.Position = UDim2.new(0, 5, 0, 35)
 PageContainer.BackgroundTransparency = 1
 PageContainer.Parent = ContentArea
 
--- 馃幆 鍒涘缓鏍囩椤电郴缁�
+-- 🎯 创建标签页系统
 local currentTab = "player"
 local tabs = {}
 
--- 鍒涘缓鏍囩鎸夐挳鍑芥暟
+-- 创建标签按钮函数
 local function createTabButton(name, displayName, position)
     local tabBtn = Instance.new("TextButton")
     tabBtn.Name = name .. "Tab"
@@ -171,7 +175,7 @@ local function createTabButton(name, displayName, position)
     tabCorner.CornerRadius = UDim.new(0, 6)
     tabCorner.Parent = tabBtn
     
-    -- 鍒涘缓椤甸潰
+    -- 创建页面
     local tabPage = Instance.new("ScrollingFrame")
     tabPage.Name = name .. "Page"
     tabPage.Size = UDim2.new(1, 0, 1, 0)
@@ -190,15 +194,15 @@ local function createTabButton(name, displayName, position)
         page = tabPage
     }
     
-    -- 鐐瑰嚮浜嬩欢
+    -- 点击事件
     tabBtn.MouseButton1Click:Connect(function()
-        -- 闅愯棌鎵€鏈夐〉闈�
+        -- 隐藏所有页面
         for tabName, tabData in pairs(tabs) do
             tabData.page.Visible = false
             tabData.button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
         end
         
-        -- 鏄剧ず褰撳墠椤甸潰
+        -- 显示当前页面
         tabPage.Visible = true
         tabBtn.BackgroundColor3 = Color3.fromRGB(30, 144, 255)
         currentTab = name
@@ -207,17 +211,17 @@ local function createTabButton(name, displayName, position)
     return tabPage
 end
 
--- 鍒涘缓鏍囩椤�
-local playerPage = createTabButton("player", "鐜╁鍔熻兘", UDim2.new(0, 0, 0, 2))
-local visualPage = createTabButton("visual", "瑙嗚鍔熻兘", UDim2.new(0, 82, 0, 2))
-local movementPage = createTabButton("movement", "绉诲姩鍔熻兘", UDim2.new(0, 164, 0, 2))
-local otherPage = createTabButton("other", "鍏朵粬鍔熻兘", UDim2.new(0, 246, 0, 2))
+-- 创建标签页
+local playerPage = createTabButton("player", "玩家功能", UDim2.new(0, 0, 0, 2))
+local visualPage = createTabButton("visual", "视觉功能", UDim2.new(0, 82, 0, 2))
+local movementPage = createTabButton("movement", "移动功能", UDim2.new(0, 164, 0, 2))
+local otherPage = createTabButton("other", "其他功能", UDim2.new(0, 246, 0, 2))
 
--- 榛樿鏄剧ず鐜╁椤甸潰
+-- 默认显示玩家页面
 tabs.player.page.Visible = true
 tabs.player.button.BackgroundColor3 = Color3.fromRGB(30, 144, 255)
 
--- 馃洜锔� 鍒涘缓鎺т欢鍑芥暟
+-- 🛠️ 创建控件函数
 local function createSection(parent, title)
     local section = Instance.new("Frame")
     section.Name = title .. "Section"
@@ -235,7 +239,7 @@ local function createSection(parent, title)
     sectionLabel.Size = UDim2.new(1, -10, 1, 0)
     sectionLabel.Position = UDim2.new(0, 5, 0, 0)
     sectionLabel.BackgroundTransparency = 1
-    sectionLabel.Text = "馃搶 " .. title
+    sectionLabel.Text = "📌 " .. title
     sectionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     sectionLabel.TextSize = 12
     sectionLabel.Font = Enum.Font.GothamBold
@@ -262,7 +266,7 @@ local function createButton(parent, text, callback)
     
     button.MouseButton1Click:Connect(callback)
     
-    -- 鎮仠鏁堟灉
+    -- 悬停效果
     button.MouseEnter:Connect(function()
         button.BackgroundColor3 = Color3.fromRGB(100, 149, 237)
     end)
@@ -286,7 +290,7 @@ local function createToggle(parent, text, default, callback)
     toggleButton.Size = UDim2.new(1, 0, 1, 0)
     toggleButton.BackgroundColor3 = default and Color3.fromRGB(86, 207, 225) or Color3.fromRGB(120, 120, 120)
     toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleButton.Text = "鈼� " .. text .. ": " .. (default and "寮€" or "鍏�")
+    toggleButton.Text = "● " .. text .. ": " .. (default and "开" or "关")
     toggleButton.TextSize = 12
     toggleButton.Font = Enum.Font.Gotham
     toggleButton.TextXAlignment = Enum.TextXAlignment.Left
@@ -300,15 +304,15 @@ local function createToggle(parent, text, default, callback)
     
     toggleButton.MouseButton1Click:Connect(function()
         isEnabled = not isEnabled
-        toggleButton.BackgroundColor3 = isEnabled and Color3.fromRGB(86, 207, 225) or Color3.fromRGB(120, 120, 120)
-        toggleButton.Text = "鈼� " .. text .. ": " .. (isEnabled and "寮€" or "鍏�")
+        toggleButton.BackgroundColor3 = isEnabled and Color3.fromRGB(86,207, 225) or Color3.fromRGB(120, 120, 120)
+        toggleButton.Text = "● " .. text .. ": " .. (isEnabled and "开" or "关")
         callback(isEnabled)
     end)
     
     return {frame = toggleFrame, setState = function(state)
         isEnabled = state
         toggleButton.BackgroundColor3 = isEnabled and Color3.fromRGB(86, 207, 225) or Color3.fromRGB(120, 120, 120)
-        toggleButton.Text = "鈼� " .. text .. ": " .. (isEnabled and "寮€" or "鍏�")
+        toggleButton.Text = "● " .. text .. ": " .. (isEnabled and "开" or "关")
         callback(isEnabled)
     end}
 end
@@ -391,38 +395,38 @@ local function createSlider(parent, text, min, max, default, callback)
     return sliderFrame
 end
 
--- 馃幃 鐜╁鍔熻兘椤甸潰
-local playerSection1 = createSection(playerPage, "鍩虹灞炴€�")
-createSlider(playerSection1, "绉诲姩閫熷害", 16, 200, 16, function(value)
+-- 🎮 玩家功能页面
+local playerSection1 = createSection(playerPage, "基础属性")
+createSlider(playerSection1, "移动速度", 16, 200, 16, function(value)
     local character = player.Character
     if character and character:FindFirstChildOfClass("Humanoid") then
         character:FindFirstChildOfClass("Humanoid").WalkSpeed = value
     end
 end)
 
-createSlider(playerSection1, "璺宠穬楂樺害", 50, 200, 50, function(value)
+createSlider(playerSection1, "跳跃高度", 50, 200, 50, function(value)
     local character = player.Character
     if character and character:FindFirstChildOfClass("Humanoid") then
         character:FindFirstChildOfClass("Humanoid").JumpPower = value
     end
 end)
 
-createSlider(playerSection1, "閲嶅姏璁剧疆", 0, 500, 196, function(value)
+createSlider(playerSection1, "重力设置", 0, 500, 196, function(value)
     workspace.Gravity = value
 end)
 
-local playerSection2 = createSection(playerPage, "鐘舵€佹帶鍒�")
-local flyToggle = createToggle(playerSection2, "椋炶妯″紡", false, function(enabled)
-    -- 椋炶鍔熻兘瀹炵幇
+local playerSection2 = createSection(playerPage, "状态控制")
+local flyToggle = createToggle(playerSection2, "飞行模式", false, function(enabled)
+    -- 飞行功能实现
     if enabled then
-        -- 鍚敤椋炶
+        -- 启用飞行
         local character = player.Character
         if character then
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             local rootPart = character:FindFirstChild("HumanoidRootPart")
             
             if humanoid and rootPart then
-                -- 鍒涘缓椋炶鎺у埗鍣�
+                -- 创建飞行控制器
                 local bodyVelocity = Instance.new("BodyVelocity")
                 bodyVelocity.Velocity = Vector3.new(0, 0, 0)
                 bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
@@ -434,11 +438,11 @@ local flyToggle = createToggle(playerSection2, "椋炶妯″紡", false, func
                 
                 humanoid.PlatformStand = true
                 
-                -- 瀛樺偍寮曠敤
+                -- 存储引用
                 flyToggle.bodyVelocity = bodyVelocity
                 flyToggle.bodyGyro = bodyGyro
                 
-                -- 椋炶鎺у埗
+                -- 飞行控制
                 local flyConnection
                 flyConnection = RunService.Heartbeat:Connect(function()
                     if not flyToggle.bodyVelocity then
@@ -449,7 +453,7 @@ local flyToggle = createToggle(playerSection2, "椋炶妯″紡", false, func
                     local camera = workspace.CurrentCamera
                     local direction = Vector3.new(0, 0, 0)
                     
-                    -- 閿洏鎺у埗
+                    -- 键盘控制
                     if UserInputService:IsKeyDown(Enum.KeyCode.W) then
                         direction = direction + camera.CFrame.LookVector
                     end
@@ -482,7 +486,7 @@ local flyToggle = createToggle(playerSection2, "椋炶妯″紡", false, func
             end
         end
     else
-        -- 绂佺敤椋炶
+        -- 禁用飞行
         if flyToggle.bodyVelocity then
             flyToggle.bodyVelocity:Destroy()
             flyToggle.bodyVelocity = nil
@@ -506,8 +510,8 @@ local flyToggle = createToggle(playerSection2, "椋炶妯″紡", false, func
     end
 end)
 
-local noclipToggle = createToggle(playerSection2, "绌垮妯″紡", false, function(enabled)
-    -- 绌垮鍔熻兘瀹炵幇
+local noclipToggle = createToggle(playerSection2, "穿墙模式", false, function(enabled)
+    -- 穿墙功能实现
     if enabled then
         noclipToggle.connection = RunService.Stepped:Connect(function()
             if player.Character then
@@ -534,10 +538,10 @@ local noclipToggle = createToggle(playerSection2, "绌垮妯″紡", false, f
     end
 end)
 
--- 馃憗锔� 瑙嗚鍔熻兘椤甸潰
-local visualSection1 = createSection(visualPage, "鐜瑙嗚")
-local espToggle = createToggle(visualSection1, "鐜╁閫忚", false, function(enabled)
-    -- ESP鍔熻兘瀹炵幇
+-- 👁️ 视觉功能页面
+local visualSection1 = createSection(visualPage, "环境视觉")
+local espToggle = createToggle(visualSection1, "玩家透视", false, function(enabled)
+    -- ESP功能实现
     if enabled then
         local function createESP(targetPlayer)
             if targetPlayer == player then return end
@@ -555,18 +559,18 @@ local espToggle = createToggle(visualSection1, "鐜╁閫忚", false, func
             highlight.Parent = character
         end
         
-        -- 涓虹幇鏈夌帺瀹跺垱寤篍SP
+        -- 为现有玩家创建ESP
         for _, otherPlayer in pairs(Players:GetPlayers()) do
             if otherPlayer ~= player then
                 createESP(otherPlayer)
                 otherPlayer.CharacterAdded:Connect(function(character)
-                    wait(1) -- 绛夊緟瑙掕壊鍔犺浇
+                    wait(1) -- 等待角色加载
                     createESP(otherPlayer)
                 end)
             end
         end
         
-        -- 涓烘柊鐜╁鍒涘缓ESP
+        -- 为新玩家创建ESP
         espToggle.playerAdded = Players.PlayerAdded:Connect(function(newPlayer)
             newPlayer.CharacterAdded:Connect(function(character)
                 wait(1)
@@ -574,7 +578,7 @@ local espToggle = createToggle(visualSection1, "鐜╁閫忚", false, func
             end)
         end)
     else
-        -- 绉婚櫎鎵€鏈塃SP
+        -- 移除所有ESP
         for _, otherPlayer in pairs(Players:GetPlayers()) do
             if otherPlayer.Character then
                 local highlight = otherPlayer.Character:FindFirstChild("ESPHighlight")
@@ -591,7 +595,7 @@ local espToggle = createToggle(visualSection1, "鐜╁閫忚", false, func
     end
 end)
 
-local nightVisionToggle = createToggle(visualSection1, "澶滆妯″紡", false, function(enabled)
+local nightVisionToggle = createToggle(visualSection1, "夜视模式", false, function(enabled)
     if enabled then
         game.Lighting.Ambient = Color3.new(1, 1, 1)
         game.Lighting.Brightness = 2
@@ -601,9 +605,9 @@ local nightVisionToggle = createToggle(visualSection1, "澶滆妯″紡", fal
     end
 end)
 
--- 馃弮 绉诲姩鍔熻兘椤甸潰
-local movementSection1 = createSection(movementPage, "绉诲姩澧炲己")
-local infiniteJumpToggle = createToggle(movementSection1, "鏃犻檺璺宠穬", false, function(enabled)
+-- 🏃 移动功能页面
+local movementSection1 = createSection(movementPage, "移动增强")
+local infiniteJumpToggle = createToggle(movementSection1, "无限跳跃", false, function(enabled)
     if enabled then
         infiniteJumpToggle.connection = UserInputService.JumpRequest:Connect(function()
             if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
@@ -618,16 +622,16 @@ local infiniteJumpToggle = createToggle(movementSection1, "鏃犻檺璺宠穬", 
     end
 end)
 
-createButton(movementSection1, "浼犻€佸埌鍑虹敓鐐�", function()
+createButton(movementSection1, "传送到出生点", function()
     if player.Character then
         player.Character:FindFirstChild("HumanoidRootPart").CFrame = CFrame.new(0, 10, 0)
     end
 end)
 
--- 馃敡 鍏朵粬鍔熻兘椤甸潰
-local otherSection1 = createSection(otherPage, "宸ュ叿鍔熻兘")
-createButton(otherSection1, "鏄剧ずFPS", function()
-    -- FPS鏄剧ず鍔熻兘
+-- 🔧 其他功能页面
+local otherSection1 = createSection(otherPage, "工具功能")
+createButton(otherSection1, "显示FPS", function()
+    -- FPS显示功能
     local fpsGui = Instance.new("ScreenGui")
     fpsGui.Name = "FPSDisplay"
     fpsGui.Parent = playerGui
@@ -658,8 +662,8 @@ createButton(otherSection1, "鏄剧ずFPS", function()
     end)
 end)
 
-createButton(otherSection1, "鐜╁淇℃伅", function()
-    -- 鐜╁淇℃伅鏄剧ず
+createButton(otherSection1, "玩家信息", function()
+    -- 玩家信息显示
     local infoGui = Instance.new("ScreenGui")
     infoGui.Name = "PlayerInfo"
     infoGui.Parent = playerGui
@@ -685,7 +689,7 @@ createButton(otherSection1, "鐜╁淇℃伅", function()
     infoLabel.Parent = infoFrame
     
     local info = string.format(
-        "鐢ㄦ埛鍚�: %s\n璐﹀彿骞撮緞: %d澶‐n鐢ㄦ埛ID: %d\n娓告垙ID: %d",
+        "用户名: %s\n账号年龄: %d天\n用户ID: %d\n游戏ID: %d",
         player.Name,
         player.AccountAge,
         player.UserId,
@@ -694,8 +698,8 @@ createButton(otherSection1, "鐜╁淇℃伅", function()
     infoLabel.Text = info
 end)
 
--- 馃幆 UI鎺у埗鍔熻兘
--- 鎷栧姩鍔熻兘
+-- 🎯 UI控制功能
+-- 拖动功能
 local dragging = false
 local dragInput
 local dragStart
@@ -733,7 +737,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- 鎸夐挳鍔熻兘
+-- 按钮功能
 CloseBtn.MouseButton1Click:Connect(function()
     local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
     local tween = TweenService:Create(MainContainer, tweenInfo, {Size = UDim2.new(0, 0, 0, 0)})
@@ -744,12 +748,12 @@ end)
 
 MinimizeBtn.MouseButton1Click:Connect(function()
     if ContentArea.Visible then
-        -- 鏈€灏忓寲
+        -- 最小化
         MainContainer.Size = UDim2.new(0, 350, 0, 35)
         ContentArea.Visible = false
         MinimizeBtn.Text = "+"
     else
-        -- 鎭㈠
+        -- 恢复
         MainContainer.Size = UDim2.new(0, 350, 0, 400)
         ContentArea.Visible = true
         MinimizeBtn.Text = "_"
@@ -757,20 +761,20 @@ MinimizeBtn.MouseButton1Click:Connect(function()
 end)
 
 SettingsBtn.MouseButton1Click:Connect(function()
-    -- 绠€鍗曡缃姛鑳� - 鍒囨崲涓婚
+    -- 简单设置功能 - 切换主题
     local currentBg = MainContainer.BackgroundColor3
     if currentBg == Color3.fromRGB(40, 40, 40) then
-        -- 鍒囨崲鍒版繁鑹蹭富棰�
+        -- 切换到深色主题
         MainContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
         ContentArea.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     else
-        -- 鍒囨崲鍥為粯璁や富棰�
+        -- 切换回默认主题
         MainContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         ContentArea.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
 end)
 
--- 鎸夐挳鎮仠鏁堟灉
+-- 按钮悬停效果
 local function setupHoverEffects()
     local buttons = {CloseBtn, MinimizeBtn, SettingsBtn}
     
@@ -803,13 +807,13 @@ end
 
 setupHoverEffects()
 
--- 璋冩暣椤甸潰澶у皬
+-- 调整页面大小
 playerPage.CanvasSize = UDim2.new(0, 0, 0, 300)
 visualPage.CanvasSize = UDim2.new(0, 0, 0, 200)
 movementPage.CanvasSize = UDim2.new(0, 0, 0, 150)
 otherPage.CanvasSize = UDim2.new(0, 0, 0, 200)
 
-print("馃幃 澶氬姛鑳借剼鏈悎闆嗗凡鍔犺浇锛�")
-print("馃摑 鍔熻兘鍖呮嫭: 椋炶銆佺┛澧欍€丒SP銆佸瑙嗐€佹棤闄愯烦绛�")
-print("馃柋锔�  鎷栧姩鏍囬鏍忕Щ鍔║I")
-print("鈿欙笍  浣跨敤鎺у埗鎸夐挳绠＄悊绐楀彛")
+print("🎮 多功能脚本合集已加载！")
+print("📝 功能包括: 飞行、穿墙、ESP、夜视、无限跳等")
+print("🖱️  拖动标题栏移动UI")
+print("⚙️  使用控制按钮管理窗口")
