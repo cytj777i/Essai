@@ -1,0 +1,880 @@
+-- 服务引用
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local SoundService = game:GetService("SoundService")
+
+-- 玩家引用
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 全局变量
+local ESPEnabled = false
+local SpeedHackEnabled = false
+local FlyEnabled = false
+local NoclipEnabled = false
+local XRayEnabled = false
+local AutoFarmEnabled = false
+local AimbotEnabled = false
+local PlayerESP = {}
+local OriginalWalkSpeed = 16
+local OriginalJumpPower = 50
+
+-- 创建主GUI界面
+local function CreateMainGUI()
+    -- 创建ScreenGui
+    local MainGUI = Instance.new("ScreenGui")
+    MainGUI.Name = "AdvancedClientGUI"
+    MainGUI.Parent = playerGui
+    
+    -- 创建主框架
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 400, 0, 500)
+    MainFrame.Position = UDim2.new(0, 10, 0, 10)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = MainGUI
+    
+    -- 标题
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Size = UDim2.new(1, 0, 0, 40)
+    Title.Position = UDim2.new(0, 0, 0, 0)
+    Title.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Text = "高级客户端 v1.0"
+    Title.TextScaled = true
+    Title.Font = Enum.Font.GothamBold
+    Title.Parent = MainFrame
+    
+    -- 创建选项卡框架
+    local TabButtonsFrame = Instance.new("Frame")
+    TabButtonsFrame.Name = "TabButtonsFrame"
+    TabButtonsFrame.Size = UDim2.new(1, 0, 0, 40)
+    TabButtonsFrame.Position = UDim2.new(0, 0, 0, 40)
+    TabButtonsFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    TabButtonsFrame.BorderSizePixel = 0
+    TabButtonsFrame.Parent = MainFrame
+    
+    -- 创建内容框架
+    local ContentFrame = Instance.new("Frame")
+    ContentFrame.Name = "ContentFrame"
+    ContentFrame.Size = UDim2.new(1, 0, 1, -80)
+    ContentFrame.Position = UDim2.new(0, 0, 0, 80)
+    ContentFrame.BackgroundTransparency = 1
+    ContentFrame.Parent = MainFrame
+    
+    return MainGUI, ContentFrame, TabButtonsFrame
+end
+
+-- 创建按钮函数
+local function CreateButton(parent, text, position, size, callback)
+    local Button = Instance.new("TextButton")
+    Button.Size = size or UDim2.new(0.9, 0, 0, 40)
+    Button.Position = position or UDim2.new(0.05, 0, 0, 0)
+    Button.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.Text = text
+    Button.TextScaled = true
+    Button.Font = Enum.Font.Gotham
+    Button.Parent = parent
+    
+    Button.MouseButton1Click:Connect(callback)
+    
+    -- 悬停效果
+    Button.MouseEnter:Connect(function()
+        game:GetService("TweenService"):Create(Button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(80, 80, 100)}):Play()
+    end)
+    
+    Button.MouseLeave:Connect(function()
+        game:GetService("TweenService"):Create(Button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 60, 80)}):Play()
+    end)
+    
+    return Button
+end
+
+-- 创建开关按钮
+local function CreateToggle(parent, text, position, callback)
+    local ToggleFrame = Instance.new("Frame")
+    ToggleFrame.Size = UDim2.new(0.9, 0, 0, 40)
+    ToggleFrame.Position = position
+    ToggleFrame.BackgroundTransparency = 1
+    ToggleFrame.Parent = parent
+    
+    local ToggleButton = Instance.new("TextButton")
+    ToggleButton.Size = UDim2.new(0, 60, 0, 30)
+    ToggleButton.Position = UDim2.new(0, 0, 0.5, -15)
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    ToggleButton.Text = "OFF"
+    ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleButton.TextScaled = true
+    ToggleButton.Font = Enum.Font.Gotham
+    ToggleButton.Parent = ToggleFrame
+    
+    local ToggleLabel = Instance.new("TextLabel")
+    ToggleLabel.Size = UDim2.new(1, -70, 1, 0)
+    ToggleLabel.Position = UDim2.new(0, 70, 0, 0)
+    ToggleLabel.BackgroundTransparency = 1
+    ToggleLabel.Text = text
+    ToggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleLabel.TextScaled = true
+    ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    ToggleLabel.Font = Enum.Font.Gotham
+    ToggleLabel.Parent = ToggleFrame
+    
+    local isEnabled = false
+    
+    local function UpdateToggle()
+        if isEnabled then
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+            ToggleButton.Text = "ON"
+        else
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+            ToggleButton.Text = "OFF"
+        end
+        if callback then
+            callback(isEnabled)
+        end
+    end
+    
+    ToggleButton.MouseButton1Click:Connect(function()
+        isEnabled = not isEnabled
+        UpdateToggle()
+    end)
+    
+    UpdateToggle()
+    
+    return ToggleFrame, function() return isEnabled end, function(state) 
+        isEnabled = state 
+        UpdateToggle()
+    end
+end
+
+-- 创建滑块控件
+local function CreateSlider(parent, text, minValue, maxValue, defaultValue, callback)
+    local SliderFrame = Instance.new("Frame")
+    SliderFrame.Size = UDim2.new(0.9, 0, 0, 60)
+    SliderFrame.Position = UDim2.new(0.05, 0, 0, 0)
+    SliderFrame.BackgroundTransparency = 1
+    SliderFrame.Parent = parent
+    
+    local SliderLabel = Instance.new("TextLabel")
+    SliderLabel.Size = UDim2.new(1, 0, 0, 20)
+    SliderLabel.Position = UDim2.new(0, 0, 0, 0)
+    SliderLabel.BackgroundTransparency = 1
+    SliderLabel.Text = text .. ": " .. tostring(defaultValue)
+    SliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SliderLabel.TextScaled = true
+    SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+    SliderLabel.Font = Enum.Font.Gotham
+    SliderLabel.Parent = SliderFrame
+    
+    local SliderTrack = Instance.new("Frame")
+    SliderTrack.Size = UDim2.new(1, 0, 0, 10)
+    SliderTrack.Position = UDim2.new(0, 0, 0, 30)
+    SliderTrack.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    SliderTrack.BorderSizePixel = 0
+    SliderTrack.Parent = SliderFrame
+    
+    local SliderThumb = Instance.new("Frame")
+    SliderThumb.Size = UDim2.new(0, 20, 0, 20)
+    SliderThumb.Position = UDim2.new((defaultValue - minValue) / (maxValue - minValue), -10, 0, 25)
+    SliderThumb.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    SliderThumb.BorderSizePixel = 0
+    SliderThumb.Parent = SliderFrame
+    
+    local isDragging = false
+    
+    local function UpdateValue(xPosition)
+        local relativeX = math.clamp(xPosition / SliderTrack.AbsoluteSize.X, 0, 1)
+        local value = minValue + (maxValue - minValue) * relativeX
+        value = math.floor(value * 100) / 100 -- 保留两位小数
+        
+        SliderThumb.Position = UDim2.new(relativeX, -10, 0, 25)
+        SliderLabel.Text = text .. ": " .. tostring(value)
+        
+        if callback then
+            callback(value)
+        end
+    end
+    
+    SliderThumb.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = true
+        end
+    end)
+    
+    SliderThumb.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = false
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = Vector2.new(input.Position.X, input.Position.Y)
+            local trackPos = SliderTrack.AbsolutePosition
+            local trackSize = SliderTrack.AbsoluteSize
+            
+            if mousePos.X >= trackPos.X and mousePos.X <= trackPos.X + trackSize.X then
+                UpdateValue(mousePos.X - trackPos.X)
+            end
+        end
+    end)
+    
+    -- 点击轨道也可以设置值
+    SliderTrack.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mousePos = Vector2.new(input.Position.X, input.Position.Y)
+            local trackPos = SliderTrack.AbsolutePosition
+            UpdateValue(mousePos.X - trackPos.X)
+        end
+    end)
+    
+    return SliderFrame
+end
+
+-- 创建玩家ESP功能
+local function CreateESP()
+    local function AddESP(player)
+        if player ~= game.Players.LocalPlayer and player.Character then
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "ESP_Highlight"
+            highlight.FillColor = Color3.fromRGB(255, 0, 0)
+            highlight.FillTransparency = 0.7
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.OutlineTransparency = 0
+            highlight.Parent = player.Character
+            PlayerESP[player] = highlight
+        end
+    end
+    
+    local function RemoveESP(player)
+        if PlayerESP[player] then
+            PlayerESP[player]:Destroy()
+            PlayerESP[player] = nil
+        end
+    end
+    
+    -- 为现有玩家添加ESP
+    for _, player in pairs(Players:GetPlayers()) do
+        AddESP(player)
+    end
+    
+    -- 监听新玩家
+    Players.PlayerAdded:Connect(AddESP)
+    
+    -- 监听玩家离开
+    Players.PlayerRemoving:Connect(RemoveESP)
+    
+    -- 监听角色生成
+    Players.PlayerAdded:Connect(function(player)
+        player.CharacterAdded:Connect(function(character)
+            if ESPEnabled then
+                wait(1) -- 等待角色完全加载
+                AddESP(player)
+            end
+        end)
+    end)
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        player.CharacterAdded:Connect(function(character)
+            if ESPEnabled then
+                wait(1)
+                AddESP(player)
+            end
+        end)
+    end
+end
+
+-- 速度黑客功能
+local function SpeedHack(enabled, speed)
+    if enabled then
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            OriginalWalkSpeed = humanoid.WalkSpeed
+            humanoid.WalkSpeed = speed
+        end
+    else
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = OriginalWalkSpeed
+        end
+    end
+end
+
+-- 飞行功能
+local function Fly(enabled)
+    if enabled then
+        local character = player.Character
+        if not character then return end
+        
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+        
+        -- 创建飞行体
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.MaxForce = Vector3.new(0, 0, 0)
+        
+        -- 创建陀螺仪保持方向
+        local bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.MaxTorque = Vector3.new(0, 0, 0)
+        bodyGyro.P = 1000
+        bodyGyro.D = 50
+        
+        -- 连接到角色
+        bodyVelocity.Parent = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart")
+        bodyGyro.Parent = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart")
+        
+        -- 启用飞行控制
+        local flyConnection
+        flyConnection = RunService.Heartbeat:Connect(function()
+            if not FlyEnabled or not character or not character:FindFirstChild("HumanoidRootPart") then
+                flyConnection:Disconnect()
+                return
+            end
+            
+            local rootPart = character.HumanoidRootPart
+            bodyGyro.MaxTorque = Vector3.new(4000, 0, 4000)
+            bodyVelocity.MaxForce = Vector3.new(40000, 0, 40000)
+            
+            -- 设置飞行方向
+            bodyGyro.CFrame = CFrame.new(Vector3.new(), rootPart.CFrame.lookVector * 10)
+            
+            -- 飞行控制
+            local flyDirection = Vector3.new(0, 0, 0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                flyDirection = flyDirection + rootPart.CFrame.lookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                flyDirection = flyDirection - rootPart.CFrame.lookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                flyDirection = flyDirection - rootPart.CFrame.rightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                flyDirection = flyDirection + rootPart.CFrame.rightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                flyDirection = flyDirection + Vector3.new(0, 1, 0)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                flyDirection = flyDirection - Vector3.new(0, 1, 0)
+            end
+            
+            -- 应用飞行速度
+            if flyDirection.Magnitude > 0 then
+                bodyVelocity.Velocity = flyDirection.Unit * 50
+            else
+                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            end
+        end)
+    else
+        -- 禁用飞行
+        local character = player.Character
+        if character then
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                for _, obj in pairs(rootPart:GetChildren()) do
+                    if obj:IsA("BodyVelocity") or obj:IsA("BodyGyro") then
+                        obj:Destroy()
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- 穿墙功能
+local function Noclip(enabled)
+    if enabled then
+        local character = player.Character
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    else
+        local character = player.Character
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+end
+
+-- X射线透视功能
+local function XRay(enabled)
+    if enabled then
+        -- 使所有墙壁半透明
+        for _, part in pairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name:lower():find("wall") or part.Name:lower():find("floor") then
+                part.LocalTransparencyModifier = 0.5
+            end
+        end
+    else
+        -- 恢复透明度
+        for _, part in pairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.LocalTransparencyModifier = 0
+            end
+        end
+    end
+end
+
+-- 自动收集资源功能
+local function AutoFarm(enabled)
+    if enabled then
+        -- 查找附近的收集物
+        local farmConnection
+        farmConnection = RunService.Heartbeat:Connect(function()
+            if not AutoFarmEnabled then
+                farmConnection:Disconnect()
+                return
+            end
+            
+            local character = player.Character
+            if not character then return end
+            
+            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+            if not humanoidRootPart then return end
+            
+            -- 在附近查找可收集的物品
+            for _, item in pairs(workspace:GetDescendants()) do
+                if item:IsA("Part") and (item.Name:lower():find("coin") or item.Name:lower():find("resource") or item.Name:lower():find("collect")) then
+                    local distance = (humanoidRootPart.Position - item.Position).Magnitude
+                    if distance < 20 then
+                        -- 移动到物品位置
+                        humanoidRootPart.CFrame = CFrame.new(item.Position + Vector3.new(0, 3, 0))
+                        wait(0.1)
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- 自瞄功能
+local function Aimbot(enabled)
+    if enabled then
+        local aimbotConnection
+        aimbotConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            
+            if input.UserInputType == Enum.UserInputType.MouseButton2 then -- 右键瞄准
+                -- 找到最近的玩家
+                local closestPlayer = nil
+                local closestDistance = math.huge
+                local localCharacter = player.Character
+                local localHead = localCharacter and localCharacter:FindFirstChild("Head")
+                
+                if not localHead then return end
+                
+                for _, otherPlayer in pairs(Players:GetPlayers()) do
+                    if otherPlayer ~= player and otherPlayer.Character then
+                        local otherHead = otherPlayer.Character:FindFirstChild("Head")
+                        if otherHead then
+                            local distance = (localHead.Position - otherHead.Position).Magnitude
+                            if distance < closestDistance then
+                                closestDistance = distance
+                                closestPlayer = otherPlayer
+                            end
+                        end
+                    end
+                end
+                
+                if closestPlayer and closestPlayer.Character then
+                    local targetHead = closestPlayer.Character:FindFirstChild("Head")
+                    if targetHead then
+                        -- 瞄准目标
+                        local camera = workspace.CurrentCamera
+                        camera.CFrame = CFrame.new(camera.CFrame.Position, targetHead.Position)
+                    end
+                end
+            end
+        end)
+        
+        return aimbotConnection
+    end
+end
+
+-- 创建工具系统
+local function CreateToolsSystem()
+    local ToolsFrame = Instance.new("Frame")
+    ToolsFrame.Name = "ToolsFrame"
+    ToolsFrame.Size = UDim2.new(1, 0, 1, 0)
+    ToolsFrame.BackgroundTransparency = 1
+    ToolsFrame.Visible = false
+    ToolsFrame.Parent = ContentFrame
+    
+    local yOffset = 0
+    
+    -- 创建各种工具按钮
+    CreateButton(ToolsFrame, "给予工具", UDim2.new(0.05, 0, 0, yOffset), UDim2.new(0.9, 0, 0, 30), function()
+        local tool = Instance.new("Tool")
+        tool.Name = "客户端工具"
+        tool.Parent = player.Backpack
+    end)
+    yOffset = yOffset + 40
+    
+    CreateButton(ToolsFrame, "移除所有工具", UDim2.new(0.05, 0, 0, yOffset), UDim2.new(0.9, 0, 0, 30), function()
+        for _, item in pairs(player.Backpack:GetChildren()) do
+            if item:IsA("Tool") then
+                item:Destroy()
+            end
+        end
+    end)
+    yOffset = yOffset + 40
+    
+    CreateButton(ToolsFrame, "重置角色", UDim2.new(0.05, 0, 0, yOffset), UDim2.new(0.9, 0, 0, 30), function()
+        local character = player.Character
+        if character then
+            character:BreakJoints()
+        end
+    end)
+    yOffset = yOffset + 40
+    
+    return ToolsFrame
+end
+
+-- 创建视觉效果系统
+local function CreateVisualsSystem()
+    local VisualsFrame = Instance.new("Frame")
+    VisualsFrame.Name = "VisualsFrame"
+    VisualsFrame.Size = UDim2.new(1, 0, 1, 0)
+    VisualsFrame.BackgroundTransparency = 1
+    VisualsFrame.Visible = false
+    VisualsFrame.Parent = ContentFrame
+    
+    local yOffset = 0
+    
+    -- FPS计数器
+    local fpsLabel = Instance.new("TextLabel")
+    fpsLabel.Size = UDim2.new(0.9, 0, 0, 30)
+    fpsLabel.Position = UDim2.new(0.05, 0, 0, yOffset)
+    fpsLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    fpsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fpsLabel.Text = "FPS: 60"
+    fpsLabel.TextScaled = true
+    fpsLabel.Font = Enum.Font.Gotham
+    fpsLabel.Parent = VisualsFrame
+    yOffset = yOffset + 40
+    
+    -- FPS更新
+    local fpsConnection
+    fpsConnection = RunService.Heartbeat:Connect(function()
+        fpsLabel.Text = "FPS: " .. tostring(math.floor(1/RunService.Heartbeat:Wait()))
+    end)
+    
+    -- 全亮模式
+    CreateToggle(VisualsFrame, "全亮模式", UDim2.new(0.05, 0, 0, yOffset), function(enabled)
+        if enabled then
+            Lighting.Ambient = Color3.new(1, 1, 1)
+            Lighting.Brightness = 2
+            Lighting.GlobalShadows = false
+        else
+            Lighting.Ambient = Color3.new(0, 0, 0)
+            Lighting.Brightness = 1
+            Lighting.GlobalShadows = true
+        end
+    end)
+    yOffset = yOffset + 50
+    
+    -- 时间控制
+    CreateSlider(VisualsFrame, "时间", 0, 24, Lighting.ClockTime, function(value)
+        Lighting.ClockTime = value
+    end)
+    yOffset = yOffset + 70
+    
+    return VisualsFrame
+end
+
+-- 创建运动系统
+local function CreateMovementSystem()
+    local MovementFrame = Instance.new("Frame")
+    MovementFrame.Name = "MovementFrame"
+    MovementFrame.Size = UDim2.new(1, 0, 1, 0)
+    MovementFrame.BackgroundTransparency = 1
+    MovementFrame.Visible = false
+    MovementFrame.Parent = ContentFrame
+    
+    local yOffset = 0
+    
+    -- 速度黑客
+    local speedToggle, getSpeedState, setSpeedState = CreateToggle(MovementFrame, "速度黑客", UDim2.new(0.05, 0, 0, yOffset), function(enabled)
+        SpeedHackEnabled = enabled
+        if enabled then
+            SpeedHack(true, 50)
+        else
+            SpeedHack(false)
+        end
+    end)
+    yOffset = yOffset + 50
+    
+    -- 速度滑块
+    CreateSlider(MovementFrame, "速度值", 16, 200, 50, function(value)
+        if getSpeedState() then
+            SpeedHack(true, value)
+        end
+    end)
+    yOffset = yOffset + 70
+    
+    -- 飞行模式
+    CreateToggle(MovementFrame, "飞行模式", UDim2.new(0.05, 0, 0, yOffset), function(enabled)
+        FlyEnabled = enabled
+        Fly(enabled)
+    end)
+    yOffset = yOffset + 50
+    
+    -- 穿墙模式
+    CreateToggle(MovementFrame, "穿墙模式", UDim2.new(0.05, 0, 0, yOffset), function(enabled)
+        NoclipEnabled = enabled
+        if enabled then
+            -- 持续更新穿墙状态
+            local noclipConnection
+            noclipConnection = RunService.Heartbeat:Connect(function()
+                if not NoclipEnabled then
+                    noclipConnection:Disconnect()
+                    return
+                end
+                Noclip(true)
+            end)
+        else
+            Noclip(false)
+        end
+    end)
+    yOffset = yOffset + 50
+    
+    -- 跳跃力增强
+    CreateToggle(MovementFrame, "超级跳跃", UDim2.new(0.05, 0, 0, yOffset), function(enabled)
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            if enabled then
+                OriginalJumpPower = humanoid.JumpPower
+                humanoid.JumpPower = 100
+            else
+                humanoid.JumpPower = OriginalJumpPower
+            end
+        end
+    end)
+    yOffset = yOffset + 50
+    
+    return MovementFrame
+end
+
+-- 创建玩家功能系统
+local function CreatePlayerSystem()
+    local PlayerFrame = Instance.new("Frame")
+    PlayerFrame.Name = "PlayerFrame"
+    PlayerFrame.Size = UDim2.new(1, 0, 1, 0)
+    PlayerFrame.BackgroundTransparency = 1
+    PlayerFrame.Visible = false
+    PlayerFrame.Parent = ContentFrame
+    
+    local yOffset = 0
+    
+    -- ESP功能
+    CreateToggle(PlayerFrame, "玩家ESP", UDim2.new(0.05, 0, 0, yOffset), function(enabled)
+        ESPEnabled = enabled
+        if enabled then
+            CreateESP()
+        else
+            -- 移除所有ESP
+            for _, esp in pairs(PlayerESP) do
+                esp:Destroy()
+            end
+            PlayerESP = {}
+        end
+    end)
+    yOffset = yOffset + 50
+    
+    -- 自瞄功能
+    local aimbotConnection
+    CreateToggle(PlayerFrame, "自瞄辅助", UDim2.new(0.05, 0, 0, yOffset), function(enabled)
+        AimbotEnabled = enabled
+        if enabled then
+            aimbotConnection = Aimbot(true)
+        else
+            if aimbotConnection then
+                aimbotConnection:Disconnect()
+            end
+        end
+    end)
+    yOffset = yOffset + 50
+    
+    -- X射线透视
+    CreateToggle(PlayerFrame, "X射线透视", UDim2.new(0.05, 0, 0, yOffset), function(enabled)
+        XRayEnabled = enabled
+        XRay(enabled)
+    end)
+    yOffset = yOffset + 50
+    
+    -- 自动收集资源
+    CreateToggle(PlayerFrame, "自动收集资源", UDim2.new(0.05, 0, 0, yOffset), function(enabled)
+        AutoFarmEnabled = enabled
+        AutoFarm(enabled)
+    end)
+    yOffset = yOffset + 50
+    
+    return PlayerFrame
+end
+
+-- 创建设置系统
+local function CreateSettingsSystem()
+    local SettingsFrame = Instance.new("Frame")
+    SettingsFrame.Name = "SettingsFrame"
+    SettingsFrame.Size = UDim2.new(1, 0, 1, 0)
+    SettingsFrame.BackgroundTransparency = 1
+    SettingsFrame.Visible = false
+    SettingsFrame.Parent = ContentFrame
+    
+    local yOffset = 0
+    
+    -- 隐藏/显示GUI
+    CreateButton(SettingsFrame, "隐藏GUI", UDim2.new(0.05, 0, 0, yOffset), UDim2.new(0.9, 0, 0, 30), function()
+        MainFrame.Visible = not MainFrame.Visible
+    end)
+    yOffset = yOffset + 40
+    
+    -- 重置所有设置
+    CreateButton(SettingsFrame, "重置所有设置", UDim2.new(0.05, 0, 0, yOffset), UDim2.new(0.9, 0, 0, 30), function()
+        -- 重置所有功能状态
+        ESPEnabled = false
+        SpeedHackEnabled = false
+        FlyEnabled = false
+        NoclipEnabled = false
+        XRayEnabled = false
+        AutoFarmEnabled = false
+        AimbotEnabled = false
+        
+        -- 重置角色状态
+        SpeedHack(false)
+        Fly(false)
+        Noclip(false)
+        XRay(false)
+        AutoFarm(false)
+        
+        -- 移除ESP
+        for _, esp in pairs(PlayerESP) do
+            esp:Destroy()
+        end
+        PlayerESP = {}
+    end)
+    yOffset = yOffset + 40
+    
+    return SettingsFrame
+end
+
+-- 创建选项卡系统
+local function CreateTabs()
+    local tabs = {}
+    local currentTab = nil
+    
+    local function CreateTabButton(name)
+        local TabButton = Instance.new("TextButton")
+        TabButton.Size = UDim2.new(0.2, 0, 1, 0)
+        TabButton.Position = UDim2.new(#tabs * 0.2, 0, 0, 0)
+        TabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+        TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TabButton.Text = name
+        TabButton.TextScaled = true
+        TabButton.Font = Enum.Font.Gotham
+        TabButton.Parent = TabButtonsFrame
+        
+        TabButton.MouseButton1Click:Connect(function()
+            if currentTab then
+                currentTab.Visible = false
+            end
+            tabs[name].Visible = true
+            currentTab = tabs[name]
+        end)
+        
+        return TabButton
+    end
+    
+    -- 创建各个选项卡
+    tabs["玩家"] = CreatePlayerSystem()
+    tabs["运动"] = CreateMovementSystem()
+    tabs["视觉"] = CreateVisualsSystem()
+    tabs["工具"] = CreateToolsSystem()
+    tabs["设置"] = CreateSettingsSystem()
+    
+    -- 创建选项卡按钮
+    for tabName, _ in pairs(tabs) do
+        CreateTabButton(tabName)
+    end
+    
+    -- 设置默认选项卡
+    if tabs["玩家"] then
+        tabs["玩家"].Visible = true
+        currentTab = tabs["玩家"]
+    end
+end
+
+-- 初始化函数
+local function Initialize()
+    -- 创建主GUI
+    CreateMainGUI()
+    
+    -- 创建选项卡系统
+    CreateTabs()
+    
+    -- 角色加载时重置状态
+    player.CharacterAdded:Connect(function(character)
+        wait(1) -- 等待角色完全加载
+        
+        -- 重新应用启用的功能
+        if SpeedHackEnabled then
+            SpeedHack(true, 50)
+        end
+        
+        if FlyEnabled then
+            Fly(true)
+        end
+        
+        if NoclipEnabled then
+            Noclip(true)
+        end
+    end)
+    
+    -- 键盘快捷键
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if input.KeyCode == Enum.KeyCode.RightShift then
+            MainFrame.Visible = not MainFrame.Visible
+        end
+    end)
+    
+    -- 输出初始化完成信息
+    print("高级客户端脚本加载完成！")
+    print("按 RightShift 键显示/隐藏GUI")
+    print("当前版本: 1.0")
+end
+
+-- 启动脚本
+Initialize()
+
+-- 错误处理
+local success, errorMessage = pcall(function()
+    Initialize()
+end)
+
+if not success then
+    warn("脚本初始化失败: " .. errorMessage)
+end
+
+-- 脚本结束
+return "脚本执行完毕"
