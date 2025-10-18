@@ -138,6 +138,18 @@ local originalAmbient
 local infiniteJumpEnabled = false
 local jumpConnection
 
+-- 防止摔落伤害功能变量
+local antiFallEnabled = false
+local antiFallConnection
+
+-- 全局物体漂浮功能变量
+local globalFloatEnabled = false
+local floatScript
+
+-- 单一物体飞行功能变量
+local singleFloatEnabled = false
+local singleFloatScript
+
 -- 坐标管理变量
 local CoordinateManager = {
     SavedCoordinates = {},
@@ -228,7 +240,7 @@ local function ToggleInfiniteJump(value)
     if value then
         -- 开启无限跳
         infiniteJumpEnabled = true
-        
+
         -- 连接跳跃事件
         jumpConnection = UserInputService.JumpRequest:Connect(function()
             local character = player.Character
@@ -239,19 +251,89 @@ local function ToggleInfiniteJump(value)
                 end
             end
         end)
-        
+
         ShowNotification("无限跳已开启", Color3.fromRGB(0, 255, 100))
     else
         -- 关闭无限跳
         infiniteJumpEnabled = false
-        
+
         -- 断开连接
         if jumpConnection then
             jumpConnection:Disconnect()
             jumpConnection = nil
         end
-        
+
         ShowNotification("无限跳已关闭", Color3.fromRGB(255, 100, 0))
+    end
+end
+
+-- 防止摔落伤害功能
+local function ToggleAntiFall(value)
+    if value then
+        -- 加载防止摔落伤害脚本
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Fall-injury/main/%E9%98%B2%E6%AD%A2%E6%91%94%E8%90%BD%E4%BC%A4%E5%AE%B3"))()
+        end)
+
+        if success then
+            antiFallEnabled = true
+            ShowNotification("防止摔落伤害已开启", Color3.fromRGB(0, 255, 100))
+        else
+            antiFallEnabled = false
+            ShowNotification("防止摔落伤害加载失败", Color3.fromRGB(255, 50, 50))
+            warn("防止摔落伤害脚本加载错误: " .. tostring(result))
+        end
+    else
+        -- 这里假设外部脚本有自己的关闭机制
+        -- 如果没有，我们可能需要手动断开连接
+        antiFallEnabled = false
+        ShowNotification("防止摔落伤害已关闭", Color3.fromRGB(255, 100, 0))
+    end
+end
+
+-- 全局物体漂浮功能
+local function ToggleGlobalFloat(value)
+    if value then
+        -- 加载全局物体漂浮脚本
+        local success, result = pcall(function()
+            floatScript = loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/%E5%85%A8%E5%B1%80%E7%89%A9%E4%BD%93%E6%BC%82%E6%B5%AE%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%89%88"))()
+        end)
+
+        if success then
+            globalFloatEnabled = true
+            ShowNotification("全局物体漂浮已开启", Color3.fromRGB(0, 255, 100))
+        else
+            globalFloatEnabled = false
+            ShowNotification("全局物体漂浮加载失败", Color3.fromRGB(255, 50, 50))
+            warn("全局物体漂浮脚本加载错误: " .. tostring(result))
+        end
+    else
+        -- 这里假设外部脚本有自己的关闭机制
+        globalFloatEnabled = false
+        ShowNotification("全局物体漂浮已关闭", Color3.fromRGB(255, 100, 0))
+    end
+end
+
+-- 单一物体飞行功能
+local function ToggleSingleFloat(value)
+    if value then
+        -- 加载单一物体飞行脚本
+        local success, result = pcall(function()
+            singleFloatScript = loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/%E5%8D%95%E4%B8%80%E7%89%A9%E4%BD%93%E9%A3%9E%E8%A1%8C%E8%BD%BD%E8%87%AA%E5%B7%B1%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%89%88"))()
+        end)
+
+        if success then
+            singleFloatEnabled = true
+            ShowNotification("单一物体飞行已开启", Color3.fromRGB(0, 255, 100))
+        else
+            singleFloatEnabled = false
+            ShowNotification("单一物体飞行加载失败", Color3.fromRGB(255, 50, 50))
+            warn("单一物体飞行脚本加载错误: " .. tostring(result))
+        end
+    else
+        -- 这里假设外部脚本有自己的关闭机制
+        singleFloatEnabled = false
+        ShowNotification("单一物体飞行已关闭", Color3.fromRGB(255, 100, 0))
     end
 end
 
@@ -674,9 +756,12 @@ flyButton.MouseButton1Click:Connect(function()
     if success then
         flyButton.Text = "飞行已加载"
         flyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+        ShowNotification("飞行功能已加载", Color3.fromRGB(0, 255, 100))
     else
         flyButton.Text = "重新加载飞行"
         flyButton.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
+        ShowNotification("飞行功能加载失败", Color3.fromRGB(255, 50, 50))
+        warn("飞行脚本加载错误: " .. tostring(result))
     end
 end)
 
@@ -709,6 +794,7 @@ local function toggleNoclip()
         noclipEnabled = false
         noclipButton.Text = "穿墙模式"
         noclipButton.BackgroundColor3 = Color3.fromRGB(180, 70, 180)
+        ShowNotification("穿墙模式已关闭", Color3.fromRGB(255, 100, 0))
     else
         -- 开启穿墙
         noclipEnabled = true
@@ -731,6 +817,8 @@ local function toggleNoclip()
                 end
             end
         end)
+
+        ShowNotification("穿墙模式已开启", Color3.fromRGB(0, 255, 100))
     end
 end
 
@@ -749,6 +837,8 @@ player.CharacterAdded:Connect(function(character)
                 part.CanCollide = false
             end
         end
+        
+        ShowNotification("角色重生，已重新应用穿墙模式", Color3.fromRGB(0, 200, 255))
     end
 end)
 
@@ -817,7 +907,7 @@ local nightVisionButton = createFunctionButton("NightVisionButton", "夜视", Co
 -- 夜视按钮点击功能
 nightVisionButton.MouseButton1Click:Connect(function()
     ToggleNightVision(not nightVisionEnabled)
-    
+
     -- 更新按钮状态显示
     if nightVisionEnabled then
         nightVisionButton.Text = "夜视已开启"
@@ -834,7 +924,7 @@ local infiniteJumpButton = createFunctionButton("InfiniteJumpButton", "无限跳
 -- 无限跳按钮点击功能
 infiniteJumpButton.MouseButton1Click:Connect(function()
     ToggleInfiniteJump(not infiniteJumpEnabled)
-    
+
     -- 更新按钮状态显示
     if infiniteJumpEnabled then
         infiniteJumpButton.Text = "无限跳已开启"
@@ -845,24 +935,75 @@ infiniteJumpButton.MouseButton1Click:Connect(function()
     end
 end)
 
+-- 创建防止摔落伤害按钮
+local antiFallButton = createFunctionButton("AntiFallButton", "防止摔落伤害", Color3.fromRGB(200, 100, 50))
+
+-- 防止摔落伤害按钮点击功能
+antiFallButton.MouseButton1Click:Connect(function()
+    ToggleAntiFall(not antiFallEnabled)
+
+    -- 更新按钮状态显示
+    if antiFallEnabled then
+        antiFallButton.Text = "防摔已开启"
+        antiFallButton.BackgroundColor3 = Color3.fromRGB(180, 80, 30)
+    else
+        antiFallButton.Text = "防止摔落伤害"
+        antiFallButton.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+    end
+end)
+
+-- 创建全局未固定物体控制按钮
+local globalFloatButton = createFunctionButton("GlobalFloatButton", "全局未固定物体控制", Color3.fromRGB(100, 150, 200))
+
+-- 全局未固定物体控制按钮点击功能
+globalFloatButton.MouseButton1Click:Connect(function()
+    ToggleGlobalFloat(not globalFloatEnabled)
+
+    -- 更新按钮状态显示
+    if globalFloatEnabled then
+        globalFloatButton.Text = "全局未固定物体控制已开启"
+        globalFloatButton.BackgroundColor3 = Color3.fromRGB(80, 130, 180)
+    else
+        globalFloatButton.Text = "全局未固定物体控制"
+        globalFloatButton.BackgroundColor3 = Color3.fromRGB(100, 150, 200)
+    end
+end)
+
+-- 创建单一未固定物体控制按钮
+local singleFloatButton = createFunctionButton("SingleFloatButton", "单一未固定物体控制", Color3.fromRGB(150, 100, 200))
+
+-- 单一未固定物体控制按钮点击功能
+singleFloatButton.MouseButton1Click:Connect(function()
+    ToggleSingleFloat(not singleFloatEnabled)
+
+    -- 更新按钮状态显示
+    if singleFloatEnabled then
+        singleFloatButton.Text = "单一未固定物体控制已开启"
+        singleFloatButton.BackgroundColor3 = Color3.fromRGB(130, 80, 180)
+    else
+        singleFloatButton.Text = "单一未固定物体控制"
+        singleFloatButton.BackgroundColor3 = Color3.fromRGB(150, 100, 200)
+    end
+end)
+
 -- 角色重生时重新连接无限跳
 player.CharacterAdded:Connect(function(character)
     if infiniteJumpEnabled then
         -- 等待角色完全加载
         character:WaitForChild("Humanoid")
-        
+
         -- 重新连接无限跳
         if jumpConnection then
             jumpConnection:Disconnect()
         end
-        
+
         jumpConnection = UserInputService.JumpRequest:Connect(function()
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 humanoid:ChangeState("Jumping")
             end
         end)
-        
+
         ShowNotification("角色重生，已重新连接无限跳", Color3.fromRGB(0, 200, 255))
     end
 end)
@@ -870,4 +1011,4 @@ end)
 -- 初始化坐标管理器
 InitCoordinateManager()
 
-print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视和无限跳功能")
+print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制和单一未固定物体控制功能")
