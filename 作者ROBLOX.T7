@@ -179,6 +179,16 @@ local CoordinateManager = {
     FilePath = "SavedCoordinates.json"
 }
 
+-- 新功能变量
+local airWalkEnabled = false
+local airWalkScript
+
+local invisibleEnabled = false
+local invisibleScript
+
+local egorEnabled = false
+local egorScript
+
 -- ESP透视功能
 local function CreateESP(player)
     if player == Players.LocalPlayer then return end
@@ -488,6 +498,69 @@ local function ToggleGlobalFloat(value)
     else
         globalFloatEnabled = false
         ShowNotification("全局物体漂浮已关闭", Color3.fromRGB(255, 100, 0))
+    end
+end
+
+-- 踏空行走功能
+local function ToggleAirWalk(value)
+    if value then
+        local success, result = pcall(function()
+            airWalkScript = loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostPlayer352/Test4/main/Float'))()
+        end)
+
+        if success then
+            airWalkEnabled = true
+            ShowNotification("踏空行走已开启", Color3.fromRGB(0, 255, 100))
+        else
+            airWalkEnabled = false
+            ShowNotification("踏空行走加载失败", Color3.fromRGB(255, 50, 50))
+            warn("踏空行走脚本加载错误: " .. tostring(result))
+        end
+    else
+        airWalkEnabled = false
+        ShowNotification("踏空行走已关闭", Color3.fromRGB(255, 100, 0))
+    end
+end
+
+-- 隐身功能
+local function ToggleInvisible(value)
+    if value then
+        local success, result = pcall(function()
+            invisibleScript = loadstring(game:HttpGet('https://pastebin.com/raw/3Rnd9rHf'))()
+        end)
+
+        if success then
+            invisibleEnabled = true
+            ShowNotification("隐身功能已开启", Color3.fromRGB(0, 255, 100))
+        else
+            invisibleEnabled = false
+            ShowNotification("隐身功能加载失败", Color3.fromRGB(255, 50, 50))
+            warn("隐身脚本加载错误: " .. tostring(result))
+        end
+    else
+        invisibleEnabled = false
+        ShowNotification("隐身功能已关闭", Color3.fromRGB(255, 100, 0))
+    end
+end
+
+-- Egor功能
+local function ToggleEgor(value)
+    if value then
+        local success, result = pcall(function()
+            egorScript = loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fake-Lag-Runner-read-description-44701"))()
+        end)
+
+        if success then
+            egorEnabled = true
+            ShowNotification("Egor功能已开启", Color3.fromRGB(0, 255, 100))
+        else
+            egorEnabled = false
+            ShowNotification("Egor功能加载失败", Color3.fromRGB(255, 50, 50))
+            warn("Egor脚本加载错误: " .. tostring(result))
+        end
+    else
+        egorEnabled = false
+        ShowNotification("Egor功能已关闭", Color3.fromRGB(255, 100, 0))
     end
 end
 
@@ -1049,7 +1122,7 @@ Players.PlayerRemoving:Connect(function(player)
             break
         end
     end
-    
+
     -- 如果目标玩家离开，清除选择
     if Teleport.TargetPlayer == player then
         Teleport.TargetPlayer = nil
@@ -1096,7 +1169,7 @@ local climbButton = createFunctionButton("ClimbButton", "爬墙", Color3.fromRGB
 climbButton.MouseButton1Click:Connect(function()
     if not climbEnabled then
         ToggleClimb(true)
-        
+
         if climbEnabled then
             climbButton.Text = "爬墙已开启"
             climbButton.BackgroundColor3 = Color3.fromRGB(160, 80, 30)
@@ -1337,11 +1410,11 @@ local singleFlightButton = createFunctionButton("SingleFlightButton", "单一物
 -- 单一物体飞行按钮点击功能（按照简单GUI逻辑修复）
 singleFlightButton.MouseButton1Click:Connect(function()
     ShowNotification("正在加载单一物体飞行...", Color3.fromRGB(255, 255, 0))
-    
+
     local success, result = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/单一物体飞行载自己最终优化版"))()
     end)
-    
+
     if success then
         singleFlightButton.Text = "飞行已加载"
         singleFlightButton.BackgroundColor3 = Color3.fromRGB(60, 160, 60)
@@ -1360,11 +1433,11 @@ local partDestroyerButton = createFunctionButton("PartDestroyerButton", "零件�
 -- 零件破坏者按钮点击功能（按照简单GUI逻辑修复）
 partDestroyerButton.MouseButton1Click:Connect(function()
     ShowNotification("正在加载零件破坏者...", Color3.fromRGB(255, 255, 0))
-    
+
     local success, result = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/-/main/零件破坏者v2"))()
     end)
-    
+
     if success then
         partDestroyerButton.Text = "破坏者已加载"
         partDestroyerButton.BackgroundColor3 = Color3.fromRGB(160, 50, 50)
@@ -1374,6 +1447,54 @@ partDestroyerButton.MouseButton1Click:Connect(function()
         partDestroyerButton.BackgroundColor3 = Color3.fromRGB(200, 100, 100)
         ShowNotification("零件破坏者加载失败", Color3.fromRGB(255, 50, 50))
         warn("零件破坏者脚本加载错误: " .. tostring(result))
+    end
+end)
+
+-- 创建踏空行走功能按钮
+local airWalkButton = createFunctionButton("AirWalkButton", "踏空行走", Color3.fromRGB(100, 200, 200))
+
+-- 踏空行走按钮点击功能
+airWalkButton.MouseButton1Click:Connect(function()
+    ToggleAirWalk(not airWalkEnabled)
+
+    if airWalkEnabled then
+        airWalkButton.Text = "踏空行走已开启"
+        airWalkButton.BackgroundColor3 = Color3.fromRGB(80, 180, 180)
+    else
+        airWalkButton.Text = "踏空行走"
+        airWalkButton.BackgroundColor3 = Color3.fromRGB(100, 200, 200)
+    end
+end)
+
+-- 创建隐身功能按钮
+local invisibleButton = createFunctionButton("InvisibleButton", "隐身", Color3.fromRGB(150, 150, 150))
+
+-- 隐身按钮点击功能
+invisibleButton.MouseButton1Click:Connect(function()
+    ToggleInvisible(not invisibleEnabled)
+
+    if invisibleEnabled then
+        invisibleButton.Text = "隐身已开启"
+        invisibleButton.BackgroundColor3 = Color3.fromRGB(130, 130, 130)
+    else
+        invisibleButton.Text = "隐身"
+        invisibleButton.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+    end
+end)
+
+-- 创建Egor功能按钮
+local egorButton = createFunctionButton("EgorButton", "Egor功能", Color3.fromRGB(200, 200, 100))
+
+-- Egor按钮点击功能
+egorButton.MouseButton1Click:Connect(function()
+    ToggleEgor(not egorEnabled)
+
+    if egorEnabled then
+        egorButton.Text = "Egor已开启"
+        egorButton.BackgroundColor3 = Color3.fromRGB(180, 180, 80)
+    else
+        egorButton.Text = "Egor功能"
+        egorButton.BackgroundColor3 = Color3.fromRGB(200, 200, 100)
     end
 end)
 
@@ -1418,4 +1539,4 @@ game:GetService("CoreGui").ChildRemoved:Connect(function(child)
     end
 end)
 
-print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、ESP透视、走路创人、爬墙、传送功能，以及修复的单一物体飞行和零件破坏者功能")
+print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、ESP透视、走路创人、爬墙、传送功能，以及修复的单一物体飞行和零件破坏者功能，还有新添加的踏空行走、隐身和Egor功能")
