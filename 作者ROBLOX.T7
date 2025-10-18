@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -129,6 +130,10 @@ squareCorner.Parent = squareIcon
 -- 状态变量
 local isHidden = false
 
+-- 夜视功能变量
+local nightVisionEnabled = false
+local originalAmbient
+
 -- 坐标管理变量
 local CoordinateManager = {
     SavedCoordinates = {},
@@ -191,6 +196,27 @@ end
 -- 初始化坐标管理
 local function InitCoordinateManager()
     LoadCoordinates()
+end
+
+-- 夜视功能
+local function ToggleNightVision(value)
+    if value then
+        -- 保存原始环境光设置
+        originalAmbient = Lighting.Ambient
+        -- 设置夜视效果
+        Lighting.Ambient = Color3.new(1, 1, 1)
+        nightVisionEnabled = true
+        ShowNotification("夜视已开启", Color3.fromRGB(255, 255, 0))
+    else
+        -- 恢复原始环境光设置
+        if originalAmbient then
+            Lighting.Ambient = originalAmbient
+        else
+            Lighting.Ambient = Color3.new(0, 0, 0)
+        end
+        nightVisionEnabled = false
+        ShowNotification("夜视已关闭", Color3.fromRGB(255, 255, 0))
+    end
 end
 
 -- 创建通知系统
@@ -500,42 +526,42 @@ end
 
 -- 自定义拖动功能 - 只在标题栏拖动
 local function setupTitleBarDrag(dragArea, guiObject)
-	local dragging = false
-	local dragInput
-	local dragStart
-	local startPos
-	
-	dragArea.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			dragStart = input.Position
-			startPos = guiObject.Position
-			
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					dragging = false
-				end
-			end)
-		end
-	end)
-	
-	dragArea.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			dragInput = input
-		end
-	end)
-	
-	UserInputService.InputChanged:Connect(function(input)
-		if dragging and input == dragInput then
-			local delta = input.Position - dragStart
-			guiObject.Position = UDim2.new(
-				startPos.X.Scale, 
-				startPos.X.Offset + delta.X,
-				startPos.Y.Scale, 
-				startPos.Y.Offset + delta.Y
-			)
-		end
-	end)
+        local dragging = false
+        local dragInput
+        local dragStart
+        local startPos
+
+        dragArea.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        dragging = true
+                        dragStart = input.Position
+                        startPos = guiObject.Position
+
+                        input.Changed:Connect(function()
+                                if input.UserInputState == Enum.UserInputState.End then
+                                        dragging = false
+                                end
+                        end)
+                end
+        end)
+
+        dragArea.InputChanged:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                        dragInput = input
+                end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+                if dragging and input == dragInput then
+                        local delta = input.Position - dragStart
+                        guiObject.Position = UDim2.new(
+                                startPos.X.Scale, 
+                                startPos.X.Offset + delta.X,
+                                startPos.Y.Scale, 
+                                startPos.Y.Offset + delta.Y
+                        )
+                end
+        end)
 end
 
 -- 应用增强拖动功能 - 只在标题栏拖动
@@ -544,31 +570,31 @@ setupTitleBarDrag(squareIcon, squareIcon)
 
 -- 隐藏/显示功能
 hideButton.MouseButton1Click:Connect(function()
-	if not isHidden then
-		-- 隐藏主UI，显示正方形图标
-		mainFrame.Visible = false
-		squareIcon.Visible = true
-		isHidden = true
-	end
+        if not isHidden then
+                -- 隐藏主UI，显示正方形图标
+                mainFrame.Visible = false
+                squareIcon.Visible = true
+                isHidden = true
+        end
 end)
 
 -- 正方形图标点击功能
 squareIcon.MouseButton1Click:Connect(function()
-	-- 显示主UI，隐藏正方形图标
-	mainFrame.Visible = true
-	squareIcon.Visible = false
-	isHidden = false
+        -- 显示主UI，隐藏正方形图标
+        mainFrame.Visible = true
+        squareIcon.Visible = false
+        isHidden = false
 end)
 
 -- 添加悬停效果
 local function addHoverEffect(button)
-	button.MouseEnter:Connect(function()
-		button.BackgroundTransparency = 0.1
-	end)
-	
-	button.MouseLeave:Connect(function()
-		button.BackgroundTransparency = 0
-	end)
+        button.MouseEnter:Connect(function()
+                button.BackgroundTransparency = 0.1
+        end)
+
+        button.MouseLeave:Connect(function()
+                button.BackgroundTransparency = 0
+        end)
 end
 
 addHoverEffect(hideButton)
@@ -588,14 +614,14 @@ local function createFunctionButton(name, text, color)
     button.Font = Enum.Font.Gotham
     button.LayoutOrder = #scrollFrame:GetChildren()
     button.Parent = scrollFrame
-    
+
     local buttonCorner = Instance.new("UICorner")
     buttonCorner.CornerRadius = UDim.new(0, 8)
     buttonCorner.Parent = button
-    
+
     -- 添加悬停效果
     addHoverEffect(button)
-    
+
     return button
 end
 
@@ -608,7 +634,7 @@ flyButton.MouseButton1Click:Connect(function()
     local success, result = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/666-/main/%E5%8F%AA%E8%83%BD%E8%87%AA%E5%B7%B1%E6%90%9E%E4%B8%80%E4%B8%AA%E4%BA%86"))()
     end)
-    
+
     if success then
         flyButton.Text = "飞行已加载"
         flyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
@@ -633,7 +659,7 @@ local function toggleNoclip()
             noclipConnection:Disconnect()
             noclipConnection = nil
         end
-        
+
         -- 恢复碰撞
         local character = player.Character
         if character then
@@ -643,7 +669,7 @@ local function toggleNoclip()
                 end
             end
         end
-        
+
         noclipEnabled = false
         noclipButton.Text = "穿墙模式"
         noclipButton.BackgroundColor3 = Color3.fromRGB(180, 70, 180)
@@ -652,14 +678,14 @@ local function toggleNoclip()
         noclipEnabled = true
         noclipButton.Text = "穿墙已启用"
         noclipButton.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
-        
+
         -- 穿墙逻辑
         noclipConnection = RunService.Stepped:Connect(function()
             if not noclipEnabled then
                 noclipConnection:Disconnect()
                 return
             end
-            
+
             local character = player.Character
             if character then
                 for _, part in pairs(character:GetChildren()) do
@@ -680,7 +706,7 @@ player.CharacterAdded:Connect(function(character)
     if noclipEnabled then
         -- 等待角色完全加载
         character:WaitForChild("Humanoid")
-        
+
         -- 重新应用穿墙效果
         for _, part in pairs(character:GetChildren()) do
             if part:IsA("BasePart") then
@@ -742,14 +768,31 @@ local lastWalkSpeed = 16
 player.CharacterAdded:Connect(function(character)
     -- 等待角色完全加载
     local humanoid = character:WaitForChild("Humanoid")
-    
+
     -- 重新应用移动速度
     humanoid.WalkSpeed = lastWalkSpeed
-    
+
     ShowNotification("角色重生，已重新应用移动速度设置", Color3.fromRGB(0, 200, 255))
+end)
+
+-- 创建夜视功能按钮
+local nightVisionButton = createFunctionButton("NightVisionButton", "夜视", Color3.fromRGB(255, 200, 50))
+
+-- 夜视按钮点击功能
+nightVisionButton.MouseButton1Click:Connect(function()
+    ToggleNightVision(not nightVisionEnabled)
+    
+    -- 更新按钮状态显示
+    if nightVisionEnabled then
+        nightVisionButton.Text = "夜视已开启"
+        nightVisionButton.BackgroundColor3 = Color3.fromRGB(200, 170, 30)
+    else
+        nightVisionButton.Text = "夜视"
+        nightVisionButton.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+    end
 end)
 
 -- 初始化坐标管理器
 InitCoordinateManager()
 
-print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理和移动速度调整功能")
+print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整和夜视功能")
