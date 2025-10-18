@@ -135,6 +135,10 @@ local ESPEnabled = false
 local ESPConnections = {}
 local ESPHighlights = {}
 
+-- 走路创人功能变量
+local ThrowEnabled = false
+local ThrowScript
+
 -- 夜视功能变量
 local nightVisionEnabled = false
 local originalAmbient
@@ -171,9 +175,9 @@ local function CreateESP(player)
     -- 创建高亮效果
     local highlight = Instance.new("Highlight")
     highlight.Name = "ESP_Highlight"
-    highlight.FillColor = Color3.fromRGB(255, 255, 255)  -- 白色填充
-    highlight.FillTransparency = 0.7  -- 半透明
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)  -- 白色轮廓
+    highlight.FillColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.7
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
     highlight.OutlineTransparency = 0.3
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = character
@@ -182,16 +186,13 @@ local function CreateESP(player)
     
     -- 监听角色变化
     local characterAddedConnection = player.CharacterAdded:Connect(function(newChar)
-        -- 移除旧的高亮
         if ESPHighlights[player] then
             ESPHighlights[player]:Destroy()
             ESPHighlights[player] = nil
         end
         
-        -- 等待角色加载完成
         task.wait(1)
         
-        -- 创建新的高亮
         if ESPEnabled and newChar then
             local newHighlight = Instance.new("Highlight")
             newHighlight.Name = "ESP_Highlight"
@@ -237,17 +238,14 @@ local function EnableESP()
     
     ESPEnabled = true
     
-    -- 为所有现有玩家创建ESP
     for _, player in pairs(Players:GetPlayers()) do
         CreateESP(player)
     end
     
-    -- 监听新玩家加入
     local playerAddedConnection = Players.PlayerAdded:Connect(function(player)
         CreateESP(player)
     end)
     
-    -- 监听玩家离开
     local playerRemovingConnection = Players.PlayerRemoving:Connect(function(player)
         RemoveESP(player)
     end)
@@ -265,14 +263,12 @@ local function DisableESP()
     
     ESPEnabled = false
     
-    -- 断开全局连接
     if ESPConnections["Global"] then
         ESPConnections["Global"].playerAdded:Disconnect()
         ESPConnections["Global"].playerRemoving:Disconnect()
         ESPConnections["Global"] = nil
     end
     
-    -- 移除所有玩家的ESP
     for _, player in pairs(Players:GetPlayers()) do
         RemoveESP(player)
     end
@@ -287,6 +283,29 @@ local function ToggleESP()
     else
         EnableESP()
         return true
+    end
+end
+
+-- 走路创人功能
+local function ToggleThrow(value)
+    if value then
+        -- 加载走路创人脚本
+        local success, result = pcall(function()
+            ThrowScript = loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Throw/main/Throw"))()
+        end)
+
+        if success then
+            ThrowEnabled = true
+            ShowNotification("走路创人功能已开启", Color3.fromRGB(0, 255, 100))
+        else
+            ThrowEnabled = false
+            ShowNotification("走路创人功能加载失败", Color3.fromRGB(255, 50, 50))
+            warn("走路创人脚本加载错误: " .. tostring(result))
+        end
+    else
+        -- 这里假设外部脚本有自己的关闭机制
+        ThrowEnabled = false
+        ShowNotification("走路创人功能已关闭", Color3.fromRGB(255, 100, 0))
     end
 end
 
@@ -351,14 +370,11 @@ end
 -- 夜视功能
 local function ToggleNightVision(value)
     if value then
-        -- 保存原始环境光设置
         originalAmbient = Lighting.Ambient
-        -- 设置夜视效果
         Lighting.Ambient = Color3.new(1, 1, 1)
         nightVisionEnabled = true
         ShowNotification("夜视已开启", Color3.fromRGB(255, 255, 0))
     else
-        -- 恢复原始环境光设置
         if originalAmbient then
             Lighting.Ambient = originalAmbient
         else
@@ -372,10 +388,8 @@ end
 -- 无限跳功能
 local function ToggleInfiniteJump(value)
     if value then
-        -- 开启无限跳
         infiniteJumpEnabled = true
 
-        -- 连接跳跃事件
         jumpConnection = UserInputService.JumpRequest:Connect(function()
             local character = player.Character
             if character then
@@ -388,10 +402,8 @@ local function ToggleInfiniteJump(value)
 
         ShowNotification("无限跳已开启", Color3.fromRGB(0, 255, 100))
     else
-        -- 关闭无限跳
         infiniteJumpEnabled = false
 
-        -- 断开连接
         if jumpConnection then
             jumpConnection:Disconnect()
             jumpConnection = nil
@@ -404,7 +416,6 @@ end
 -- 防止摔落伤害功能
 local function ToggleAntiFall(value)
     if value then
-        -- 加载防止摔落伤害脚本
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Fall-injury/main/%E9%98%B2%E6%AD%A2%E6%91%94%E8%90%BD%E4%BC%A4%E5%AE%B3"))()
         end)
@@ -418,8 +429,6 @@ local function ToggleAntiFall(value)
             warn("防止摔落伤害脚本加载错误: " .. tostring(result))
         end
     else
-        -- 这里假设外部脚本有自己的关闭机制
-        -- 如果没有，我们可能需要手动断开连接
         antiFallEnabled = false
         ShowNotification("防止摔落伤害已关闭", Color3.fromRGB(255, 100, 0))
     end
@@ -428,7 +437,6 @@ end
 -- 全局物体漂浮功能
 local function ToggleGlobalFloat(value)
     if value then
-        -- 加载全局物体漂浮脚本
         local success, result = pcall(function()
             floatScript = loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/%E5%85%A8%E5%B1%80%E7%89%A9%E4%BD%93%E6%BC%82%E6%B5%AE%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%89%88"))()
         end)
@@ -442,7 +450,6 @@ local function ToggleGlobalFloat(value)
             warn("全局物体漂浮脚本加载错误: " .. tostring(result))
         end
     else
-        -- 这里假设外部脚本有自己的关闭机制
         globalFloatEnabled = false
         ShowNotification("全局物体漂浮已关闭", Color3.fromRGB(255, 100, 0))
     end
@@ -451,7 +458,6 @@ end
 -- 单一物体飞行功能
 local function ToggleSingleFloat(value)
     if value then
-        -- 加载单一物体飞行脚本
         local success, result = pcall(function()
             singleFloatScript = loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/%E5%8D%95%E4%B8%80%E7%89%A9%E4%BD%93%E9%A3%9E%E8%A1%8C%E8%BD%BD%E8%87%AA%E5%B7%B1%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%89%88"))()
         end)
@@ -465,7 +471,6 @@ local function ToggleSingleFloat(value)
             warn("单一物体飞行脚本加载错误: " .. tostring(result))
         end
     else
-        -- 这里假设外部脚本有自己的关闭机制
         singleFloatEnabled = false
         ShowNotification("单一物体飞行已关闭", Color3.fromRGB(255, 100, 0))
     end
@@ -823,7 +828,6 @@ setupTitleBarDrag(squareIcon, squareIcon)
 -- 隐藏/显示功能
 hideButton.MouseButton1Click:Connect(function()
         if not isHidden then
-                -- 隐藏主UI，显示正方形图标
                 mainFrame.Visible = false
                 squareIcon.Visible = true
                 isHidden = true
@@ -832,7 +836,6 @@ end)
 
 -- 正方形图标点击功能
 squareIcon.MouseButton1Click:Connect(function()
-        -- 显示主UI，隐藏正方形图标
         mainFrame.Visible = true
         squareIcon.Visible = false
         isHidden = false
@@ -871,7 +874,6 @@ local function createFunctionButton(name, text, color)
     buttonCorner.CornerRadius = UDim.new(0, 8)
     buttonCorner.Parent = button
 
-    -- 添加悬停效果
     addHoverEffect(button)
 
     return button
@@ -884,7 +886,6 @@ local espButton = createFunctionButton("ESPButton", "ESP透视", Color3.fromRGB(
 espButton.MouseButton1Click:Connect(function()
     local newState = ToggleESP()
     
-    -- 更新按钮状态显示
     if newState then
         espButton.Text = "ESP透视已开启"
         espButton.BackgroundColor3 = Color3.fromRGB(180, 80, 180)
@@ -894,12 +895,27 @@ espButton.MouseButton1Click:Connect(function()
     end
 end)
 
+-- 创建走路创人功能按钮
+local throwButton = createFunctionButton("ThrowButton", "走路创人", Color3.fromRGB(150, 70, 180))
+
+-- 走路创人按钮点击功能
+throwButton.MouseButton1Click:Connect(function()
+    ToggleThrow(not ThrowEnabled)
+
+    if ThrowEnabled then
+        throwButton.Text = "走路创人已开启"
+        throwButton.BackgroundColor3 = Color3.fromRGB(130, 50, 160)
+    else
+        throwButton.Text = "走路创人"
+        throwButton.BackgroundColor3 = Color3.fromRGB(150, 70, 180)
+    end
+end)
+
 -- 创建飞行功能按钮
 local flyButton = createFunctionButton("FlyButton", "加载飞行功能", Color3.fromRGB(70, 180, 70))
 
 -- 飞行按钮点击功能
 flyButton.MouseButton1Click:Connect(function()
-    -- 加载外部飞行脚本
     local success, result = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/666-/main/%E5%8F%AA%E8%83%BD%E8%87%AA%E5%B7%B1%E6%90%9E%E4%B8%80%E4%B8%AA%E4%BA%86"))()
     end)
@@ -926,13 +942,11 @@ local noclipButton = createFunctionButton("NoclipButton", "穿墙模式", Color3
 -- 穿墙功能实现
 local function toggleNoclip()
     if noclipEnabled then
-        -- 关闭穿墙
         if noclipConnection then
             noclipConnection:Disconnect()
             noclipConnection = nil
         end
 
-        -- 恢复碰撞
         local character = player.Character
         if character then
             for _, part in pairs(character:GetChildren()) do
@@ -947,12 +961,10 @@ local function toggleNoclip()
         noclipButton.BackgroundColor3 = Color3.fromRGB(180, 70, 180)
         ShowNotification("穿墙模式已关闭", Color3.fromRGB(255, 100, 0))
     else
-        -- 开启穿墙
         noclipEnabled = true
         noclipButton.Text = "穿墙已启用"
         noclipButton.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
 
-        -- 穿墙逻辑
         noclipConnection = RunService.Stepped:Connect(function()
             if not noclipEnabled then
                 noclipConnection:Disconnect()
@@ -979,10 +991,8 @@ noclipButton.MouseButton1Click:Connect(toggleNoclip)
 -- 角色重生时重置穿墙状态
 player.CharacterAdded:Connect(function(character)
     if noclipEnabled then
-        -- 等待角色完全加载
         character:WaitForChild("Humanoid")
 
-        -- 重新应用穿墙效果
         for _, part in pairs(character:GetChildren()) do
             if part:IsA("BasePart") then
                 part.CanCollide = false
@@ -1043,12 +1053,8 @@ end)
 local lastWalkSpeed = 16
 
 player.CharacterAdded:Connect(function(character)
-    -- 等待角色完全加载
     local humanoid = character:WaitForChild("Humanoid")
-
-    -- 重新应用移动速度
     humanoid.WalkSpeed = lastWalkSpeed
-
     ShowNotification("角色重生，已重新应用移动速度设置", Color3.fromRGB(0, 200, 255))
 end)
 
@@ -1059,7 +1065,6 @@ local nightVisionButton = createFunctionButton("NightVisionButton", "夜视", Co
 nightVisionButton.MouseButton1Click:Connect(function()
     ToggleNightVision(not nightVisionEnabled)
 
-    -- 更新按钮状态显示
     if nightVisionEnabled then
         nightVisionButton.Text = "夜视已开启"
         nightVisionButton.BackgroundColor3 = Color3.fromRGB(200, 170, 30)
@@ -1076,7 +1081,6 @@ local infiniteJumpButton = createFunctionButton("InfiniteJumpButton", "无限跳
 infiniteJumpButton.MouseButton1Click:Connect(function()
     ToggleInfiniteJump(not infiniteJumpEnabled)
 
-    -- 更新按钮状态显示
     if infiniteJumpEnabled then
         infiniteJumpButton.Text = "无限跳已开启"
         infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
@@ -1093,7 +1097,6 @@ local antiFallButton = createFunctionButton("AntiFallButton", "防止摔落伤�
 antiFallButton.MouseButton1Click:Connect(function()
     ToggleAntiFall(not antiFallEnabled)
 
-    -- 更新按钮状态显示
     if antiFallEnabled then
         antiFallButton.Text = "防摔已开启"
         antiFallButton.BackgroundColor3 = Color3.fromRGB(180, 80, 30)
@@ -1110,7 +1113,6 @@ local globalFloatButton = createFunctionButton("GlobalFloatButton", "全局未�
 globalFloatButton.MouseButton1Click:Connect(function()
     ToggleGlobalFloat(not globalFloatEnabled)
 
-    -- 更新按钮状态显示
     if globalFloatEnabled then
         globalFloatButton.Text = "全局未固定物体控制已开启"
         globalFloatButton.BackgroundColor3 = Color3.fromRGB(80, 130, 180)
@@ -1127,7 +1129,6 @@ local singleFloatButton = createFunctionButton("SingleFloatButton", "单一未�
 singleFloatButton.MouseButton1Click:Connect(function()
     ToggleSingleFloat(not singleFloatEnabled)
 
-    -- 更新按钮状态显示
     if singleFloatEnabled then
         singleFloatButton.Text = "单一未固定物体控制已开启"
         singleFloatButton.BackgroundColor3 = Color3.fromRGB(130, 80, 180)
@@ -1140,10 +1141,8 @@ end)
 -- 角色重生时重新连接无限跳
 player.CharacterAdded:Connect(function(character)
     if infiniteJumpEnabled then
-        -- 等待角色完全加载
         character:WaitForChild("Humanoid")
 
-        -- 重新连接无限跳
         if jumpConnection then
             jumpConnection:Disconnect()
         end
@@ -1174,4 +1173,4 @@ game:GetService("CoreGui").ChildRemoved:Connect(function(child)
     end
 end)
 
-print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、单一未固定物体控制和ESP透视功能")
+print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、单一未固定物体控制、ESP透视和走路创人功能")
