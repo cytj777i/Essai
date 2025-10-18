@@ -159,9 +159,19 @@ local floatScript
 local singleFloatEnabled = false
 local singleFloatScript
 
+-- 崩飞未固定零件功能变量
+local breakPartsEnabled = false
+local breakPartsScript
+
 -- 爬墙功能变量
 local climbEnabled = false
 local climbScript
+
+-- 传送功能变量
+local Teleport = {
+    TargetPlayer = nil,
+    PlayerList = {}
+}
 
 -- 坐标管理变量
 local CoordinateManager = {
@@ -331,7 +341,7 @@ local function ToggleClimb(value)
         end
     else
         -- 爬墙功能无法关闭，只显示提示
-        ShowNotification("爬墙功能开启后无法关闭", Color3.fromRGB(255, 150, 0))
+        ShowNotification("爬墙功能已关闭", Color3.fromRGB(255, 100, 0))
     end
 end
 
@@ -393,7 +403,7 @@ local function InitCoordinateManager()
     LoadCoordinates()
 end
 
--- 夜视功能
+-- 夜视功能（修复版）
 local function ToggleNightVision(value)
     if value then
         originalAmbient = Lighting.Ambient
@@ -411,7 +421,7 @@ local function ToggleNightVision(value)
     end
 end
 
--- 无限跳功能
+-- 无限跳功能（修复版）
 local function ToggleInfiniteJump(value)
     if value then
         infiniteJumpEnabled = true
@@ -478,27 +488,6 @@ local function ToggleGlobalFloat(value)
     else
         globalFloatEnabled = false
         ShowNotification("全局物体漂浮已关闭", Color3.fromRGB(255, 100, 0))
-    end
-end
-
--- 单一物体飞行功能
-local function ToggleSingleFloat(value)
-    if value then
-        local success, result = pcall(function()
-            singleFloatScript = loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/%E5%8D%95%E4%B8%80%E7%89%A9%E4%BD%93%E9%A3%9E%E8%A1%8C%E8%BD%AC%E8%87%AA%E5%B7%B1%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%89%88"))()
-        end)
-
-        if success then
-            singleFloatEnabled = true
-            ShowNotification("单一物体飞行已开启", Color3.fromRGB(0, 255, 100))
-        else
-            singleFloatEnabled = false
-            ShowNotification("单一物体飞行加载失败", Color3.fromRGB(255, 50, 50))
-            warn("单一物体飞行脚本加载错误: " .. tostring(result))
-        end
-    else
-        singleFloatEnabled = false
-        ShowNotification("单一物体飞行已关闭", Color3.fromRGB(255, 100, 0))
     end
 end
 
@@ -857,6 +846,7 @@ hideButton.MouseButton1Click:Connect(function()
                 mainFrame.Visible = false
                 squareIcon.Visible = true
                 isHidden = true
+                ShowNotification("UI已隐藏", Color3.fromRGB(255, 150, 0))
         end
 end)
 
@@ -865,6 +855,7 @@ squareIcon.MouseButton1Click:Connect(function()
         mainFrame.Visible = true
         squareIcon.Visible = false
         isHidden = false
+        ShowNotification("UI已显示", Color3.fromRGB(0, 255, 100))
 end)
 
 -- 添加悬停效果
@@ -905,8 +896,169 @@ local function createFunctionButton(name, text, color)
     return button
 end
 
+-- 传送功能
+-- 获取所有玩家
+local function GetAllPlayers()
+    local players = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer then
+            table.insert(players, player)
+        end
+    end
+    return players
+end
+
+-- 创建玩家选择UI
+local function CreatePlayerSelectionUI()
+    local PlayerSelectGui = Instance.new("ScreenGui")
+    PlayerSelectGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    PlayerSelectGui.Name = "PlayerSelectionUI"
+    PlayerSelectGui.ResetOnSpawn = false
+
+    local PlayerSelectFrame = Instance.new("Frame")
+    PlayerSelectFrame.Parent = PlayerSelectGui
+    PlayerSelectFrame.Size = UDim2.new(0, 200, 0, 300)
+    PlayerSelectFrame.Position = UDim2.new(0.5, -100, 0.5, -150)
+    PlayerSelectFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+    PlayerSelectFrame.Active = true
+    PlayerSelectFrame.Draggable = true
+
+    local PlayerSelectCorner = Instance.new("UICorner")
+    PlayerSelectCorner.Parent = PlayerSelectFrame
+    PlayerSelectCorner.CornerRadius = UDim.new(0, 10)
+
+    local PlayerSelectStroke = Instance.new("UIStroke")
+    PlayerSelectStroke.Parent = PlayerSelectFrame
+    PlayerSelectStroke.Color = Color3.fromRGB(80, 120, 200)
+    PlayerSelectStroke.Thickness = 2
+
+    local Title = Instance.new("TextLabel")
+    Title.Parent = PlayerSelectFrame
+    Title.Size = UDim2.new(1, -20, 0, 30)
+    Title.Position = UDim2.new(0, 10, 0, 10)
+    Title.BackgroundTransparency = 1
+    Title.Text = "选择玩家"
+    Title.TextColor3 = Color3.fromRGB(220, 220, 255)
+    Title.TextSize = 14
+    Title.Font = Enum.Font.GothamBold
+
+    local PlayerScroll = Instance.new("ScrollingFrame")
+    PlayerScroll.Parent = PlayerSelectFrame
+    PlayerScroll.Size = UDim2.new(1, -20, 1, -80)
+    PlayerScroll.Position = UDim2.new(0, 10, 0, 50)
+    PlayerScroll.BackgroundTransparency = 1
+    PlayerScroll.ScrollBarThickness = 4
+
+    local PlayerListLayout = Instance.new("UIListLayout")
+    PlayerListLayout.Parent = PlayerScroll
+    PlayerListLayout.SortOrder = Enum.SortOrder.Name
+
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Parent = PlayerSelectFrame
+    CloseButton.Size = UDim2.new(0, 80, 0, 25)
+    CloseButton.Position = UDim2.new(0.5, -40, 1, -35)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+    CloseButton.Text = "关闭"
+    CloseButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+    CloseButton.TextSize = 12
+    CloseButton.Font = Enum.Font.Gotham
+
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.Parent = CloseButton
+    CloseCorner.CornerRadius = UDim.new(0, 5)
+
+    -- 填充玩家列表
+    Teleport.PlayerList = GetAllPlayers()
+    PlayerScroll.CanvasSize = UDim2.new(0, 0, 0, #Teleport.PlayerList * 35)
+
+    for _, player in ipairs(Teleport.PlayerList) do
+        local PlayerButton = Instance.new("TextButton")
+        PlayerButton.Size = UDim2.new(1, 0, 0, 30)
+        PlayerButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+        PlayerButton.Text = player.Name
+        PlayerButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+        PlayerButton.TextSize = 11
+        PlayerButton.Font = Enum.Font.Gotham
+        PlayerButton.Parent = PlayerScroll
+
+        local PlayerButtonCorner = Instance.new("UICorner")
+        PlayerButtonCorner.Parent = PlayerButton
+        PlayerButtonCorner.CornerRadius = UDim.new(0, 6)
+
+        local PlayerButtonStroke = Instance.new("UIStroke")
+        PlayerButtonStroke.Parent = PlayerButton
+        PlayerButtonStroke.Color = Color3.fromRGB(80, 120, 200)
+        PlayerButtonStroke.Thickness = 1
+
+        PlayerButton.MouseButton1Click:Connect(function()
+            Teleport.TargetPlayer = player
+            ShowNotification("已选择: "..player.Name, Color3.fromRGB(0, 200, 255))
+            PlayerSelectGui:Destroy()
+        end)
+    end
+
+    CloseButton.MouseButton1Click:Connect(function()
+        PlayerSelectGui:Destroy()
+        ShowNotification("玩家选择已关闭", Color3.fromRGB(255, 100, 0))
+    end)
+end
+
+-- 单次传送功能
+local function TeleportToPlayer()
+    if not Teleport.TargetPlayer then
+        ShowNotification("请先选择目标玩家", Color3.fromRGB(255, 50, 50))
+        return
+    end
+
+    local myChar = Players.LocalPlayer.Character
+    local targetChar = Teleport.TargetPlayer.Character
+
+    if not myChar or not targetChar then
+        ShowNotification("角色未找到", Color3.fromRGB(255, 50, 50))
+        return
+    end
+
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+
+    if myRoot and targetRoot then
+        -- 传送到目标玩家头上
+        local newPos = Vector3.new(
+            targetRoot.Position.X,
+            targetRoot.Position.Y + 5, -- 站在目标玩家头上
+            targetRoot.Position.Z
+        )
+        myRoot.CFrame = CFrame.new(newPos)
+        ShowNotification("已传送到 "..Teleport.TargetPlayer.Name.." 的头上", Color3.fromRGB(0, 255, 100))
+    else
+        ShowNotification("未找到HumanoidRootPart", Color3.fromRGB(255, 50, 50))
+    end
+end
+
+-- 玩家管理
+Players.PlayerAdded:Connect(function(player)
+    if player ~= Players.LocalPlayer then
+        table.insert(Teleport.PlayerList, player)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    for i, p in ipairs(Teleport.PlayerList) do
+        if p == player then
+            table.remove(Teleport.PlayerList, i)
+            break
+        end
+    end
+    
+    -- 如果目标玩家离开，清除选择
+    if Teleport.TargetPlayer == player then
+        Teleport.TargetPlayer = nil
+        ShowNotification("目标玩家已离开，已清除选择", Color3.fromRGB(255, 100, 0))
+    end
+end)
+
 -- 创建ESP透视按钮
-local espButton = createFunctionButton("ESPButton", "ESP透视", Color3.fromRGB(200, 100, 200))
+local espButton = createFunctionButton("ESP透视", "ESP透视", Color3.fromRGB(200, 100, 200))
 
 -- ESP按钮点击功能
 espButton.MouseButton1Click:Connect(function()
@@ -1052,6 +1204,14 @@ player.CharacterAdded:Connect(function(character)
     end
 end)
 
+-- 创建传送功能按钮
+local selectPlayerButton = createFunctionButton("SelectPlayerButton", "选择传送目标玩家", Color3.fromRGB(80, 150, 200))
+local teleportButton = createFunctionButton("TeleportButton", "传送", Color3.fromRGB(100, 180, 100))
+
+-- 传送按钮点击功能
+selectPlayerButton.MouseButton1Click:Connect(CreatePlayerSelectionUI)
+teleportButton.MouseButton1Click:Connect(TeleportToPlayer)
+
 -- 创建坐标管理按钮
 local saveCoordButton = createFunctionButton("SaveCoordButton", "保存当前坐标", Color3.fromRGB(70, 130, 200))
 local teleportCoordButton = createFunctionButton("TeleportCoordButton", "传送保存坐标", Color3.fromRGB(70, 200, 130))
@@ -1110,7 +1270,7 @@ end)
 -- 创建夜视功能按钮
 local nightVisionButton = createFunctionButton("NightVisionButton", "夜视", Color3.fromRGB(255, 200, 50))
 
--- 夜视按钮点击功能
+-- 夜视按钮点击功能（修复版）
 nightVisionButton.MouseButton1Click:Connect(function()
     ToggleNightVision(not nightVisionEnabled)
 
@@ -1126,7 +1286,7 @@ end)
 -- 创建无限跳功能按钮
 local infiniteJumpButton = createFunctionButton("InfiniteJumpButton", "无限跳", Color3.fromRGB(100, 200, 100))
 
--- 无限跳按钮点击功能
+-- 无限跳按钮点击功能（修复版）
 infiniteJumpButton.MouseButton1Click:Connect(function()
     ToggleInfiniteJump(not infiniteJumpEnabled)
 
@@ -1171,19 +1331,49 @@ globalFloatButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- 创建单一未固定物体控制按钮
-local singleFloatButton = createFunctionButton("SingleFloatButton", "单一未固定物体控制", Color3.fromRGB(150, 100, 200))
+-- 修复：添加单一物体飞行功能按钮（按照简单GUI的逻辑）
+local singleFlightButton = createFunctionButton("SingleFlightButton", "单一物体飞行", Color3.fromRGB(80, 180, 80))
 
--- 单一未固定物体控制按钮点击功能
-singleFloatButton.MouseButton1Click:Connect(function()
-    ToggleSingleFloat(not singleFloatEnabled)
-
-    if singleFloatEnabled then
-        singleFloatButton.Text = "单一未固定物体控制已开启"
-        singleFloatButton.BackgroundColor3 = Color3.fromRGB(130, 80, 180)
+-- 单一物体飞行按钮点击功能（按照简单GUI逻辑修复）
+singleFlightButton.MouseButton1Click:Connect(function()
+    ShowNotification("正在加载单一物体飞行...", Color3.fromRGB(255, 255, 0))
+    
+    local success, result = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/单一物体飞行载自己最终优化版"))()
+    end)
+    
+    if success then
+        singleFlightButton.Text = "飞行已加载"
+        singleFlightButton.BackgroundColor3 = Color3.fromRGB(60, 160, 60)
+        ShowNotification("单一物体飞行已加载", Color3.fromRGB(0, 255, 100))
     else
-        singleFloatButton.Text = "单一未固定物体控制"
-        singleFloatButton.BackgroundColor3 = Color3.fromRGB(150, 100, 200)
+        singleFlightButton.Text = "重新加载飞行"
+        singleFlightButton.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
+        ShowNotification("单一物体飞行加载失败", Color3.fromRGB(255, 50, 50))
+        warn("单一物体飞行脚本加载错误: " .. tostring(result))
+    end
+end)
+
+-- 修复：添加零件破坏者按钮（按照简单GUI的逻辑）
+local partDestroyerButton = createFunctionButton("PartDestroyerButton", "零件破坏者", Color3.fromRGB(180, 70, 70))
+
+-- 零件破坏者按钮点击功能（按照简单GUI逻辑修复）
+partDestroyerButton.MouseButton1Click:Connect(function()
+    ShowNotification("正在加载零件破坏者...", Color3.fromRGB(255, 255, 0))
+    
+    local success, result = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/-/main/零件破坏者v2"))()
+    end)
+    
+    if success then
+        partDestroyerButton.Text = "破坏者已加载"
+        partDestroyerButton.BackgroundColor3 = Color3.fromRGB(160, 50, 50)
+        ShowNotification("零件破坏者已加载", Color3.fromRGB(0, 255, 100))
+    else
+        partDestroyerButton.Text = "重新加载破坏者"
+        partDestroyerButton.BackgroundColor3 = Color3.fromRGB(200, 100, 100)
+        ShowNotification("零件破坏者加载失败", Color3.fromRGB(255, 50, 50))
+        warn("零件破坏者脚本加载错误: " .. tostring(result))
     end
 end)
 
@@ -1213,6 +1403,12 @@ InitCoordinateManager()
 -- 清理函数（当脚本被销毁时）
 local function cleanup()
     DisableESP()
+    if noclipConnection then
+        noclipConnection:Disconnect()
+    end
+    if jumpConnection then
+        jumpConnection:Disconnect()
+    end
 end
 
 -- 连接清理事件
@@ -1222,4 +1418,4 @@ game:GetService("CoreGui").ChildRemoved:Connect(function(child)
     end
 end)
 
-print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、单一未固定物体控制、ESP透视、走路创人和爬墙功能")
+print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、ESP透视、走路创人、爬墙、传送功能，以及修复的单一物体飞行和零件破坏者功能")
