@@ -159,6 +159,10 @@ local floatScript
 local singleFloatEnabled = false
 local singleFloatScript
 
+-- 爬墙功能变量
+local climbEnabled = false
+local climbScript
+
 -- 坐标管理变量
 local CoordinateManager = {
     SavedCoordinates = {},
@@ -168,10 +172,10 @@ local CoordinateManager = {
 -- ESP透视功能
 local function CreateESP(player)
     if player == Players.LocalPlayer then return end
-    
+
     local character = player.Character
     if not character then return end
-    
+
     -- 创建高亮效果
     local highlight = Instance.new("Highlight")
     highlight.Name = "ESP_Highlight"
@@ -181,18 +185,18 @@ local function CreateESP(player)
     highlight.OutlineTransparency = 0.3
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = character
-    
+
     ESPHighlights[player] = highlight
-    
+
     -- 监听角色变化
     local characterAddedConnection = player.CharacterAdded:Connect(function(newChar)
         if ESPHighlights[player] then
             ESPHighlights[player]:Destroy()
             ESPHighlights[player] = nil
         end
-        
+
         task.wait(1)
-        
+
         if ESPEnabled and newChar then
             local newHighlight = Instance.new("Highlight")
             newHighlight.Name = "ESP_Highlight"
@@ -202,18 +206,18 @@ local function CreateESP(player)
             newHighlight.OutlineTransparency = 0.3
             newHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
             newHighlight.Parent = newChar
-            
+
             ESPHighlights[player] = newHighlight
         end
     end)
-    
+
     local characterRemovingConnection = player.CharacterRemoving:Connect(function()
         if ESPHighlights[player] then
             ESPHighlights[player]:Destroy()
             ESPHighlights[player] = nil
         end
     end)
-    
+
     ESPConnections[player] = {
         characterAdded = characterAddedConnection,
         characterRemoving = characterRemovingConnection
@@ -226,7 +230,7 @@ local function RemoveESP(player)
         ESPConnections[player].characterRemoving:Disconnect()
         ESPConnections[player] = nil
     end
-    
+
     if ESPHighlights[player] then
         ESPHighlights[player]:Destroy()
         ESPHighlights[player] = nil
@@ -235,44 +239,44 @@ end
 
 local function EnableESP()
     if ESPEnabled then return end
-    
+
     ESPEnabled = true
-    
+
     for _, player in pairs(Players:GetPlayers()) do
         CreateESP(player)
     end
-    
+
     local playerAddedConnection = Players.PlayerAdded:Connect(function(player)
         CreateESP(player)
     end)
-    
+
     local playerRemovingConnection = Players.PlayerRemoving:Connect(function(player)
         RemoveESP(player)
     end)
-    
+
     ESPConnections["Global"] = {
         playerAdded = playerAddedConnection,
         playerRemoving = playerRemovingConnection
     }
-    
+
     ShowNotification("ESP透视已开启", Color3.fromRGB(0, 255, 100))
 end
 
 local function DisableESP()
     if not ESPEnabled then return end
-    
+
     ESPEnabled = false
-    
+
     if ESPConnections["Global"] then
         ESPConnections["Global"].playerAdded:Disconnect()
         ESPConnections["Global"].playerRemoving:Disconnect()
         ESPConnections["Global"] = nil
     end
-    
+
     for _, player in pairs(Players:GetPlayers()) do
         RemoveESP(player)
     end
-    
+
     ShowNotification("ESP透视已关闭", Color3.fromRGB(255, 100, 0))
 end
 
@@ -306,6 +310,28 @@ local function ToggleThrow(value)
         -- 这里假设外部脚本有自己的关闭机制
         ThrowEnabled = false
         ShowNotification("走路创人功能已关闭", Color3.fromRGB(255, 100, 0))
+    end
+end
+
+-- 爬墙功能
+local function ToggleClimb(value)
+    if value then
+        -- 加载爬墙脚本
+        local success, result = pcall(function()
+            climbScript = loadstring(game:HttpGet("https://pastebin.com/raw/zXk4Rq2r"))()
+        end)
+
+        if success then
+            climbEnabled = true
+            ShowNotification("爬墙功能已开启（无法关闭）", Color3.fromRGB(0, 255, 100))
+        else
+            climbEnabled = false
+            ShowNotification("爬墙功能加载失败", Color3.fromRGB(255, 50, 50))
+            warn("爬墙脚本加载错误: " .. tostring(result))
+        end
+    else
+        -- 爬墙功能无法关闭，只显示提示
+        ShowNotification("爬墙功能开启后无法关闭", Color3.fromRGB(255, 150, 0))
     end
 end
 
@@ -459,7 +485,7 @@ end
 local function ToggleSingleFloat(value)
     if value then
         local success, result = pcall(function()
-            singleFloatScript = loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/%E5%8D%95%E4%B8%80%E7%89%A9%E4%BD%93%E9%A3%9E%E8%A1%8C%E8%BD%BD%E8%87%AA%E5%B7%B1%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%89%88"))()
+            singleFloatScript = loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/%E5%8D%95%E4%B8%80%E7%89%A9%E4%BD%93%E9%A3%9E%E8%A1%8C%E8%BD%AC%E8%87%AA%E5%B7%B1%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%89%88"))()
         end)
 
         if success then
@@ -885,7 +911,7 @@ local espButton = createFunctionButton("ESPButton", "ESP透视", Color3.fromRGB(
 -- ESP按钮点击功能
 espButton.MouseButton1Click:Connect(function()
     local newState = ToggleESP()
-    
+
     if newState then
         espButton.Text = "ESP透视已开启"
         espButton.BackgroundColor3 = Color3.fromRGB(180, 80, 180)
@@ -908,6 +934,29 @@ throwButton.MouseButton1Click:Connect(function()
     else
         throwButton.Text = "走路创人"
         throwButton.BackgroundColor3 = Color3.fromRGB(150, 70, 180)
+    end
+end)
+
+-- 创建爬墙功能按钮
+local climbButton = createFunctionButton("ClimbButton", "爬墙", Color3.fromRGB(180, 100, 50))
+
+-- 爬墙按钮点击功能
+climbButton.MouseButton1Click:Connect(function()
+    if not climbEnabled then
+        ToggleClimb(true)
+        
+        if climbEnabled then
+            climbButton.Text = "爬墙已开启"
+            climbButton.BackgroundColor3 = Color3.fromRGB(160, 80, 30)
+            -- 禁用按钮，因为爬墙功能无法关闭
+            climbButton.AutoButtonColor = false
+            climbButton.Active = false
+        else
+            climbButton.Text = "爬墙加载失败"
+            climbButton.BackgroundColor3 = Color3.fromRGB(120, 60, 30)
+        end
+    else
+        ShowNotification("爬墙功能已开启，无法关闭", Color3.fromRGB(255, 150, 0))
     end
 end)
 
@@ -1173,4 +1222,4 @@ game:GetService("CoreGui").ChildRemoved:Connect(function(child)
     end
 end)
 
-print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、单一未固定物体控制、ESP透视和走路创人功能")
+print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、单一未固定物体控制、ESP透视、走路创人和爬墙功能")
