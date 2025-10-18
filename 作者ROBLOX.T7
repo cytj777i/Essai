@@ -189,6 +189,9 @@ local invisibleScript
 local egorEnabled = false
 local egorScript
 
+local throwFlyEnabled = false
+local throwFlyScript
+
 -- ESP透视功能
 local function CreateESP(player)
     if player == Players.LocalPlayer then return end
@@ -561,6 +564,27 @@ local function ToggleEgor(value)
     else
         egorEnabled = false
         ShowNotification("Egor功能已关闭", Color3.fromRGB(255, 100, 0))
+    end
+end
+
+-- 甩飞功能
+local function ToggleThrowFly(value)
+    if value then
+        local success, result = pcall(function()
+            throwFlyScript = loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/hknvh/main/%E7%94%A9%E9%A3%9E.txt"))()
+        end)
+
+        if success then
+            throwFlyEnabled = true
+            ShowNotification("甩飞功能已开启", Color3.fromRGB(0, 255, 100))
+        else
+            throwFlyEnabled = false
+            ShowNotification("甩飞功能加载失败", Color3.fromRGB(255, 50, 50))
+            warn("甩飞脚本加载错误: " .. tostring(result))
+        end
+    else
+        throwFlyEnabled = false
+        ShowNotification("甩飞功能已关闭", Color3.fromRGB(255, 100, 0))
     end
 end
 
@@ -1498,6 +1522,22 @@ egorButton.MouseButton1Click:Connect(function()
     end
 end)
 
+-- 创建甩飞功能按钮
+local throwFlyButton = createFunctionButton("ThrowFlyButton", "甩飞", Color3.fromRGB(180, 100, 180))
+
+-- 甩飞按钮点击功能
+throwFlyButton.MouseButton1Click:Connect(function()
+    ToggleThrowFly(not throwFlyEnabled)
+
+    if throwFlyEnabled then
+        throwFlyButton.Text = "甩飞已开启"
+        throwFlyButton.BackgroundColor3 = Color3.fromRGB(160, 80, 160)
+    else
+        throwFlyButton.Text = "甩飞"
+        throwFlyButton.BackgroundColor3 = Color3.fromRGB(180, 100, 180)
+    end
+end)
+
 -- 角色重生时重新连接无限跳
 player.CharacterAdded:Connect(function(character)
     if infiniteJumpEnabled then
@@ -1539,4 +1579,4 @@ game:GetService("CoreGui").ChildRemoved:Connect(function(child)
     end
 end)
 
-print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、ESP透视、走路创人、爬墙、传送功能，以及修复的单一物体飞行和零件破坏者功能，还有新添加的踏空行走、隐身和Egor功能")
+print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、ESP透视、走路创人、爬墙、传送功能，以及修复的单一物体飞行和零件破坏者功能，还有新添加的踏空行走、隐身、Egor功能和甩飞功能")
