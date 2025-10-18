@@ -1,0 +1,292 @@
+-- 本地脚本：可拖动的UI界面
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 创建主ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DragUI"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = playerGui
+
+-- 创建主框架
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0.7, 0, 0.6, 0)
+mainFrame.Position = UDim2.new(0.15, 0, 0.2, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+mainFrame.BackgroundTransparency = 0.3
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Parent = screenGui
+
+-- 创建圆角效果
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 12)
+uiCorner.Parent = mainFrame
+
+-- 创建标题栏
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.Position = UDim2.new(0, 0, 0, 0)
+titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+titleBar.BackgroundTransparency = 0.2
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 12)
+titleCorner.Parent = titleBar
+
+-- 标题文字
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "TitleLabel"
+titleLabel.Size = UDim2.new(0.6, 0, 1, 0)
+titleLabel.Position = UDim2.new(0.2, 0, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "脚本作者ROBLOX.T7 合作人XTTT"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextScaled = true
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Parent = titleBar
+
+-- 隐藏按钮（右上角）
+local hideButton = Instance.new("TextButton")
+hideButton.Name = "HideButton"
+hideButton.Size = UDim2.new(0, 30, 0, 30)
+hideButton.Position = UDim2.new(1, -35, 0, 5)
+hideButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+hideButton.BorderSizePixel = 0
+hideButton.Text = "X"
+hideButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+hideButton.TextScaled = true
+hideButton.Font = Enum.Font.GothamBold
+hideButton.Parent = titleBar
+
+local hideButtonCorner = Instance.new("UICorner")
+hideButtonCorner.CornerRadius = UDim.new(0, 6)
+hideButtonCorner.Parent = hideButton
+
+-- 大小切换按钮 - 放在标题栏右侧
+local sizeButton = Instance.new("TextButton")
+sizeButton.Name = "SizeButton"
+sizeButton.Size = UDim2.new(0, 60, 0, 30)
+sizeButton.Position = UDim2.new(1, -105, 0, 5)
+sizeButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+sizeButton.BorderSizePixel = 0
+sizeButton.Text = "缩小"
+sizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+sizeButton.TextScaled = true
+sizeButton.Font = Enum.Font.Gotham
+sizeButton.Parent = titleBar
+
+local sizeButtonCorner = Instance.new("UICorner")
+sizeButtonCorner.CornerRadius = UDim.new(0, 6)
+sizeButtonCorner.Parent = sizeButton
+
+-- 内容区域 - 调整大小避免被按钮挡住
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "ContentFrame"
+contentFrame.Size = UDim2.new(1, -20, 1, -60)
+contentFrame.Position = UDim2.new(0, 10, 0, 50)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = mainFrame
+
+-- 创建按钮容器
+local buttonsFrame = Instance.new("Frame")
+buttonsFrame.Name = "ButtonsFrame"
+buttonsFrame.Size = UDim2.new(1, 0, 0.7, 0)
+buttonsFrame.Position = UDim2.new(0, 0, 0, 0)
+buttonsFrame.BackgroundTransparency = 1
+buttonsFrame.Parent = contentFrame
+
+-- 使用UIListLayout来排列按钮
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 10)
+listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+listLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Parent = buttonsFrame
+
+-- 内容文字
+local contentLabel = Instance.new("TextLabel")
+contentLabel.Name = "ContentLabel"
+contentLabel.Size = UDim2.new(1, 0, 0.3, 0)
+contentLabel.Position = UDim2.new(0, 0, 0.7, 0)
+contentLabel.BackgroundTransparency = 1
+contentLabel.Text = "功能区域 - 点击按钮使用相应功能"
+contentLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+contentLabel.TextScaled = true
+contentLabel.Font = Enum.Font.Gotham
+contentLabel.TextWrapped = true
+contentLabel.Parent = contentFrame
+
+-- 创建正方形图标（隐藏时显示）- 使用文字代替图片
+local squareIcon = Instance.new("TextButton")
+squareIcon.Name = "SquareIcon"
+squareIcon.Size = UDim2.new(0, 50, 0, 50) -- 更小的尺寸
+squareIcon.Position = UDim2.new(0, 10, 0, 10) -- 左上角位置
+squareIcon.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+squareIcon.BackgroundTransparency = 0.3
+squareIcon.BorderSizePixel = 0
+squareIcon.Text = "菜单"
+squareIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+squareIcon.TextScaled = true
+squareIcon.Font = Enum.Font.GothamBold
+squareIcon.Visible = false
+squareIcon.Active = true
+squareIcon.Parent = screenGui
+
+local squareCorner = Instance.new("UICorner")
+squareCorner.CornerRadius = UDim.new(0, 8) -- 更小的圆角
+squareCorner.Parent = squareIcon
+
+-- 状态变量
+local isMinimized = false
+local isHidden = false
+local originalSize = mainFrame.Size
+local minimizedSize = UDim2.new(0.4, 0, 0.4, 0)
+
+-- 自定义拖动功能
+local function setupEnhancedDrag(guiObject)
+	local dragging = false
+	local dragInput
+	local dragStart
+	local startPos
+	
+	guiObject.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = guiObject.Position
+			
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+	
+	guiObject.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+		end
+	end)
+	
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input == dragInput then
+			local delta = input.Position - dragStart
+			guiObject.Position = UDim2.new(
+				startPos.X.Scale, 
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale, 
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+end
+
+-- 应用增强拖动功能
+setupEnhancedDrag(mainFrame)
+setupEnhancedDrag(squareIcon)
+
+-- 大小切换按钮功能
+sizeButton.MouseButton1Click:Connect(function()
+	if isMinimized then
+		-- 恢复到原始大小
+		mainFrame.Size = originalSize
+		sizeButton.Text = "缩小"
+		isMinimized = false
+	else
+		-- 缩小
+		mainFrame.Size = minimizedSize
+		sizeButton.Text = "放大"
+		isMinimized = true
+	end
+end)
+
+-- 隐藏/显示功能
+hideButton.MouseButton1Click:Connect(function()
+	if not isHidden then
+		-- 隐藏主UI，显示正方形图标
+		mainFrame.Visible = false
+		squareIcon.Visible = true
+		isHidden = true
+	end
+end)
+
+-- 正方形图标点击功能
+squareIcon.MouseButton1Click:Connect(function()
+	-- 显示主UI，隐藏正方形图标
+	mainFrame.Visible = true
+	squareIcon.Visible = false
+	isHidden = false
+end)
+
+-- 添加悬停效果
+local function addHoverEffect(button)
+	button.MouseEnter:Connect(function()
+		button.BackgroundTransparency = 0.1
+	end)
+	
+	button.MouseLeave:Connect(function()
+		button.BackgroundTransparency = 0
+	end)
+end
+
+addHoverEffect(hideButton)
+addHoverEffect(sizeButton)
+addHoverEffect(squareIcon)
+
+-- 创建功能按钮函数
+local function createFunctionButton(name, text, color)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Size = UDim2.new(0.8, 0, 0, 40)
+    button.BackgroundColor3 = color
+    button.BackgroundTransparency = 0.2
+    button.BorderSizePixel = 0
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextScaled = true
+    button.Font = Enum.Font.Gotham
+    button.LayoutOrder = #buttonsFrame:GetChildren()
+    button.Parent = buttonsFrame
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.Parent = button
+    
+    -- 添加悬停效果
+    addHoverEffect(button)
+    
+    return button
+end
+
+-- 创建飞行功能按钮
+local flyButton = createFunctionButton("FlyButton", "加载飞行功能", Color3.fromRGB(70, 180, 70))
+
+-- 飞行按钮点击功能
+flyButton.MouseButton1Click:Connect(function()
+    contentLabel.Text = "正在加载飞行功能..."
+    
+    -- 加载外部飞行脚本
+    local success, result = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/666-/main/%E5%8F%AA%E8%83%BD%E8%87%AA%E5%B7%B1%E6%90%9E%E4%B8%80%E4%B8%AA%E4%BA%86"))()
+    end)
+    
+    if success then
+        contentLabel.Text = "飞行功能加载成功！"
+        flyButton.Text = "飞行已加载"
+        flyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+    else
+        contentLabel.Text = "飞行功能加载失败: " .. tostring(result)
+        flyButton.Text = "重新加载飞行"
+        flyButton.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
+    end
+end)
