@@ -15,35 +15,36 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
--- 创建主框架
+-- 创建主框架 - 调整为更紧凑的尺寸
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0.7, 0, 0.6, 0)
-mainFrame.Position = UDim2.new(0.15, 0, 0.2, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-mainFrame.BackgroundTransparency = 0.3
-mainFrame.BorderSizePixel = 0
+mainFrame.Size = UDim2.new(0.6, 0, 0.7, 0) -- 调整为更紧凑的尺寸
+mainFrame.Position = UDim2.new(0.2, 0, 0.15, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色背景
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 1
+mainFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
 mainFrame.Active = true
 mainFrame.Parent = screenGui
 
 -- 创建圆角效果
 local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 12)
+uiCorner.CornerRadius = UDim.new(0, 8)
 uiCorner.Parent = mainFrame
 
 -- 创建标题栏
 local titleBar = Instance.new("Frame")
 titleBar.Name = "TitleBar"
-titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.Size = UDim2.new(1, 0, 0, 30) -- 更矮的标题栏
 titleBar.Position = UDim2.new(0, 0, 0, 0)
-titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-titleBar.BackgroundTransparency = 0.2
+titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20) -- 深黑色
+titleBar.BackgroundTransparency = 0
 titleBar.BorderSizePixel = 0
 titleBar.Active = true
 titleBar.Parent = mainFrame
 
 local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 12)
+titleCorner.CornerRadius = UDim.new(0, 8)
 titleCorner.Parent = titleBar
 
 -- 标题文字
@@ -53,7 +54,7 @@ titleLabel.Size = UDim2.new(0.6, 0, 1, 0)
 titleLabel.Position = UDim2.new(0.2, 0, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "脚本作者ROBLOX.T7 合作人XTTT"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
 titleLabel.TextScaled = true
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = titleBar
@@ -61,25 +62,25 @@ titleLabel.Parent = titleBar
 -- 隐藏按钮（右上角）
 local hideButton = Instance.new("TextButton")
 hideButton.Name = "HideButton"
-hideButton.Size = UDim2.new(0, 30, 0, 30)
-hideButton.Position = UDim2.new(1, -35, 0, 5)
-hideButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+hideButton.Size = UDim2.new(0, 25, 0, 25)
+hideButton.Position = UDim2.new(1, -30, 0, 2)
+hideButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- 深灰色
 hideButton.BorderSizePixel = 0
 hideButton.Text = "X"
-hideButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+hideButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
 hideButton.TextScaled = true
 hideButton.Font = Enum.Font.GothamBold
 hideButton.Parent = titleBar
 
 local hideButtonCorner = Instance.new("UICorner")
-hideButtonCorner.CornerRadius = UDim.new(0, 6)
+hideButtonCorner.CornerRadius = UDim.new(0, 4)
 hideButtonCorner.Parent = hideButton
 
--- 内容区域 - 调整大小避免被按钮挡住
+-- 内容区域 - 调整尺寸以容纳更多内容
 local contentFrame = Instance.new("Frame")
 contentFrame.Name = "ContentFrame"
-contentFrame.Size = UDim2.new(1, -20, 1, -60)
-contentFrame.Position = UDim2.new(0, 10, 0, 50)
+contentFrame.Size = UDim2.new(1, -10, 1, -35)
+contentFrame.Position = UDim2.new(0, 5, 0, 30)
 contentFrame.BackgroundTransparency = 1
 contentFrame.Parent = mainFrame
 
@@ -90,13 +91,13 @@ scrollFrame.Size = UDim2.new(1, 0, 1, 0)
 scrollFrame.Position = UDim2.new(0, 0, 0, 0)
 scrollFrame.BackgroundTransparency = 1
 scrollFrame.BorderSizePixel = 0
-scrollFrame.ScrollBarThickness = 8
-scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+scrollFrame.ScrollBarThickness = 6
+scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
 scrollFrame.Parent = contentFrame
 
--- 使用UIListLayout来排列按钮
+-- 使用UIListLayout来排列按钮 - 减小间距
 local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, 10)
+listLayout.Padding = UDim.new(0, 5) -- 减小按钮间距
 listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 listLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -107,23 +108,24 @@ listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
 end)
 
--- 创建正方形图标（隐藏时显示）- 使用图片代替文字
+-- 创建正方形图标（隐藏时显示）
 local squareIcon = Instance.new("ImageButton")
 squareIcon.Name = "SquareIcon"
 squareIcon.Size = UDim2.new(0, 50, 0, 50)
 squareIcon.Position = UDim2.new(0, 10, 0, 10)
-squareIcon.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
-squareIcon.BackgroundTransparency = 0.3
-squareIcon.BorderSizePixel = 0
-squareIcon.Image = "http://www.roblox.com/asset/?id=94635173333299" -- 使用新的图片ID
+squareIcon.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色背景
+squareIcon.BackgroundTransparency = 0.2
+squareIcon.BorderSizePixel = 1
+squareIcon.BorderColor3 = Color3.fromRGB(50, 50, 50)
+squareIcon.Image = "http://www.roblox.com/asset/?id=94635173333299"
 squareIcon.ScaleType = Enum.ScaleType.Fit
-squareIcon.ImageTransparency = 0 -- 确保不透明
+squareIcon.ImageTransparency = 0
 squareIcon.Visible = false
 squareIcon.Active = true
 squareIcon.Parent = screenGui
 
 local squareCorner = Instance.new("UICorner")
-squareCorner.CornerRadius = UDim.new(0, 8)
+squareCorner.CornerRadius = UDim.new(0, 6)
 squareCorner.Parent = squareIcon
 
 -- 状态变量
@@ -599,7 +601,7 @@ local function ShowNotification(message, color)
     NotificationFrame.Parent = NotificationGui
     NotificationFrame.Size = UDim2.new(0, 200, 0, 50)
     NotificationFrame.Position = UDim2.new(0.5, -100, 0.1, 0)
-    NotificationFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    NotificationFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色背景
     NotificationFrame.BackgroundTransparency = 0.1
 
     local NotificationCorner = Instance.new("UICorner")
@@ -617,7 +619,7 @@ local function ShowNotification(message, color)
     NotificationText.Position = UDim2.new(0, 10, 0, 5)
     NotificationText.BackgroundTransparency = 1
     NotificationText.Text = message
-    NotificationText.TextColor3 = Color3.fromRGB(220, 220, 255)
+    NotificationText.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
     NotificationText.TextSize = 14
     NotificationText.Font = Enum.Font.Gotham
     NotificationText.TextWrapped = true
@@ -641,7 +643,7 @@ local function CreateTextInputPopup(title, placeholder, defaultValue, callback)
     PopupFrame.Parent = PopupGui
     PopupFrame.Size = UDim2.new(0, 250, 0, 150)
     PopupFrame.Position = UDim2.new(0.5, -125, 0.5, -75)
-    PopupFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+    PopupFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色背景
     PopupFrame.Active = true
     PopupFrame.Draggable = true
 
@@ -651,7 +653,7 @@ local function CreateTextInputPopup(title, placeholder, defaultValue, callback)
 
     local PopupStroke = Instance.new("UIStroke")
     PopupStroke.Parent = PopupFrame
-    PopupStroke.Color = Color3.fromRGB(80, 120, 200)
+    PopupStroke.Color = Color3.fromRGB(80, 80, 80)
     PopupStroke.Thickness = 2
 
     local TitleLabel = Instance.new("TextLabel")
@@ -660,7 +662,7 @@ local function CreateTextInputPopup(title, placeholder, defaultValue, callback)
     TitleLabel.Position = UDim2.new(0, 10, 0, 8)
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Text = title
-    TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+    TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
     TitleLabel.TextSize = 12
     TitleLabel.Font = Enum.Font.GothamBold
 
@@ -668,10 +670,10 @@ local function CreateTextInputPopup(title, placeholder, defaultValue, callback)
     InputBox.Parent = PopupFrame
     InputBox.Size = UDim2.new(1, -40, 0, 35)
     InputBox.Position = UDim2.new(0, 20, 0, 40)
-    InputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    InputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     InputBox.PlaceholderText = placeholder
     InputBox.Text = tostring(defaultValue)
-    InputBox.TextColor3 = Color3.fromRGB(220, 220, 255)
+    InputBox.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
     InputBox.TextSize = 14
     InputBox.Font = Enum.Font.Gotham
     InputBox.ClearTextOnFocus = false
@@ -682,16 +684,16 @@ local function CreateTextInputPopup(title, placeholder, defaultValue, callback)
 
     local InputStroke = Instance.new("UIStroke")
     InputStroke.Parent = InputBox
-    InputStroke.Color = Color3.fromRGB(80, 120, 200)
+    InputStroke.Color = Color3.fromRGB(80, 80, 80)
     InputStroke.Thickness = 1
 
     local ConfirmButton = Instance.new("TextButton")
     ConfirmButton.Parent = PopupFrame
     ConfirmButton.Size = UDim2.new(0, 80, 0, 25)
     ConfirmButton.Position = UDim2.new(0.5, -90, 1, -40)
-    ConfirmButton.BackgroundColor3 = Color3.fromRGB(40, 120, 80)
+    ConfirmButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色按钮
     ConfirmButton.Text = "确认"
-    ConfirmButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+    ConfirmButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
     ConfirmButton.TextSize = 12
     ConfirmButton.Font = Enum.Font.Gotham
 
@@ -703,9 +705,9 @@ local function CreateTextInputPopup(title, placeholder, defaultValue, callback)
     CancelButton.Parent = PopupFrame
     CancelButton.Size = UDim2.new(0, 80, 0, 25)
     CancelButton.Position = UDim2.new(0.5, 10, 1, -40)
-    CancelButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+    CancelButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色按钮
     CancelButton.Text = "取消"
-    CancelButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+    CancelButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
     CancelButton.TextSize = 12
     CancelButton.Font = Enum.Font.Gotham
 
@@ -756,7 +758,7 @@ local function ShowCoordinateSelectionPopup(title, actionCallback)
     SelectionFrame.Parent = SelectionGui
     SelectionFrame.Size = UDim2.new(0, 280, 0, 350)
     SelectionFrame.Position = UDim2.new(0.5, -140, 0.5, -175)
-    SelectionFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+    SelectionFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色背景
     SelectionFrame.Active = true
     SelectionFrame.Draggable = true
 
@@ -766,7 +768,7 @@ local function ShowCoordinateSelectionPopup(title, actionCallback)
 
     local SelectionStroke = Instance.new("UIStroke")
     SelectionStroke.Parent = SelectionFrame
-    SelectionStroke.Color = Color3.fromRGB(80, 120, 200)
+    SelectionStroke.Color = Color3.fromRGB(80, 80, 80)
     SelectionStroke.Thickness = 2
 
     local Title = Instance.new("TextLabel")
@@ -775,7 +777,7 @@ local function ShowCoordinateSelectionPopup(title, actionCallback)
     Title.Position = UDim2.new(0, 10, 0, 10)
     Title.BackgroundTransparency = 1
     Title.Text = title
-    Title.TextColor3 = Color3.fromRGB(220, 220, 255)
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
     Title.TextSize = 14
     Title.Font = Enum.Font.GothamBold
 
@@ -791,9 +793,9 @@ local function ShowCoordinateSelectionPopup(title, actionCallback)
     CloseButton.Parent = SelectionFrame
     CloseButton.Size = UDim2.new(0, 80, 0, 25)
     CloseButton.Position = UDim2.new(0.5, -40, 1, -35)
-    CloseButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色按钮
     CloseButton.Text = "关闭"
-    CloseButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
     CloseButton.TextSize = 12
     CloseButton.Font = Enum.Font.Gotham
 
@@ -805,10 +807,10 @@ local function ShowCoordinateSelectionPopup(title, actionCallback)
         local CoordButton = Instance.new("TextButton")
         CoordButton.Size = UDim2.new(1, 0, 0, 40)
         CoordButton.Position = UDim2.new(0, 0, 0, (i-1)*45)
-        CoordButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+        CoordButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         CoordButton.Text = string.format("%s\nX: %.1f, Y: %.1f, Z: %.1f", 
             coord.name, coord.x, coord.y, coord.z)
-        CoordButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+        CoordButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
         CoordButton.TextSize = 10
         CoordButton.Font = Enum.Font.Gotham
         CoordButton.TextWrapped = true
@@ -820,7 +822,7 @@ local function ShowCoordinateSelectionPopup(title, actionCallback)
 
         local CoordStroke = Instance.new("UIStroke")
         CoordStroke.Parent = CoordButton
-        CoordStroke.Color = Color3.fromRGB(80, 120, 200)
+        CoordStroke.Color = Color3.fromRGB(80, 80, 80)
         CoordStroke.Thickness = 1
 
         CoordButton.MouseButton1Click:Connect(function()
@@ -968,23 +970,24 @@ end
 addHoverEffect(hideButton)
 addHoverEffect(squareIcon)
 
--- 创建功能按钮函数
+-- 创建功能按钮函数 - 调整为更小的按钮以适应紧凑布局
 local function createFunctionButton(name, text, color)
     local button = Instance.new("TextButton")
     button.Name = name
-    button.Size = UDim2.new(0.8, 0, 0, 40)
-    button.BackgroundColor3 = color
-    button.BackgroundTransparency = 0.2
-    button.BorderSizePixel = 0
+    button.Size = UDim2.new(0.95, 0, 0, 30) -- 更小的按钮高度
+    button.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色按钮
+    button.BackgroundTransparency = 0.1
+    button.BorderSizePixel = 1
+    button.BorderColor3 = Color3.fromRGB(50, 50, 50)
     button.Text = text
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
     button.TextScaled = true
     button.Font = Enum.Font.Gotham
     button.LayoutOrder = #scrollFrame:GetChildren()
     button.Parent = scrollFrame
 
     local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.CornerRadius = UDim.new(0, 6)
     buttonCorner.Parent = button
 
     addHoverEffect(button)
@@ -1015,7 +1018,7 @@ local function CreatePlayerSelectionUI()
     PlayerSelectFrame.Parent = PlayerSelectGui
     PlayerSelectFrame.Size = UDim2.new(0, 200, 0, 300)
     PlayerSelectFrame.Position = UDim2.new(0.5, -100, 0.5, -150)
-    PlayerSelectFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+    PlayerSelectFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色背景
     PlayerSelectFrame.Active = true
     PlayerSelectFrame.Draggable = true
 
@@ -1025,7 +1028,7 @@ local function CreatePlayerSelectionUI()
 
     local PlayerSelectStroke = Instance.new("UIStroke")
     PlayerSelectStroke.Parent = PlayerSelectFrame
-    PlayerSelectStroke.Color = Color3.fromRGB(80, 120, 200)
+    PlayerSelectStroke.Color = Color3.fromRGB(80, 80, 80)
     PlayerSelectStroke.Thickness = 2
 
     local Title = Instance.new("TextLabel")
@@ -1034,7 +1037,7 @@ local function CreatePlayerSelectionUI()
     Title.Position = UDim2.new(0, 10, 0, 10)
     Title.BackgroundTransparency = 1
     Title.Text = "选择玩家"
-    Title.TextColor3 = Color3.fromRGB(220, 220, 255)
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
     Title.TextSize = 14
     Title.Font = Enum.Font.GothamBold
 
@@ -1053,9 +1056,9 @@ local function CreatePlayerSelectionUI()
     CloseButton.Parent = PlayerSelectFrame
     CloseButton.Size = UDim2.new(0, 80, 0, 25)
     CloseButton.Position = UDim2.new(0.5, -40, 1, -35)
-    CloseButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色按钮
     CloseButton.Text = "关闭"
-    CloseButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
     CloseButton.TextSize = 12
     CloseButton.Font = Enum.Font.Gotham
 
@@ -1070,9 +1073,9 @@ local function CreatePlayerSelectionUI()
     for _, player in ipairs(Teleport.PlayerList) do
         local PlayerButton = Instance.new("TextButton")
         PlayerButton.Size = UDim2.new(1, 0, 0, 30)
-        PlayerButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+        PlayerButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         PlayerButton.Text = player.Name
-        PlayerButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+        PlayerButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
         PlayerButton.TextSize = 11
         PlayerButton.Font = Enum.Font.Gotham
         PlayerButton.Parent = PlayerScroll
@@ -1083,7 +1086,7 @@ local function CreatePlayerSelectionUI()
 
         local PlayerButtonStroke = Instance.new("UIStroke")
         PlayerButtonStroke.Parent = PlayerButton
-        PlayerButtonStroke.Color = Color3.fromRGB(80, 120, 200)
+        PlayerButtonStroke.Color = Color3.fromRGB(80, 80, 80)
         PlayerButtonStroke.Thickness = 1
 
         PlayerButton.MouseButton1Click:Connect(function()
@@ -1153,97 +1156,82 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
--- 创建ESP透视按钮
-local espButton = createFunctionButton("ESP透视", "ESP透视", Color3.fromRGB(200, 100, 200))
+-- 创建所有功能按钮（保持所有原有功能）
 
--- ESP按钮点击功能
+-- ESP透视按钮
+local espButton = createFunctionButton("ESP透视", "ESP透视", Color3.fromRGB(0, 0, 0))
 espButton.MouseButton1Click:Connect(function()
     local newState = ToggleESP()
-
     if newState then
         espButton.Text = "ESP透视已开启"
-        espButton.BackgroundColor3 = Color3.fromRGB(180, 80, 180)
+        espButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     else
         espButton.Text = "ESP透视"
-        espButton.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
+        espButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     end
 end)
 
--- 创建走路创人功能按钮
-local throwButton = createFunctionButton("ThrowButton", "走路创人", Color3.fromRGB(150, 70, 180))
-
--- 走路创人按钮点击功能
+-- 走路创人功能按钮
+local throwButton = createFunctionButton("ThrowButton", "走路创人", Color3.fromRGB(0, 0, 0))
 throwButton.MouseButton1Click:Connect(function()
     ToggleThrow(not ThrowEnabled)
-
     if ThrowEnabled then
         throwButton.Text = "走路创人已开启"
-        throwButton.BackgroundColor3 = Color3.fromRGB(130, 50, 160)
+        throwButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     else
         throwButton.Text = "走路创人"
-        throwButton.BackgroundColor3 = Color3.fromRGB(150, 70, 180)
+        throwButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     end
 end)
 
--- 创建爬墙功能按钮
-local climbButton = createFunctionButton("ClimbButton", "爬墙", Color3.fromRGB(180, 100, 50))
-
--- 爬墙按钮点击功能
+-- 爬墙功能按钮
+local climbButton = createFunctionButton("ClimbButton", "爬墙", Color3.fromRGB(0, 0, 0))
 climbButton.MouseButton1Click:Connect(function()
     if not climbEnabled then
         ToggleClimb(true)
-
         if climbEnabled then
             climbButton.Text = "爬墙已开启"
-            climbButton.BackgroundColor3 = Color3.fromRGB(160, 80, 30)
-            -- 禁用按钮，因为爬墙功能无法关闭
+            climbButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
             climbButton.AutoButtonColor = false
             climbButton.Active = false
         else
             climbButton.Text = "爬墙加载失败"
-            climbButton.BackgroundColor3 = Color3.fromRGB(120, 60, 30)
+            climbButton.BackgroundColor3 = Color3.fromRGB(30, 20, 20)
         end
     else
         ShowNotification("爬墙功能已开启，无法关闭", Color3.fromRGB(255, 150, 0))
     end
 end)
 
--- 创建飞行功能按钮
-local flyButton = createFunctionButton("FlyButton", "加载飞行功能", Color3.fromRGB(70, 180, 70))
-
--- 飞行按钮点击功能
+-- 飞行功能按钮
+local flyButton = createFunctionButton("FlyButton", "加载飞行功能", Color3.fromRGB(0, 0, 0))
 flyButton.MouseButton1Click:Connect(function()
     local success, result = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/666-/main/%E5%8F%AA%E8%83%BD%E8%87%AA%E5%B7%B1%E6%90%9E%E4%B8%80%E4%B8%AA%E4%BA%86"))()
     end)
-
     if success then
         flyButton.Text = "飞行已加载"
-        flyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+        flyButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
         ShowNotification("飞行功能已加载", Color3.fromRGB(0, 255, 100))
     else
         flyButton.Text = "重新加载飞行"
-        flyButton.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
+        flyButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         ShowNotification("飞行功能加载失败", Color3.fromRGB(255, 50, 50))
         warn("飞行脚本加载错误: " .. tostring(result))
     end
 end)
 
--- 穿墙功能变量
+-- 穿墙功能按钮
+local noclipButton = createFunctionButton("NoclipButton", "穿墙模式", Color3.fromRGB(0, 0, 0))
 local noclipEnabled = false
 local noclipConnection
 
--- 创建穿墙功能按钮
-local noclipButton = createFunctionButton("NoclipButton", "穿墙模式", Color3.fromRGB(180, 70, 180))
-
--- 穿墙功能实现
 local function toggleNoclip()
     if noclipEnabled then
         if noclipConnection then
             noclipConnection:Disconnect()
             noclipConnection = nil
         end
-
         local character = player.Character
         if character then
             for _, part in pairs(character:GetChildren()) do
@@ -1252,22 +1240,19 @@ local function toggleNoclip()
                 end
             end
         end
-
         noclipEnabled = false
         noclipButton.Text = "穿墙模式"
-        noclipButton.BackgroundColor3 = Color3.fromRGB(180, 70, 180)
+        noclipButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         ShowNotification("穿墙模式已关闭", Color3.fromRGB(255, 100, 0))
     else
         noclipEnabled = true
         noclipButton.Text = "穿墙已启用"
-        noclipButton.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
-
+        noclipButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
         noclipConnection = RunService.Stepped:Connect(function()
             if not noclipEnabled then
                 noclipConnection:Disconnect()
                 return
             end
-
             local character = player.Character
             if character then
                 for _, part in pairs(character:GetChildren()) do
@@ -1277,51 +1262,28 @@ local function toggleNoclip()
                 end
             end
         end)
-
         ShowNotification("穿墙模式已开启", Color3.fromRGB(0, 255, 100))
     end
 end
 
--- 穿墙按钮点击功能
 noclipButton.MouseButton1Click:Connect(toggleNoclip)
 
--- 角色重生时重置穿墙状态
-player.CharacterAdded:Connect(function(character)
-    if noclipEnabled then
-        character:WaitForChild("Humanoid")
-
-        for _, part in pairs(character:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-
-        ShowNotification("角色重生，已重新应用穿墙模式", Color3.fromRGB(0, 200, 255))
-    end
-end)
-
--- 创建传送功能按钮
-local selectPlayerButton = createFunctionButton("SelectPlayerButton", "选择传送目标玩家", Color3.fromRGB(80, 150, 200))
-local teleportButton = createFunctionButton("TeleportButton", "传送", Color3.fromRGB(100, 180, 100))
-
--- 传送按钮点击功能
+-- 传送功能按钮
+local selectPlayerButton = createFunctionButton("SelectPlayerButton", "选择传送目标玩家", Color3.fromRGB(0, 0, 0))
+local teleportButton = createFunctionButton("TeleportButton", "传送", Color3.fromRGB(0, 0, 0))
 selectPlayerButton.MouseButton1Click:Connect(CreatePlayerSelectionUI)
 teleportButton.MouseButton1Click:Connect(TeleportToPlayer)
 
--- 创建坐标管理按钮
-local saveCoordButton = createFunctionButton("SaveCoordButton", "保存当前坐标", Color3.fromRGB(70, 130, 200))
-local teleportCoordButton = createFunctionButton("TeleportCoordButton", "传送保存坐标", Color3.fromRGB(70, 200, 130))
-local deleteCoordButton = createFunctionButton("DeleteCoordButton", "删除保存坐标", Color3.fromRGB(200, 70, 70))
-
--- 坐标管理按钮功能
+-- 坐标管理按钮
+local saveCoordButton = createFunctionButton("SaveCoordButton", "保存当前坐标", Color3.fromRGB(0, 0, 0))
+local teleportCoordButton = createFunctionButton("TeleportCoordButton", "传送保存坐标", Color3.fromRGB(0, 0, 0))
+local deleteCoordButton = createFunctionButton("DeleteCoordButton", "删除保存坐标", Color3.fromRGB(0, 0, 0))
 saveCoordButton.MouseButton1Click:Connect(SaveCurrentCoordinate)
 teleportCoordButton.MouseButton1Click:Connect(TeleportToCoordinate)
 deleteCoordButton.MouseButton1Click:Connect(DeleteCoordinate)
 
--- 创建速度设置按钮
-local speedButton = createFunctionButton("SpeedButton", "设置移动速度", Color3.fromRGB(50, 150, 255))
-
--- 移动速度设置功能
+-- 速度设置按钮
+local speedButton = createFunctionButton("SpeedButton", "设置移动速度", Color3.fromRGB(0, 0, 0))
 local function setWalkSpeed(value)
     local character = player.Character
     if character then
@@ -1337,7 +1299,6 @@ local function setWalkSpeed(value)
     end
 end
 
--- 速度设置功能
 speedButton.MouseButton1Click:Connect(function()
     CreateTextInputPopup("设置移动速度", "输入移动速度 (16-400)", "16", function(value)
         local numValue = tonumber(value)
@@ -1354,186 +1315,145 @@ speedButton.MouseButton1Click:Connect(function()
     end)
 end)
 
--- 角色重生时重新应用移动速度设置
-local lastWalkSpeed = 16
-
-player.CharacterAdded:Connect(function(character)
-    local humanoid = character:WaitForChild("Humanoid")
-    humanoid.WalkSpeed = lastWalkSpeed
-    ShowNotification("角色重生，已重新应用移动速度设置", Color3.fromRGB(0, 200, 255))
-end)
-
--- 创建夜视功能按钮
-local nightVisionButton = createFunctionButton("NightVisionButton", "夜视", Color3.fromRGB(255, 200, 50))
-
--- 夜视按钮点击功能（修复版）
+-- 夜视功能按钮
+local nightVisionButton = createFunctionButton("NightVisionButton", "夜视", Color3.fromRGB(0, 0, 0))
 nightVisionButton.MouseButton1Click:Connect(function()
     ToggleNightVision(not nightVisionEnabled)
-
     if nightVisionEnabled then
         nightVisionButton.Text = "夜视已开启"
-        nightVisionButton.BackgroundColor3 = Color3.fromRGB(200, 170, 30)
+        nightVisionButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     else
         nightVisionButton.Text = "夜视"
-        nightVisionButton.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+        nightVisionButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     end
 end)
 
--- 创建无限跳功能按钮
-local infiniteJumpButton = createFunctionButton("InfiniteJumpButton", "无限跳", Color3.fromRGB(100, 200, 100))
-
--- 无限跳按钮点击功能（修复版）
+-- 无限跳功能按钮
+local infiniteJumpButton = createFunctionButton("InfiniteJumpButton", "无限跳", Color3.fromRGB(0, 0, 0))
 infiniteJumpButton.MouseButton1Click:Connect(function()
     ToggleInfiniteJump(not infiniteJumpEnabled)
-
     if infiniteJumpEnabled then
         infiniteJumpButton.Text = "无限跳已开启"
-        infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
+        infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     else
         infiniteJumpButton.Text = "无限跳"
-        infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+        infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     end
 end)
 
--- 创建防止摔落伤害按钮
-local antiFallButton = createFunctionButton("AntiFallButton", "防止摔落伤害", Color3.fromRGB(200, 100, 50))
-
--- 防止摔落伤害按钮点击功能
+-- 防止摔落伤害按钮
+local antiFallButton = createFunctionButton("AntiFallButton", "防止摔落伤害", Color3.fromRGB(0, 0, 0))
 antiFallButton.MouseButton1Click:Connect(function()
     ToggleAntiFall(not antiFallEnabled)
-
     if antiFallEnabled then
         antiFallButton.Text = "防摔已开启"
-        antiFallButton.BackgroundColor3 = Color3.fromRGB(180, 80, 30)
+        antiFallButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     else
         antiFallButton.Text = "防止摔落伤害"
-        antiFallButton.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+        antiFallButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     end
 end)
 
--- 创建全局未固定物体控制按钮
-local globalFloatButton = createFunctionButton("GlobalFloatButton", "全局未固定物体控制", Color3.fromRGB(100, 150, 200))
-
--- 全局未固定物体控制按钮点击功能
+-- 全局未固定物体控制按钮
+local globalFloatButton = createFunctionButton("GlobalFloatButton", "全局未固定物体控制", Color3.fromRGB(0, 0, 0))
 globalFloatButton.MouseButton1Click:Connect(function()
     ToggleGlobalFloat(not globalFloatEnabled)
-
     if globalFloatEnabled then
         globalFloatButton.Text = "全局未固定物体控制已开启"
-        globalFloatButton.BackgroundColor3 = Color3.fromRGB(80, 130, 180)
+        globalFloatButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     else
         globalFloatButton.Text = "全局未固定物体控制"
-        globalFloatButton.BackgroundColor3 = Color3.fromRGB(100, 150, 200)
+        globalFloatButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     end
 end)
 
--- 修复：添加单一物体飞行功能按钮（按照简单GUI的逻辑）
-local singleFlightButton = createFunctionButton("SingleFlightButton", "单一物体飞行", Color3.fromRGB(80, 180, 80))
-
--- 单一物体飞行按钮点击功能（按照简单GUI逻辑修复）
+-- 单一物体飞行功能按钮
+local singleFlightButton = createFunctionButton("SingleFlightButton", "单一物体飞行", Color3.fromRGB(0, 0, 0))
 singleFlightButton.MouseButton1Click:Connect(function()
     ShowNotification("正在加载单一物体飞行...", Color3.fromRGB(255, 255, 0))
-
     local success, result = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/单一物体飞行载自己最终优化版"))()
     end)
-
     if success then
         singleFlightButton.Text = "飞行已加载"
-        singleFlightButton.BackgroundColor3 = Color3.fromRGB(60, 160, 60)
+        singleFlightButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
         ShowNotification("单一物体飞行已加载", Color3.fromRGB(0, 255, 100))
     else
         singleFlightButton.Text = "重新加载飞行"
-        singleFlightButton.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
+        singleFlightButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         ShowNotification("单一物体飞行加载失败", Color3.fromRGB(255, 50, 50))
         warn("单一物体飞行脚本加载错误: " .. tostring(result))
     end
 end)
 
--- 修复：添加零件破坏者按钮（按照简单GUI的逻辑）
-local partDestroyerButton = createFunctionButton("PartDestroyerButton", "零件破坏者", Color3.fromRGB(180, 70, 70))
-
--- 零件破坏者按钮点击功能（按照简单GUI逻辑修复）
+-- 零件破坏者按钮
+local partDestroyerButton = createFunctionButton("PartDestroyerButton", "零件破坏者", Color3.fromRGB(0, 0, 0))
 partDestroyerButton.MouseButton1Click:Connect(function()
     ShowNotification("正在加载零件破坏者...", Color3.fromRGB(255, 255, 0))
-
     local success, result = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/-/main/零件破坏者v2"))()
     end)
-
     if success then
         partDestroyerButton.Text = "破坏者已加载"
-        partDestroyerButton.BackgroundColor3 = Color3.fromRGB(160, 50, 50)
+        partDestroyerButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
         ShowNotification("零件破坏者已加载", Color3.fromRGB(0, 255, 100))
     else
         partDestroyerButton.Text = "重新加载破坏者"
-        partDestroyerButton.BackgroundColor3 = Color3.fromRGB(200, 100, 100)
+        partDestroyerButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         ShowNotification("零件破坏者加载失败", Color3.fromRGB(255, 50, 50))
         warn("零件破坏者脚本加载错误: " .. tostring(result))
     end
 end)
 
--- 创建踏空行走功能按钮
-local airWalkButton = createFunctionButton("AirWalkButton", "踏空行走", Color3.fromRGB(100, 200, 200))
-
--- 踏空行走按钮点击功能
+-- 踏空行走功能按钮
+local airWalkButton = createFunctionButton("AirWalkButton", "踏空行走", Color3.fromRGB(0, 0, 0))
 airWalkButton.MouseButton1Click:Connect(function()
     ToggleAirWalk(not airWalkEnabled)
-
     if airWalkEnabled then
         airWalkButton.Text = "踏空行走已开启"
-        airWalkButton.BackgroundColor3 = Color3.fromRGB(80, 180, 180)
+        airWalkButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     else
         airWalkButton.Text = "踏空行走"
-        airWalkButton.BackgroundColor3 = Color3.fromRGB(100, 200, 200)
+        airWalkButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     end
 end)
 
--- 创建隐身功能按钮
-local invisibleButton = createFunctionButton("InvisibleButton", "隐身", Color3.fromRGB(150, 150, 150))
-
--- 隐身按钮点击功能
+-- 隐身功能按钮
+local invisibleButton = createFunctionButton("InvisibleButton", "隐身", Color3.fromRGB(0, 0, 0))
 invisibleButton.MouseButton1Click:Connect(function()
     ToggleInvisible(not invisibleEnabled)
-
     if invisibleEnabled then
         invisibleButton.Text = "隐身已开启"
-        invisibleButton.BackgroundColor3 = Color3.fromRGB(130, 130, 130)
+        invisibleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     else
         invisibleButton.Text = "隐身"
-        invisibleButton.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+        invisibleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     end
 end)
 
--- 创建Egor功能按钮
-local egorButton = createFunctionButton("EgorButton", "Egor功能", Color3.fromRGB(200, 200, 100))
-
--- Egor按钮点击功能
+-- Egor功能按钮
+local egorButton = createFunctionButton("EgorButton", "Egor功能", Color3.fromRGB(0, 0, 0))
 egorButton.MouseButton1Click:Connect(function()
     ToggleEgor(not egorEnabled)
-
     if egorEnabled then
         egorButton.Text = "Egor已开启"
-        egorButton.BackgroundColor3 = Color3.fromRGB(180, 180, 80)
+        egorButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     else
         egorButton.Text = "Egor功能"
-        egorButton.BackgroundColor3 = Color3.fromRGB(200, 200, 100)
+        egorButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     end
 end)
 
--- 创建甩飞功能按钮
-local throwFlyButton = createFunctionButton("ThrowFlyButton", "甩飞", Color3.fromRGB(180, 100, 180))
-
--- 甩飞按钮点击功能
+-- 甩飞功能按钮
+local throwFlyButton = createFunctionButton("ThrowFlyButton", "甩飞", Color3.fromRGB(0, 0, 0))
 throwFlyButton.MouseButton1Click:Connect(function()
     ToggleThrowFly(not throwFlyEnabled)
-
     if throwFlyEnabled then
         throwFlyButton.Text = "甩飞已开启"
-        throwFlyButton.BackgroundColor3 = Color3.fromRGB(160, 80, 160)
+        throwFlyButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     else
         throwFlyButton.Text = "甩飞"
-        throwFlyButton.BackgroundColor3 = Color3.fromRGB(180, 100, 180)
+        throwFlyButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     end
 end)
 
@@ -1541,20 +1461,38 @@ end)
 player.CharacterAdded:Connect(function(character)
     if infiniteJumpEnabled then
         character:WaitForChild("Humanoid")
-
         if jumpConnection then
             jumpConnection:Disconnect()
         end
-
         jumpConnection = UserInputService.JumpRequest:Connect(function()
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 humanoid:ChangeState("Jumping")
             end
         end)
-
         ShowNotification("角色重生，已重新连接无限跳", Color3.fromRGB(0, 200, 255))
     end
+end)
+
+-- 角色重生时重新应用穿墙状态
+player.CharacterAdded:Connect(function(character)
+    if noclipEnabled then
+        character:WaitForChild("Humanoid")
+        for _, part in pairs(character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+        ShowNotification("角色重生，已重新应用穿墙模式", Color3.fromRGB(0, 200, 255))
+    end
+end)
+
+-- 角色重生时重新应用移动速度设置
+local lastWalkSpeed = 16
+player.CharacterAdded:Connect(function(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.WalkSpeed = lastWalkSpeed
+    ShowNotification("角色重生，已重新应用移动速度设置", Color3.fromRGB(0, 200, 255))
 end)
 
 -- 初始化坐标管理器
