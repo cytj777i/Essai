@@ -1,6 +1,7 @@
 -- 本地脚本：可拖动的UI界面
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -36,6 +37,7 @@ titleBar.Position = UDim2.new(0, 0, 0, 0)
 titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 titleBar.BackgroundTransparency = 0.2
 titleBar.BorderSizePixel = 0
+titleBar.Active = true  -- 使标题栏可以接收输入
 titleBar.Parent = mainFrame
 
 local titleCorner = Instance.new("UICorner")
@@ -71,23 +73,6 @@ local hideButtonCorner = Instance.new("UICorner")
 hideButtonCorner.CornerRadius = UDim.new(0, 6)
 hideButtonCorner.Parent = hideButton
 
--- 大小切换按钮 - 放在标题栏右侧
-local sizeButton = Instance.new("TextButton")
-sizeButton.Name = "SizeButton"
-sizeButton.Size = UDim2.new(0, 60, 0, 30)
-sizeButton.Position = UDim2.new(1, -105, 0, 5)
-sizeButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
-sizeButton.BorderSizePixel = 0
-sizeButton.Text = "缩小"
-sizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-sizeButton.TextScaled = true
-sizeButton.Font = Enum.Font.Gotham
-sizeButton.Parent = titleBar
-
-local sizeButtonCorner = Instance.new("UICorner")
-sizeButtonCorner.CornerRadius = UDim.new(0, 6)
-sizeButtonCorner.Parent = sizeButton
-
 -- 内容区域 - 调整大小避免被按钮挡住
 local contentFrame = Instance.new("Frame")
 contentFrame.Name = "ContentFrame"
@@ -96,13 +81,16 @@ contentFrame.Position = UDim2.new(0, 10, 0, 50)
 contentFrame.BackgroundTransparency = 1
 contentFrame.Parent = mainFrame
 
--- 创建按钮容器
-local buttonsFrame = Instance.new("Frame")
-buttonsFrame.Name = "ButtonsFrame"
-buttonsFrame.Size = UDim2.new(1, 0, 0.7, 0)
-buttonsFrame.Position = UDim2.new(0, 0, 0, 0)
-buttonsFrame.BackgroundTransparency = 1
-buttonsFrame.Parent = contentFrame
+-- 创建滚动框架
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Name = "ScrollFrame"
+scrollFrame.Size = UDim2.new(1, 0, 1, 0)
+scrollFrame.Position = UDim2.new(0, 0, 0, 0)
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.BorderSizePixel = 0
+scrollFrame.ScrollBarThickness = 8
+scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+scrollFrame.Parent = contentFrame
 
 -- 使用UIListLayout来排列按钮
 local listLayout = Instance.new("UIListLayout")
@@ -110,20 +98,12 @@ listLayout.Padding = UDim.new(0, 10)
 listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 listLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-listLayout.Parent = buttonsFrame
+listLayout.Parent = scrollFrame
 
--- 内容文字
-local contentLabel = Instance.new("TextLabel")
-contentLabel.Name = "ContentLabel"
-contentLabel.Size = UDim2.new(1, 0, 0.3, 0)
-contentLabel.Position = UDim2.new(0, 0, 0.7, 0)
-contentLabel.BackgroundTransparency = 1
-contentLabel.Text = "功能区域 - 点击按钮使用相应功能"
-contentLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-contentLabel.TextScaled = true
-contentLabel.Font = Enum.Font.Gotham
-contentLabel.TextWrapped = true
-contentLabel.Parent = contentFrame
+-- 更新滚动框架内容大小
+listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+end)
 
 -- 创建正方形图标（隐藏时显示）- 使用文字代替图片
 local squareIcon = Instance.new("TextButton")
@@ -146,19 +126,16 @@ squareCorner.CornerRadius = UDim.new(0, 8) -- 更小的圆角
 squareCorner.Parent = squareIcon
 
 -- 状态变量
-local isMinimized = false
 local isHidden = false
-local originalSize = mainFrame.Size
-local minimizedSize = UDim2.new(0.4, 0, 0.4, 0)
 
--- 自定义拖动功能
-local function setupEnhancedDrag(guiObject)
+-- 自定义拖动功能 - 只在标题栏拖动
+local function setupTitleBarDrag(dragArea, guiObject)
 	local dragging = false
 	local dragInput
 	local dragStart
 	local startPos
 	
-	guiObject.InputBegan:Connect(function(input)
+	dragArea.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
 			dragStart = input.Position
@@ -172,7 +149,7 @@ local function setupEnhancedDrag(guiObject)
 		end
 	end)
 	
-	guiObject.InputChanged:Connect(function(input)
+	dragArea.InputChanged:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
 			dragInput = input
 		end
@@ -191,24 +168,9 @@ local function setupEnhancedDrag(guiObject)
 	end)
 end
 
--- 应用增强拖动功能
-setupEnhancedDrag(mainFrame)
-setupEnhancedDrag(squareIcon)
-
--- 大小切换按钮功能
-sizeButton.MouseButton1Click:Connect(function()
-	if isMinimized then
-		-- 恢复到原始大小
-		mainFrame.Size = originalSize
-		sizeButton.Text = "缩小"
-		isMinimized = false
-	else
-		-- 缩小
-		mainFrame.Size = minimizedSize
-		sizeButton.Text = "放大"
-		isMinimized = true
-	end
-end)
+-- 应用增强拖动功能 - 只在标题栏拖动
+setupTitleBarDrag(titleBar, mainFrame)
+setupTitleBarDrag(squareIcon, squareIcon)
 
 -- 隐藏/显示功能
 hideButton.MouseButton1Click:Connect(function()
@@ -240,7 +202,6 @@ local function addHoverEffect(button)
 end
 
 addHoverEffect(hideButton)
-addHoverEffect(sizeButton)
 addHoverEffect(squareIcon)
 
 -- 创建功能按钮函数
@@ -255,8 +216,8 @@ local function createFunctionButton(name, text, color)
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
     button.TextScaled = true
     button.Font = Enum.Font.Gotham
-    button.LayoutOrder = #buttonsFrame:GetChildren()
-    button.Parent = buttonsFrame
+    button.LayoutOrder = #scrollFrame:GetChildren()
+    button.Parent = scrollFrame
     
     local buttonCorner = Instance.new("UICorner")
     buttonCorner.CornerRadius = UDim.new(0, 8)
@@ -273,20 +234,90 @@ local flyButton = createFunctionButton("FlyButton", "加载飞行功能", Color3
 
 -- 飞行按钮点击功能
 flyButton.MouseButton1Click:Connect(function()
-    contentLabel.Text = "正在加载飞行功能..."
-    
     -- 加载外部飞行脚本
     local success, result = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/666-/main/%E5%8F%AA%E8%83%BD%E8%87%AA%E5%B7%B1%E6%90%9E%E4%B8%80%E4%B8%AA%E4%BA%86"))()
     end)
     
     if success then
-        contentLabel.Text = "飞行功能加载成功！"
         flyButton.Text = "飞行已加载"
         flyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
     else
-        contentLabel.Text = "飞行功能加载失败: " .. tostring(result)
         flyButton.Text = "重新加载飞行"
         flyButton.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
     end
 end)
+
+-- 穿墙功能变量
+local noclipEnabled = false
+local noclipConnection
+
+-- 创建穿墙功能按钮
+local noclipButton = createFunctionButton("NoclipButton", "穿墙模式", Color3.fromRGB(180, 70, 180))
+
+-- 穿墙功能实现
+local function toggleNoclip()
+    if noclipEnabled then
+        -- 关闭穿墙
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        
+        -- 恢复碰撞
+        local character = player.Character
+        if character then
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+        
+        noclipEnabled = false
+        noclipButton.Text = "穿墙模式"
+        noclipButton.BackgroundColor3 = Color3.fromRGB(180, 70, 180)
+    else
+        -- 开启穿墙
+        noclipEnabled = true
+        noclipButton.Text = "穿墙已启用"
+        noclipButton.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
+        
+        -- 穿墙逻辑
+        noclipConnection = RunService.Stepped:Connect(function()
+            if not noclipEnabled then
+                noclipConnection:Disconnect()
+                return
+            end
+            
+            local character = player.Character
+            if character then
+                for _, part in pairs(character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- 穿墙按钮点击功能
+noclipButton.MouseButton1Click:Connect(toggleNoclip)
+
+-- 角色重生时重置穿墙状态
+player.CharacterAdded:Connect(function(character)
+    if noclipEnabled then
+        -- 等待角色完全加载
+        character:WaitForChild("Humanoid")
+        
+        -- 重新应用穿墙效果
+        for _, part in pairs(character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+print("可拖动UI界面加载完成！已添加飞行和穿墙功能")
