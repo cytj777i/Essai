@@ -107,18 +107,17 @@ listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
 end)
 
--- 创建正方形图标（隐藏时显示）- 使用文字代替图片
-local squareIcon = Instance.new("TextButton")
+-- 创建正方形图标（隐藏时显示）- 使用图片代替文字
+local squareIcon = Instance.new("ImageButton")
 squareIcon.Name = "SquareIcon"
 squareIcon.Size = UDim2.new(0, 50, 0, 50)
 squareIcon.Position = UDim2.new(0, 10, 0, 10)
 squareIcon.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
 squareIcon.BackgroundTransparency = 0.3
 squareIcon.BorderSizePixel = 0
-squareIcon.Text = "菜单"
-squareIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
-squareIcon.TextScaled = true
-squareIcon.Font = Enum.Font.GothamBold
+squareIcon.Image = "http://www.roblox.com/asset/?id=94635173333299" -- 使用新的图片ID
+squareIcon.ScaleType = Enum.ScaleType.Fit
+squareIcon.ImageTransparency = 0 -- 确保不透明
 squareIcon.Visible = false
 squareIcon.Active = true
 squareIcon.Parent = screenGui
