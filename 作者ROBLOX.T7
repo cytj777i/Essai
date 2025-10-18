@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -127,6 +128,369 @@ squareCorner.Parent = squareIcon
 
 -- 状态变量
 local isHidden = false
+
+-- 坐标管理变量
+local CoordinateManager = {
+    SavedCoordinates = {},
+    FilePath = "SavedCoordinates.json"
+}
+
+-- 文件操作函数
+local function ReadFile(path)
+    local success, result = pcall(function()
+        if readfile then
+            return readfile(path)
+        elseif syn and syn.readfile then
+            return syn.readfile(path)
+        else
+            return nil
+        end
+    end)
+    return success and result or nil
+end
+
+local function WriteFile(path, content)
+    local success, result = pcall(function()
+        if writefile then
+            writefile(path, content)
+            return true
+        elseif syn and syn.writefile then
+            syn.writefile(path, content)
+            return true
+        else
+            return false
+        end
+    end)
+    return success and result or false
+end
+
+-- 加载保存的坐标
+local function LoadCoordinates()
+    local content = ReadFile(CoordinateManager.FilePath)
+    if content then
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(content)
+        end)
+        if success and type(data) == "table" then
+            CoordinateManager.SavedCoordinates = data
+            return true
+        end
+    end
+    return false
+end
+
+-- 保存坐标到文件
+local function SaveCoordinates()
+    local success = pcall(function()
+        local json = HttpService:JSONEncode(CoordinateManager.SavedCoordinates)
+        return WriteFile(CoordinateManager.FilePath, json)
+    end)
+    return success
+end
+
+-- 初始化坐标管理
+local function InitCoordinateManager()
+    LoadCoordinates()
+end
+
+-- 创建通知系统
+local function ShowNotification(message, color)
+    color = color or Color3.fromRGB(0, 150, 255)
+
+    local NotificationGui = Instance.new("ScreenGui")
+    NotificationGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    NotificationGui.ResetOnSpawn = false
+
+    local NotificationFrame = Instance.new("Frame")
+    NotificationFrame.Parent = NotificationGui
+    NotificationFrame.Size = UDim2.new(0, 200, 0, 50)
+    NotificationFrame.Position = UDim2.new(0.5, -100, 0.1, 0)
+    NotificationFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    NotificationFrame.BackgroundTransparency = 0.1
+
+    local NotificationCorner = Instance.new("UICorner")
+    NotificationCorner.Parent = NotificationFrame
+    NotificationCorner.CornerRadius = UDim.new(0, 8)
+
+    local NotificationStroke = Instance.new("UIStroke")
+    NotificationStroke.Parent = NotificationFrame
+    NotificationStroke.Color = color
+    NotificationStroke.Thickness = 2
+
+    local NotificationText = Instance.new("TextLabel")
+    NotificationText.Parent = NotificationFrame
+    NotificationText.Size = UDim2.new(1, -20, 1, -10)
+    NotificationText.Position = UDim2.new(0, 10, 0, 5)
+    NotificationText.BackgroundTransparency = 1
+    NotificationText.Text = message
+    NotificationText.TextColor3 = Color3.fromRGB(220, 220, 255)
+    NotificationText.TextSize = 14
+    NotificationText.Font = Enum.Font.Gotham
+    NotificationText.TextWrapped = true
+
+    delay(2, function()
+        for i = 0, 1, 0.1 do
+            NotificationFrame.BackgroundTransparency = i
+            NotificationText.TextTransparency = i
+            wait(0.05)
+        end
+        NotificationGui:Destroy()
+    end)
+end
+
+-- 文本输入弹窗
+local function CreateTextInputPopup(title, placeholder, callback)
+    local PopupGui = Instance.new("ScreenGui")
+    PopupGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+    local PopupFrame = Instance.new("Frame")
+    PopupFrame.Parent = PopupGui
+    PopupFrame.Size = UDim2.new(0, 250, 0, 150)
+    PopupFrame.Position = UDim2.new(0.5, -125, 0.5, -75)
+    PopupFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+    PopupFrame.Active = true
+    PopupFrame.Draggable = true
+
+    local PopupCorner = Instance.new("UICorner")
+    PopupCorner.Parent = PopupFrame
+    PopupCorner.CornerRadius = UDim.new(0, 10)
+
+    local PopupStroke = Instance.new("UIStroke")
+    PopupStroke.Parent = PopupFrame
+    PopupStroke.Color = Color3.fromRGB(80, 120, 200)
+    PopupStroke.Thickness = 2
+
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Parent = PopupFrame
+    TitleLabel.Size = UDim2.new(1, -20, 0, 25)
+    TitleLabel.Position = UDim2.new(0, 10, 0, 8)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Text = title
+    TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+    TitleLabel.TextSize = 12
+    TitleLabel.Font = Enum.Font.GothamBold
+
+    local InputBox = Instance.new("TextBox")
+    InputBox.Parent = PopupFrame
+    InputBox.Size = UDim2.new(1, -40, 0, 35)
+    InputBox.Position = UDim2.new(0, 20, 0, 40)
+    InputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    InputBox.PlaceholderText = placeholder
+    InputBox.Text = ""
+    InputBox.TextColor3 = Color3.fromRGB(220, 220, 255)
+    InputBox.TextSize = 14
+    InputBox.Font = Enum.Font.Gotham
+    InputBox.ClearTextOnFocus = false
+
+    local InputCorner = Instance.new("UICorner")
+    InputCorner.Parent = InputBox
+    InputCorner.CornerRadius = UDim.new(0, 6)
+
+    local InputStroke = Instance.new("UIStroke")
+    InputStroke.Parent = InputBox
+    InputStroke.Color = Color3.fromRGB(80, 120, 200)
+    InputStroke.Thickness = 1
+
+    local ConfirmButton = Instance.new("TextButton")
+    ConfirmButton.Parent = PopupFrame
+    ConfirmButton.Size = UDim2.new(0, 80, 0, 25)
+    ConfirmButton.Position = UDim2.new(0.5, -90, 1, -40)
+    ConfirmButton.BackgroundColor3 = Color3.fromRGB(40, 120, 80)
+    ConfirmButton.Text = "确认"
+    ConfirmButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+    ConfirmButton.TextSize = 12
+    ConfirmButton.Font = Enum.Font.Gotham
+
+    local ConfirmCorner = Instance.new("UICorner")
+    ConfirmCorner.Parent = ConfirmButton
+    ConfirmCorner.CornerRadius = UDim.new(0, 5)
+
+    local CancelButton = Instance.new("TextButton")
+    CancelButton.Parent = PopupFrame
+    CancelButton.Size = UDim2.new(0, 80, 0, 25)
+    CancelButton.Position = UDim2.new(0.5, 10, 1, -40)
+    CancelButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+    CancelButton.Text = "取消"
+    CancelButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+    CancelButton.TextSize = 12
+    CancelButton.Font = Enum.Font.Gotham
+
+    local CancelCorner = Instance.new("UICorner")
+    CancelCorner.Parent = CancelButton
+    CancelCorner.CornerRadius = UDim.new(0, 5)
+
+    ConfirmButton.MouseButton1Click:Connect(function()
+        local inputText = InputBox.Text
+        if inputText and inputText ~= "" then
+            callback(inputText)
+        end
+        PopupGui:Destroy()
+    end)
+
+    CancelButton.MouseButton1Click:Connect(function()
+        PopupGui:Destroy()
+    end)
+
+    InputBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            local inputText = InputBox.Text
+            if inputText and inputText ~= "" then
+                callback(inputText)
+            end
+            PopupGui:Destroy()
+        end
+    end)
+end
+
+-- 坐标选择弹窗
+local function ShowCoordinateSelectionPopup(title, actionCallback)
+    if #CoordinateManager.SavedCoordinates == 0 then
+        ShowNotification("没有保存的坐标", Color3.fromRGB(255, 150, 0))
+        return
+    end
+
+    local SelectionGui = Instance.new("ScreenGui")
+    SelectionGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+    local SelectionFrame = Instance.new("Frame")
+    SelectionFrame.Parent = SelectionGui
+    SelectionFrame.Size = UDim2.new(0, 280, 0, 350)
+    SelectionFrame.Position = UDim2.new(0.5, -140, 0.5, -175)
+    SelectionFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+    SelectionFrame.Active = true
+    SelectionFrame.Draggable = true
+
+    local SelectionCorner = Instance.new("UICorner")
+    SelectionCorner.Parent = SelectionFrame
+    SelectionCorner.CornerRadius = UDim.new(0, 10)
+
+    local SelectionStroke = Instance.new("UIStroke")
+    SelectionStroke.Parent = SelectionFrame
+    SelectionStroke.Color = Color3.fromRGB(80, 120, 200)
+    SelectionStroke.Thickness = 2
+
+    local Title = Instance.new("TextLabel")
+    Title.Parent = SelectionFrame
+    Title.Size = UDim2.new(1, -20, 0, 30)
+    Title.Position = UDim2.new(0, 10, 0, 10)
+    Title.BackgroundTransparency = 1
+    Title.Text = title
+    Title.TextColor3 = Color3.fromRGB(220, 220, 255)
+    Title.TextSize = 14
+    Title.Font = Enum.Font.GothamBold
+
+    local ScrollFrame = Instance.new("ScrollingFrame")
+    ScrollFrame.Parent = SelectionFrame
+    ScrollFrame.Size = UDim2.new(1, -20, 1, -80)
+    ScrollFrame.Position = UDim2.new(0, 10, 0, 50)
+    ScrollFrame.BackgroundTransparency = 1
+    ScrollFrame.ScrollBarThickness = 4
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, #CoordinateManager.SavedCoordinates * 45)
+
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Parent = SelectionFrame
+    CloseButton.Size = UDim2.new(0, 80, 0, 25)
+    CloseButton.Position = UDim2.new(0.5, -40, 1, -35)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+    CloseButton.Text = "关闭"
+    CloseButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+    CloseButton.TextSize = 12
+    CloseButton.Font = Enum.Font.Gotham
+
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.Parent = CloseButton
+    CloseCorner.CornerRadius = UDim.new(0, 5)
+
+    for i, coord in ipairs(CoordinateManager.SavedCoordinates) do
+        local CoordButton = Instance.new("TextButton")
+        CoordButton.Size = UDim2.new(1, 0, 0, 40)
+        CoordButton.Position = UDim2.new(0, 0, 0, (i-1)*45)
+        CoordButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+        CoordButton.Text = string.format("%s\nX: %.1f, Y: %.1f, Z: %.1f", 
+            coord.name, coord.x, coord.y, coord.z)
+        CoordButton.TextColor3 = Color3.fromRGB(220, 220, 255)
+        CoordButton.TextSize = 10
+        CoordButton.Font = Enum.Font.Gotham
+        CoordButton.TextWrapped = true
+        CoordButton.Parent = ScrollFrame
+
+        local CoordCorner = Instance.new("UICorner")
+        CoordCorner.Parent = CoordButton
+        CoordCorner.CornerRadius = UDim.new(0, 6)
+
+        local CoordStroke = Instance.new("UIStroke")
+        CoordStroke.Parent = CoordButton
+        CoordStroke.Color = Color3.fromRGB(80, 120, 200)
+        CoordStroke.Thickness = 1
+
+        CoordButton.MouseButton1Click:Connect(function()
+            actionCallback(coord, i)
+            SelectionGui:Destroy()
+        end)
+    end
+
+    CloseButton.MouseButton1Click:Connect(function()
+        SelectionGui:Destroy()
+    end)
+end
+
+-- 坐标管理功能
+local function SaveCurrentCoordinate()
+    local character = Players.LocalPlayer.Character
+    if not character then
+        ShowNotification("角色未找到", Color3.fromRGB(255, 50, 50))
+        return
+    end
+
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then
+        ShowNotification("未找到HumanoidRootPart", Color3.fromRGB(255, 50, 50))
+        return
+    end
+
+    CreateTextInputPopup("保存坐标", "输入坐标名称", function(coordinateName)
+        local position = humanoidRootPart.Position
+        local coordinate = {
+            name = coordinateName,
+            x = math.round(position.X * 100) / 100,
+            y = math.round(position.Y * 100) / 100,
+            z = math.round(position.Z * 100) / 100,
+            timestamp = os.time()
+        }
+
+        table.insert(CoordinateManager.SavedCoordinates, coordinate)
+        SaveCoordinates()
+
+        ShowNotification("坐标已保存: " .. coordinateName, Color3.fromRGB(0, 255, 100))
+    end)
+end
+
+local function TeleportToCoordinate()
+    ShowCoordinateSelectionPopup("选择要传送的坐标", function(coord)
+        local character = Players.LocalPlayer.Character
+        if not character then
+            ShowNotification("角色未找到", Color3.fromRGB(255, 50, 50))
+            return
+        end
+
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if not humanoidRootPart then
+            ShowNotification("未找到HumanoidRootPart", Color3.fromRGB(255, 50, 50))
+            return
+        end
+
+        humanoidRootPart.CFrame = CFrame.new(coord.x, coord.y, coord.z)
+        ShowNotification("已传送到: " .. coord.name, Color3.fromRGB(0, 255, 100))
+    end)
+end
+
+local function DeleteCoordinate()
+    ShowCoordinateSelectionPopup("选择要删除的坐标", function(coord, index)
+        table.remove(CoordinateManager.SavedCoordinates, index)
+        SaveCoordinates()
+        ShowNotification("已删除坐标: " .. coord.name, Color3.fromRGB(255, 100, 0))
+    end)
+end
 
 -- 自定义拖动功能 - 只在标题栏拖动
 local function setupTitleBarDrag(dragArea, guiObject)
@@ -320,4 +684,17 @@ player.CharacterAdded:Connect(function(character)
     end
 end)
 
-print("可拖动UI界面加载完成！已添加飞行和穿墙功能")
+-- 创建坐标管理按钮
+local saveCoordButton = createFunctionButton("SaveCoordButton", "保存当前坐标", Color3.fromRGB(70, 130, 200))
+local teleportCoordButton = createFunctionButton("TeleportCoordButton", "传送保存坐标", Color3.fromRGB(70, 200, 130))
+local deleteCoordButton = createFunctionButton("DeleteCoordButton", "删除保存坐标", Color3.fromRGB(200, 70, 70))
+
+-- 坐标管理按钮功能
+saveCoordButton.MouseButton1Click:Connect(SaveCurrentCoordinate)
+teleportCoordButton.MouseButton1Click:Connect(TeleportToCoordinate)
+deleteCoordButton.MouseButton1Click:Connect(DeleteCoordinate)
+
+-- 初始化坐标管理器
+InitCoordinateManager()
+
+print("可拖动UI界面加载完成！已添加飞行、穿墙和坐标管理功能")
