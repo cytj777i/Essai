@@ -239,7 +239,7 @@ local function ShowNotification(message, color)
 end
 
 -- 文本输入弹窗
-local function CreateTextInputPopup(title, placeholder, callback)
+local function CreateTextInputPopup(title, placeholder, defaultValue, callback)
     local PopupGui = Instance.new("ScreenGui")
     PopupGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
@@ -276,7 +276,7 @@ local function CreateTextInputPopup(title, placeholder, callback)
     InputBox.Position = UDim2.new(0, 20, 0, 40)
     InputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
     InputBox.PlaceholderText = placeholder
-    InputBox.Text = ""
+    InputBox.Text = tostring(defaultValue)
     InputBox.TextColor3 = Color3.fromRGB(220, 220, 255)
     InputBox.TextSize = 14
     InputBox.Font = Enum.Font.Gotham
@@ -322,7 +322,10 @@ local function CreateTextInputPopup(title, placeholder, callback)
     ConfirmButton.MouseButton1Click:Connect(function()
         local inputText = InputBox.Text
         if inputText and inputText ~= "" then
-            callback(inputText)
+            local numberValue = tonumber(inputText)
+            if numberValue then
+                callback(numberValue)
+            end
         end
         PopupGui:Destroy()
     end)
@@ -335,7 +338,10 @@ local function CreateTextInputPopup(title, placeholder, callback)
         if enterPressed then
             local inputText = InputBox.Text
             if inputText and inputText ~= "" then
-                callback(inputText)
+                local numberValue = tonumber(inputText)
+                if numberValue then
+                    callback(numberValue)
+                end
             end
             PopupGui:Destroy()
         end
@@ -448,7 +454,7 @@ local function SaveCurrentCoordinate()
         return
     end
 
-    CreateTextInputPopup("保存坐标", "输入坐标名称", function(coordinateName)
+    CreateTextInputPopup("保存坐标", "输入坐标名称", "", function(coordinateName)
         local position = humanoidRootPart.Position
         local coordinate = {
             name = coordinateName,
@@ -694,7 +700,56 @@ saveCoordButton.MouseButton1Click:Connect(SaveCurrentCoordinate)
 teleportCoordButton.MouseButton1Click:Connect(TeleportToCoordinate)
 deleteCoordButton.MouseButton1Click:Connect(DeleteCoordinate)
 
+-- 创建速度设置按钮
+local speedButton = createFunctionButton("SpeedButton", "设置移动速度", Color3.fromRGB(50, 150, 255))
+
+-- 移动速度设置功能
+local function setWalkSpeed(value)
+    local character = player.Character
+    if character then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = value
+            return true
+        else
+            return false, "未找到Humanoid"
+        end
+    else
+        return false, "角色未找到"
+    end
+end
+
+-- 速度设置功能
+speedButton.MouseButton1Click:Connect(function()
+    CreateTextInputPopup("设置移动速度", "输入移动速度 (16-400)", "16", function(value)
+        local numValue = tonumber(value)
+        if numValue and numValue >= 16 and numValue <= 400 then
+            local success, errorMsg = setWalkSpeed(numValue)
+            if success then
+                ShowNotification("移动速度已设置为: " .. numValue, Color3.fromRGB(0, 255, 100))
+            else
+                ShowNotification("设置失败: " .. errorMsg, Color3.fromRGB(255, 50, 50))
+            end
+        else
+            ShowNotification("请输入16-400之间的有效数字", Color3.fromRGB(255, 50, 50))
+        end
+    end)
+end)
+
+-- 角色重生时重新应用移动速度设置
+local lastWalkSpeed = 16
+
+player.CharacterAdded:Connect(function(character)
+    -- 等待角色完全加载
+    local humanoid = character:WaitForChild("Humanoid")
+    
+    -- 重新应用移动速度
+    humanoid.WalkSpeed = lastWalkSpeed
+    
+    ShowNotification("角色重生，已重新应用移动速度设置", Color3.fromRGB(0, 200, 255))
+end)
+
 -- 初始化坐标管理器
 InitCoordinateManager()
 
-print("可拖动UI界面加载完成！已添加飞行、穿墙和坐标管理功能")
+print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理和移动速度调整功能")
