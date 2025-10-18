@@ -134,6 +134,10 @@ local isHidden = false
 local nightVisionEnabled = false
 local originalAmbient
 
+-- 无限跳功能变量
+local infiniteJumpEnabled = false
+local jumpConnection
+
 -- 坐标管理变量
 local CoordinateManager = {
     SavedCoordinates = {},
@@ -216,6 +220,38 @@ local function ToggleNightVision(value)
         end
         nightVisionEnabled = false
         ShowNotification("夜视已关闭", Color3.fromRGB(255, 255, 0))
+    end
+end
+
+-- 无限跳功能
+local function ToggleInfiniteJump(value)
+    if value then
+        -- 开启无限跳
+        infiniteJumpEnabled = true
+        
+        -- 连接跳跃事件
+        jumpConnection = UserInputService.JumpRequest:Connect(function()
+            local character = player.Character
+            if character then
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid:ChangeState("Jumping")
+                end
+            end
+        end)
+        
+        ShowNotification("无限跳已开启", Color3.fromRGB(0, 255, 100))
+    else
+        -- 关闭无限跳
+        infiniteJumpEnabled = false
+        
+        -- 断开连接
+        if jumpConnection then
+            jumpConnection:Disconnect()
+            jumpConnection = nil
+        end
+        
+        ShowNotification("无限跳已关闭", Color3.fromRGB(255, 100, 0))
     end
 end
 
@@ -792,7 +828,46 @@ nightVisionButton.MouseButton1Click:Connect(function()
     end
 end)
 
+-- 创建无限跳功能按钮
+local infiniteJumpButton = createFunctionButton("InfiniteJumpButton", "无限跳", Color3.fromRGB(100, 200, 100))
+
+-- 无限跳按钮点击功能
+infiniteJumpButton.MouseButton1Click:Connect(function()
+    ToggleInfiniteJump(not infiniteJumpEnabled)
+    
+    -- 更新按钮状态显示
+    if infiniteJumpEnabled then
+        infiniteJumpButton.Text = "无限跳已开启"
+        infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
+    else
+        infiniteJumpButton.Text = "无限跳"
+        infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+    end
+end)
+
+-- 角色重生时重新连接无限跳
+player.CharacterAdded:Connect(function(character)
+    if infiniteJumpEnabled then
+        -- 等待角色完全加载
+        character:WaitForChild("Humanoid")
+        
+        -- 重新连接无限跳
+        if jumpConnection then
+            jumpConnection:Disconnect()
+        end
+        
+        jumpConnection = UserInputService.JumpRequest:Connect(function()
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid:ChangeState("Jumping")
+            end
+        end)
+        
+        ShowNotification("角色重生，已重新连接无限跳", Color3.fromRGB(0, 200, 255))
+    end
+end)
+
 -- 初始化坐标管理器
 InitCoordinateManager()
 
-print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整和夜视功能")
+print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视和无限跳功能")
