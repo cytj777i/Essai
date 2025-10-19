@@ -9,6 +9,13 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+-- 发送加载成功通知
+game:GetService("StarterGui"):SetCore("SendNotification",{
+    Title = "作者：ROBLOX.T7",
+    Text = "合作人：XTTT",
+    Duration = 5
+})
+
 -- 创建主ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "DragUI"
@@ -48,13 +55,13 @@ local titleCorner = Instance.new("UICorner")
 titleCorner.CornerRadius = UDim.new(0, 8)
 titleCorner.Parent = titleBar
 
--- 标题文字
+-- 标题文字 - 修改为ROBLOX.T7脚本
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "TitleLabel"
 titleLabel.Size = UDim2.new(0.6, 0, 1, 0)
 titleLabel.Position = UDim2.new(0.2, 0, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "脚本作者ROBLOX.T7 合作人XTTT"
+titleLabel.Text = "ROBLOX.T7脚本"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
 titleLabel.TextScaled = true
 titleLabel.Font = Enum.Font.GothamBold
@@ -206,6 +213,23 @@ local egorScript
 
 local throwFlyEnabled = false
 local throwFlyScript
+
+-- 传送工具功能
+local function CreateTeleportTool()
+    local mouse = game.Players.LocalPlayer:GetMouse() 
+    local tool = Instance.new("Tool") 
+    tool.RequiresHandle = false 
+    tool.Name = "[ROBLOX.T7]传送工具" 
+    tool.Activated:connect(function() 
+        local pos = mouse.Hit + Vector3.new(0, 2.5, 0) 
+        pos = CFrame.new(pos.X, pos.Y, pos.Z) 
+        if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = pos 
+        end
+    end) 
+    tool.Parent = game.Players.LocalPlayer.Backpack
+    ShowNotification("传送工具已添加到背包", Color3.fromRGB(0, 255, 100))
+end
 
 -- ESP透视功能
 local function CreateESP(player)
@@ -1462,6 +1486,13 @@ throwFlyButton.MouseButton1Click:Connect(function()
     end
 end)
 
+-- 传送工具按钮
+local teleportToolButton = createFunctionButton("TeleportToolButton", "点击传送工具", Color3.fromRGB(0, 0, 0))
+teleportToolButton.MouseButton1Click:Connect(function()
+    CreateTeleportTool()
+    teleportToolButton.Text = "传送工具已添加"
+end)
+
 -- 角色重生时重新连接无限跳
 player.CharacterAdded:Connect(function(character)
     if infiniteJumpEnabled then
@@ -1521,4 +1552,4 @@ game:GetService("CoreGui").ChildRemoved:Connect(function(child)
     end
 end)
 
-print("可拖动UI界面加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、ESP透视、走路创人、爬墙、传送功能，以及修复的单一物体飞行和零件破坏者功能，还有新添加的踏空行走、隐身、Egor功能和甩飞功能")
+print("ROBLOX.T7脚本加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、ESP透视、走路创人、爬墙、传送功能，以及修复的单一物体飞行和零件破坏者功能，还有新添加的踏空行走、隐身、Egor功能、甩飞功能和传送工具")
