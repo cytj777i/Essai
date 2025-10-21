@@ -156,6 +156,13 @@ local isHidden = false
 local ESPEnabled = false
 local ESPConnections = {}
 local ESPHighlights = {}
+local ESPLabels = {} -- 新增：存储玩家名字标签
+
+-- NPC透视功能变量
+local NPCESPEnabled = false
+local NPCESPConnections = {}
+local NPCESPHighlights = {}
+local NPCESPLabels = {} -- 新增：存储NPC名字标签
 
 -- 走路创人功能变量
 local ThrowEnabled = false
@@ -231,14 +238,59 @@ local function CreateTeleportTool()
     ShowNotification("传送工具已添加到背包", Color3.fromRGB(0, 255, 100))
 end
 
--- ESP透视功能
+-- 创建通知系统
+local function ShowNotification(message, color)
+    color = color or Color3.fromRGB(0, 150, 255)
+
+    local NotificationGui = Instance.new("ScreenGui")
+    NotificationGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    NotificationGui.ResetOnSpawn = false
+
+    local NotificationFrame = Instance.new("Frame")
+    NotificationFrame.Parent = NotificationGui
+    NotificationFrame.Size = UDim2.new(0, 200, 0, 50)
+    NotificationFrame.Position = UDim2.new(0.5, -100, 0.1, 0)
+    NotificationFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色背景
+    NotificationFrame.BackgroundTransparency = 0.5 -- 半透明
+
+    local NotificationCorner = Instance.new("UICorner")
+    NotificationCorner.Parent = NotificationFrame
+    NotificationCorner.CornerRadius = UDim.new(0, 8)
+
+    local NotificationStroke = Instance.new("UIStroke")
+    NotificationStroke.Parent = NotificationFrame
+    NotificationStroke.Color = color
+    NotificationStroke.Thickness = 2
+
+    local NotificationText = Instance.new("TextLabel")
+    NotificationText.Parent = NotificationFrame
+    NotificationText.Size = UDim2.new(1, -20, 1, -10)
+    NotificationText.Position = UDim2.new(0, 10, 0, 5)
+    NotificationText.BackgroundTransparency = 1
+    NotificationText.Text = message
+    NotificationText.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
+    NotificationText.TextSize = 14
+    NotificationText.Font = Enum.Font.Gotham
+    NotificationText.TextWrapped = true
+
+    delay(2, function()
+        for i = 0, 1, 0.1 do
+            NotificationFrame.BackgroundTransparency = i + 0.5
+            NotificationText.TextTransparency = i
+            wait(0.05)
+        end
+        NotificationGui:Destroy()
+    end)
+end
+
+-- 增强的ESP透视功能 - 显示玩家名称
 local function CreateESP(player)
     if player == Players.LocalPlayer then return end
 
     local character = player.Character
     if not character then return end
 
-    -- 创建高亮效果
+    -- 创建高亮效果 - 保持原来的白色半透明
     local highlight = Instance.new("Highlight")
     highlight.Name = "ESP_Highlight"
     highlight.FillColor = Color3.fromRGB(255, 255, 255)
@@ -250,11 +302,41 @@ local function CreateESP(player)
 
     ESPHighlights[player] = highlight
 
+    -- 创建名称标签 - 玩家用黑色文字
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_NameTag"
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3, 0) -- 在头顶上方显示
+    billboard.AlwaysOnTop = true
+    local head = character:FindFirstChild("Head")
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    billboard.Adornee = head or humanoidRootPart
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = Color3.fromRGB(0, 0, 0) -- 黑色文字
+    nameLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255) -- 白色描边
+    nameLabel.TextStrokeTransparency = 0
+    nameLabel.TextSize = 14
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.Parent = billboard
+
+    if head or humanoidRootPart then
+        billboard.Parent = character
+        ESPLabels[player] = billboard
+    end
+
     -- 监听角色变化
     local characterAddedConnection = player.CharacterAdded:Connect(function(newChar)
         if ESPHighlights[player] then
             ESPHighlights[player]:Destroy()
             ESPHighlights[player] = nil
+        end
+        if ESPLabels[player] then
+            ESPLabels[player]:Destroy()
+            ESPLabels[player] = nil
         end
 
         task.wait(1)
@@ -270,6 +352,32 @@ local function CreateESP(player)
             newHighlight.Parent = newChar
 
             ESPHighlights[player] = newHighlight
+
+            -- 重新创建名称标签
+            local newBillboard = Instance.new("BillboardGui")
+            newBillboard.Name = "ESP_NameTag"
+            newBillboard.Size = UDim2.new(0, 200, 0, 50)
+            newBillboard.StudsOffset = Vector3.new(0, 3, 0)
+            newBillboard.AlwaysOnTop = true
+            local newHead = newChar:FindFirstChild("Head")
+            local newHumanoidRootPart = newChar:FindFirstChild("HumanoidRootPart")
+            newBillboard.Adornee = newHead or newHumanoidRootPart
+
+            local newNameLabel = Instance.new("TextLabel")
+            newNameLabel.Size = UDim2.new(1, 0, 1, 0)
+            newNameLabel.BackgroundTransparency = 1
+            newNameLabel.Text = player.Name
+            newNameLabel.TextColor3 = Color3.fromRGB(0, 0, 0) -- 黑色文字
+            newNameLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255) -- 白色描边
+            newNameLabel.TextStrokeTransparency = 0
+            newNameLabel.TextSize = 14
+            newNameLabel.Font = Enum.Font.GothamBold
+            newNameLabel.Parent = newBillboard
+
+            if newHead or newHumanoidRootPart then
+                newBillboard.Parent = newChar
+                ESPLabels[player] = newBillboard
+            end
         end
     end)
 
@@ -277,6 +385,10 @@ local function CreateESP(player)
         if ESPHighlights[player] then
             ESPHighlights[player]:Destroy()
             ESPHighlights[player] = nil
+        end
+        if ESPLabels[player] then
+            ESPLabels[player]:Destroy()
+            ESPLabels[player] = nil
         end
     end)
 
@@ -296,6 +408,11 @@ local function RemoveESP(player)
     if ESPHighlights[player] then
         ESPHighlights[player]:Destroy()
         ESPHighlights[player] = nil
+    end
+
+    if ESPLabels[player] then
+        ESPLabels[player]:Destroy()
+        ESPLabels[player] = nil
     end
 end
 
@@ -348,6 +465,178 @@ local function ToggleESP()
         return false
     else
         EnableESP()
+        return true
+    end
+end
+
+-- NPC透视功能
+local function CreateNPCESP(npc)
+    if not npc:IsA("Model") then return end
+    
+    local humanoid = npc:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    -- 检查是否已经是玩家角色
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character == npc then
+            return
+        end
+    end
+
+    -- 创建高亮效果 - 保持原来的白色半透明
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "NPC_ESP_Highlight"
+    highlight.FillColor = Color3.fromRGB(255, 255, 255) -- 白色高亮
+    highlight.FillTransparency = 0.7
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.OutlineTransparency = 0.3
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = npc
+
+    NPCESPHighlights[npc] = highlight
+
+    -- 创建名称标签 - NPC用白色文字
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "NPC_ESP_NameTag"
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    local head = npc:FindFirstChild("Head")
+    local humanoidRootPart = npc:FindFirstChild("HumanoidRootPart")
+    billboard.Adornee = head or humanoidRootPart
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = npc.Name .. " (NPC)"
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
+    nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- 黑色描边
+    nameLabel.TextStrokeTransparency = 0
+    nameLabel.TextSize = 12
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.Parent = billboard
+
+    if head or humanoidRootPart then
+        billboard.Parent = npc
+        NPCESPLabels[npc] = billboard
+    end
+
+    -- 监听NPC销毁
+    local descendantRemovingConnection = npc.DescendantRemoving:Connect(function(descendant)
+        if descendant == humanoid then
+            RemoveNPCESP(npc)
+        end
+    end)
+
+    NPCESPConnections[npc] = {
+        descendantRemoving = descendantRemovingConnection
+    }
+end
+
+local function RemoveNPCESP(npc)
+    if NPCESPConnections[npc] then
+        NPCESPConnections[npc].descendantRemoving:Disconnect()
+        NPCESPConnections[npc] = nil
+    end
+
+    if NPCESPHighlights[npc] then
+        NPCESPHighlights[npc]:Destroy()
+        NPCESPHighlights[npc] = nil
+    end
+
+    if NPCESPLabels[npc] then
+        NPCESPLabels[npc]:Destroy()
+        NPCESPLabels[npc] = nil
+    end
+end
+
+-- 扫描工作区中的NPC
+local function ScanForNPCs()
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj ~= Players.LocalPlayer.Character then
+            local humanoid = obj:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                -- 检查是否不是玩家角色
+                local isPlayer = false
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player.Character == obj then
+                        isPlayer = true
+                        break
+                    end
+                end
+                
+                if not isPlayer then
+                    CreateNPCESP(obj)
+                end
+            end
+        end
+    end
+end
+
+-- 启用NPC ESP
+local function EnableNPCESP()
+    if NPCESPEnabled then return end
+
+    NPCESPEnabled = true
+    
+    -- 扫描现有NPC
+    ScanForNPCs()
+    
+    -- 监听新NPC
+    local descendantAddedConnection = workspace.DescendantAdded:Connect(function(descendant)
+        if descendant:IsA("Model") then
+            task.wait(0.1) -- 等待模型完全加载
+            local humanoid = descendant:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                -- 检查是否不是玩家
+                local isPlayer = false
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player.Character == descendant then
+                        isPlayer = true
+                        break
+                    end
+                end
+                
+                if not isPlayer then
+                    CreateNPCESP(descendant)
+                end
+            end
+        end
+    end)
+
+    NPCESPConnections["Global"] = {
+        descendantAdded = descendantAddedConnection
+    }
+
+    ShowNotification("NPC透视已开启", Color3.fromRGB(0, 255, 100))
+end
+
+-- 禁用NPC ESP
+local function DisableNPCESP()
+    if not NPCESPEnabled then return end
+
+    NPCESPEnabled = false
+
+    if NPCESPConnections["Global"] then
+        NPCESPConnections["Global"].descendantAdded:Disconnect()
+        NPCESPConnections["Global"] = nil
+    end
+
+    -- 移除所有NPC ESP
+    for npc, _ in pairs(NPCESPHighlights) do
+        RemoveNPCESP(npc)
+    end
+
+    ShowNotification("NPC透视已关闭", Color3.fromRGB(255, 100, 0))
+end
+
+-- 切换NPC ESP
+local function ToggleNPCESP()
+    if NPCESPEnabled then
+        DisableNPCESP()
+        return false
+    else
+        EnableNPCESP()
         return true
     end
 end
@@ -625,51 +914,6 @@ local function ToggleThrowFly(value)
         throwFlyEnabled = false
         ShowNotification("甩飞功能已关闭", Color3.fromRGB(255, 100, 0))
     end
-end
-
--- 创建通知系统
-local function ShowNotification(message, color)
-    color = color or Color3.fromRGB(0, 150, 255)
-
-    local NotificationGui = Instance.new("ScreenGui")
-    NotificationGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-    NotificationGui.ResetOnSpawn = false
-
-    local NotificationFrame = Instance.new("Frame")
-    NotificationFrame.Parent = NotificationGui
-    NotificationFrame.Size = UDim2.new(0, 200, 0, 50)
-    NotificationFrame.Position = UDim2.new(0.5, -100, 0.1, 0)
-    NotificationFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 黑色背景
-    NotificationFrame.BackgroundTransparency = 0.5 -- 半透明
-
-    local NotificationCorner = Instance.new("UICorner")
-    NotificationCorner.Parent = NotificationFrame
-    NotificationCorner.CornerRadius = UDim.new(0, 8)
-
-    local NotificationStroke = Instance.new("UIStroke")
-    NotificationStroke.Parent = NotificationFrame
-    NotificationStroke.Color = color
-    NotificationStroke.Thickness = 2
-
-    local NotificationText = Instance.new("TextLabel")
-    NotificationText.Parent = NotificationFrame
-    NotificationText.Size = UDim2.new(1, -20, 1, -10)
-    NotificationText.Position = UDim2.new(0, 10, 0, 5)
-    NotificationText.BackgroundTransparency = 1
-    NotificationText.Text = message
-    NotificationText.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
-    NotificationText.TextSize = 14
-    NotificationText.Font = Enum.Font.Gotham
-    NotificationText.TextWrapped = true
-
-    delay(2, function()
-        for i = 0, 1, 0.1 do
-            NotificationFrame.BackgroundTransparency = i + 0.5
-            NotificationText.TextTransparency = i
-            wait(0.05)
-        end
-        NotificationGui:Destroy()
-    end)
 end
 
 -- 文本输入弹窗
@@ -1004,7 +1248,7 @@ end)
 -- 添加悬停效果（临时变色，不永久）
 local function addHoverEffect(button)
     local originalTransparency = button.BackgroundTransparency
-        
+
     button.MouseEnter:Connect(function()
         button.BackgroundTransparency = originalTransparency - 0.2
     end)
@@ -1012,11 +1256,11 @@ local function addHoverEffect(button)
     button.MouseLeave:Connect(function()
         button.BackgroundTransparency = originalTransparency
     end)
-    
+
     button.MouseButton1Down:Connect(function()
         button.BackgroundTransparency = originalTransparency - 0.3
     end)
-    
+
     button.MouseButton1Up:Connect(function()
         button.BackgroundTransparency = originalTransparency - 0.2
     end)
@@ -1217,14 +1461,25 @@ end)
 
 -- 创建所有功能按钮（保持所有原有功能）
 
--- ESP透视按钮
-local espButton = createFunctionButton("ESP透视", "ESP透视", Color3.fromRGB(0, 0, 0))
+-- ESP透视按钮（带名称显示）
+local espButton = createFunctionButton("ESP透视", "ESP透视（带名称）", Color3.fromRGB(0, 0, 0))
 espButton.MouseButton1Click:Connect(function()
     local newState = ToggleESP()
     if newState then
         espButton.Text = "ESP透视已开启"
     else
-        espButton.Text = "ESP透视"
+        espButton.Text = "ESP透视（带名称）"
+    end
+end)
+
+-- NPC透视按钮
+local npcESPButton = createFunctionButton("NPCESPButton", "NPC透视", Color3.fromRGB(0, 0, 0))
+npcESPButton.MouseButton1Click:Connect(function()
+    local newState = ToggleNPCESP()
+    if newState then
+        npcESPButton.Text = "NPC透视已开启"
+    else
+        npcESPButton.Text = "NPC透视"
     end
 end)
 
@@ -1537,6 +1792,7 @@ InitCoordinateManager()
 -- 清理函数（当脚本被销毁时）
 local function cleanup()
     DisableESP()
+    DisableNPCESP()
     if noclipConnection then
         noclipConnection:Disconnect()
     end
@@ -1552,4 +1808,4 @@ game:GetService("CoreGui").ChildRemoved:Connect(function(child)
     end
 end)
 
-print("ROBLOX.T7脚本加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、ESP透视、走路创人、爬墙、传送功能，以及修复的单一物体飞行和零件破坏者功能，还有新添加的踏空行走、隐身、Egor功能、甩飞功能和传送工具")
+print("ROBLOX.T7脚本加载完成！已添加飞行、穿墙、坐标管理、移动速度调整、夜视、无限跳、防止摔落伤害、全局未固定物体控制、ESP透视（带名称显示）、NPC透视、走路创人、爬墙、传送功能，以及修复的单一物体飞行和零件破坏者功能，还有新添加的踏空行走、隐身、Egor功能、甩飞功能和传送工具")
