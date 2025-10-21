@@ -495,7 +495,7 @@ local function CreateNPCESP(npc)
 
     NPCESPHighlights[npc] = highlight
 
-    -- 创建名称标签 - NPC用白色文字
+    -- 创建名称标签 - NPC用白色文字，显示NPC自己的名字
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "NPC_ESP_NameTag"
     billboard.Size = UDim2.new(0, 200, 0, 50)
@@ -508,7 +508,7 @@ local function CreateNPCESP(npc)
     local nameLabel = Instance.new("TextLabel")
     nameLabel.Size = UDim2.new(1, 0, 1, 0)
     nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = npc.Name .. " (NPC)"
+    nameLabel.Text = npc.Name -- 只显示NPC自己的名字，不添加"(NPC)"后缀
     nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- 白色文字
     nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- 黑色描边
     nameLabel.TextStrokeTransparency = 0
