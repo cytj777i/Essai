@@ -53,6 +53,10 @@ local lastWalkSpeed = 16
 local lastJumpPower = 50
 local lastGravity = 196.2
 
+-- ================ 跳跃高度修复变量 ================
+local jumpPowerConnection
+local forceJumpPower = false
+
 -- ================ 坐标管理变量 ================
 local CoordinateManager = {
     SavedCoordinates = {},
@@ -661,18 +665,39 @@ local function SetWalkSpeed(value)
     return false
 end
 
--- ================ 修复跳跃高度设置功能 ================
-local function SetJumpPower(value)
+-- ================ 强制跳跃高度功能 ================
+local function ApplyJumpPower(value)
     lastJumpPower = value
+    forceJumpPower = true
+    
+    -- 立即应用一次
     local character = player.Character
     if character then
-        local humanoid = character:FindFirstChild("Humanoid")
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
         if humanoid then
             humanoid.JumpPower = value
-            return true
         end
     end
-    return false
+    
+    -- 使用类似无限跳的持续监控机制
+    if jumpPowerConnection then
+        jumpPowerConnection:Disconnect()
+    end
+    
+    jumpPowerConnection = RunService.Heartbeat:Connect(function()
+        if not forceJumpPower then
+            jumpPowerConnection:Disconnect()
+            return
+        end
+        
+        local character = player.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.JumpPower ~= lastJumpPower then
+                humanoid.JumpPower = lastJumpPower
+            end
+        end
+    end)
 end
 
 -- ================ 重力设置功能 ================
@@ -701,17 +726,6 @@ local function ApplySpeed(speed)
     local humanoid = GetHumanoid(character)
     if humanoid then
         humanoid.WalkSpeed = speed
-    end
-end
-
--- ================ 应用跳跃高度设置 ================
-local function ApplyJump(jump)
-    jump = math.clamp(tonumber(jump) or 0, 0, 200)
-    lastJumpPower = jump
-    local character = player.Character
-    local humanoid = GetHumanoid(character)
-    if humanoid then
-        humanoid.JumpPower = jump
     end
 end
 
@@ -779,7 +793,7 @@ end
 local function OnCharacterAdded(character)
     character:WaitForChild("Humanoid")
     wait(0.5)
-    
+
     if infiniteJumpEnabled then
         if jumpConnection then
             jumpConnection:Disconnect()
@@ -789,6 +803,13 @@ local function OnCharacterAdded(character)
 
     if noclipEnabled then
         ToggleNoclip(true)
+    end
+
+    if forceJumpPower then
+        if jumpPowerConnection then
+            jumpPowerConnection:Disconnect()
+        end
+        ApplyJumpPower(lastJumpPower)
     end
 
     local humanoid = character:FindFirstChild("Humanoid")
@@ -837,7 +858,7 @@ local SpeedSlider = MainTab:CreateSlider({
    end,
 })
 
--- ================ 修复跳跃高度滑块 ================
+-- ================ 修复的跳跃高度滑块 ================
 local JumpPowerSlider = MainTab:CreateSlider({
    Name = "跳跃高度",
    Range = {0, 200},
@@ -846,7 +867,7 @@ local JumpPowerSlider = MainTab:CreateSlider({
    CurrentValue = 50,
    Flag = "JumpPowerSlider",
    Callback = function(Value)
-        ApplyJump(Value)
+        ApplyJumpPower(Value)
         ShowNotification("跳跃高度已设置为: " .. Value)
    end,
 })
@@ -1152,5 +1173,5 @@ EnableAntiAFK()
 if player.Character then
     wait(1)
     ApplySpeed(lastWalkSpeed)
-    ApplyJump(lastJumpPower)
+    ApplyJumpPower(lastJumpPower)
 end
