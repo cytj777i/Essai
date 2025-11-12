@@ -1,25 +1,21 @@
--- ================ 加载Rayfield UI库 ================
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
--- ================ 创建主窗口 ================
 local Window = Rayfield:CreateWindow({
-   Name = "茗噩脚本中心",
-   LoadingTitle = "茗噩脚本中心",
-   LoadingSubtitle = "正在加载功能...",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "MingEConfig",
-      FileName = "Config"
-   },
-   Discord = {
-      Enabled = false,
-      Invite = "noinvitelink",
-      RememberJoins = true
-   },
-   KeySystem = false,
+    Name = "茗噩脚本中心",
+    LoadingTitle = "茗噩脚本中心",
+    LoadingSubtitle = "正在加载功能...",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "MingEConfig",
+        FileName = "Config"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "noinvitelink",
+        RememberJoins = true
+    },
+    KeySystem = false,
 })
 
--- ================ 初始化变量 ================
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -29,20 +25,14 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
-
--- ESP透视功能变量
 local ESPEnabled = false
 local ESPConnections = {}
 local ESPHighlights = {}
 local ESPLabels = {}
-
--- NPC透视功能变量
 local NPCESPEnabled = false
 local NPCESPConnections = {}
 local NPCESPHighlights = {}
 local NPCESPLabels = {}
-
--- 其他功能变量
 local nightVisionEnabled = false
 local originalAmbient
 local infiniteJumpEnabled = false
@@ -52,24 +42,19 @@ local noclipConnection
 local lastWalkSpeed = 16
 local lastJumpPower = 50
 local lastGravity = 196.2
-
--- ================ 跳跃高度修复变量 ================
 local jumpPowerConnection
 local forceJumpPower = false
 
--- ================ 坐标管理变量 ================
 local CoordinateManager = {
     SavedCoordinates = {},
     FilePath = "SavedCoordinates.json"
 }
 
--- ================ 传送功能变量 ================
 local Teleport = {
     TargetPlayer = nil,
     PlayerList = {}
 }
 
--- ================ 反挂机功能 ================
 local function EnableAntiAFK()
     local vu = game:GetService("VirtualUser")
     game:GetService("Players").LocalPlayer.Idled:connect(function()
@@ -79,7 +64,6 @@ local function EnableAntiAFK()
     end)
 end
 
--- ================ 玩家进入提示功能 ================
 local function EnablePlayerJoinNotifier()
     local success, result = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/boyscp/scriscriptsc/main/bbn.lua"))()
@@ -91,15 +75,13 @@ local function EnablePlayerJoinNotifier()
     end
 end
 
--- ================ 创建选项卡 ================
 local MainTab = Window:CreateTab("主功能", "home")
 local VisualTab = Window:CreateTab("视觉功能", "eye")
 local MovementTab = Window:CreateTab("移动功能", "move")
 local PlayerTab = Window:CreateTab("玩家功能", "users")
 local UtilityTab = Window:CreateTab("实用工具", "settings")
-local OtherScriptsTab = Window:CreateTab("其他脚本", "code") -- 新增的其他脚本选项卡
+local OtherScriptsTab = Window:CreateTab("其他脚本", "code")
 
--- ================ 通知函数 ================
 local function ShowNotification(title, content, duration)
     duration = duration or 3
     Rayfield:Notify({
@@ -110,7 +92,6 @@ local function ShowNotification(title, content, duration)
     })
 end
 
--- ================ 文件操作函数 ================
 local function ReadFile(path)
     local success, result = pcall(function()
         if readfile then
@@ -139,7 +120,6 @@ local function WriteFile(path, content)
     return success and result or false
 end
 
--- ================ 坐标管理功能 ================
 local function LoadCoordinates()
     local content = ReadFile(CoordinateManager.FilePath)
     if content then
@@ -162,11 +142,10 @@ local function SaveCoordinates()
     return success
 end
 
--- 文本输入弹窗
 local function CreateTextInputPopup(title, placeholder, callback)
     local PopupGui = Instance.new("ScreenGui")
     PopupGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
+    
     local PopupFrame = Instance.new("Frame")
     PopupFrame.Parent = PopupGui
     PopupFrame.Size = UDim2.new(0, 250, 0, 150)
@@ -174,16 +153,16 @@ local function CreateTextInputPopup(title, placeholder, callback)
     PopupFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
     PopupFrame.Active = true
     PopupFrame.Draggable = true
-
+    
     local PopupCorner = Instance.new("UICorner")
     PopupCorner.Parent = PopupFrame
     PopupCorner.CornerRadius = UDim.new(0, 10)
-
+    
     local PopupStroke = Instance.new("UIStroke")
     PopupStroke.Parent = PopupFrame
     PopupStroke.Color = Color3.fromRGB(80, 120, 200)
     PopupStroke.Thickness = 2
-
+    
     local TitleLabel = Instance.new("TextLabel")
     TitleLabel.Parent = PopupFrame
     TitleLabel.Size = UDim2.new(1, -20, 0, 25)
@@ -193,7 +172,7 @@ local function CreateTextInputPopup(title, placeholder, callback)
     TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
     TitleLabel.TextSize = 12
     TitleLabel.Font = Enum.Font.GothamBold
-
+    
     local InputBox = Instance.new("TextBox")
     InputBox.Parent = PopupFrame
     InputBox.Size = UDim2.new(1, -40, 0, 35)
@@ -205,16 +184,16 @@ local function CreateTextInputPopup(title, placeholder, callback)
     InputBox.TextSize = 14
     InputBox.Font = Enum.Font.Gotham
     InputBox.ClearTextOnFocus = false
-
+    
     local InputCorner = Instance.new("UICorner")
     InputCorner.Parent = InputBox
     InputCorner.CornerRadius = UDim.new(0, 6)
-
+    
     local InputStroke = Instance.new("UIStroke")
     InputStroke.Parent = InputBox
     InputStroke.Color = Color3.fromRGB(80, 120, 200)
     InputStroke.Thickness = 1
-
+    
     local ConfirmButton = Instance.new("TextButton")
     ConfirmButton.Parent = PopupFrame
     ConfirmButton.Size = UDim2.new(0, 80, 0, 25)
@@ -224,11 +203,11 @@ local function CreateTextInputPopup(title, placeholder, callback)
     ConfirmButton.TextColor3 = Color3.fromRGB(220, 220, 255)
     ConfirmButton.TextSize = 12
     ConfirmButton.Font = Enum.Font.Gotham
-
+    
     local ConfirmCorner = Instance.new("UICorner")
     ConfirmCorner.Parent = ConfirmButton
     ConfirmCorner.CornerRadius = UDim.new(0, 5)
-
+    
     local CancelButton = Instance.new("TextButton")
     CancelButton.Parent = PopupFrame
     CancelButton.Size = UDim2.new(0, 80, 0, 25)
@@ -238,11 +217,11 @@ local function CreateTextInputPopup(title, placeholder, callback)
     CancelButton.TextColor3 = Color3.fromRGB(220, 220, 255)
     CancelButton.TextSize = 12
     CancelButton.Font = Enum.Font.Gotham
-
+    
     local CancelCorner = Instance.new("UICorner")
     CancelCorner.Parent = CancelButton
     CancelCorner.CornerRadius = UDim.new(0, 5)
-
+    
     ConfirmButton.MouseButton1Click:Connect(function()
         local inputText = InputBox.Text
         if inputText and inputText ~= "" then
@@ -250,11 +229,11 @@ local function CreateTextInputPopup(title, placeholder, callback)
         end
         PopupGui:Destroy()
     end)
-
+    
     CancelButton.MouseButton1Click:Connect(function()
         PopupGui:Destroy()
     end)
-
+    
     InputBox.FocusLost:Connect(function(enterPressed)
         if enterPressed then
             local inputText = InputBox.Text
@@ -266,16 +245,15 @@ local function CreateTextInputPopup(title, placeholder, callback)
     end)
 end
 
--- 坐标选择弹窗
 local function ShowCoordinateSelectionPopup(title, actionCallback)
     if #CoordinateManager.SavedCoordinates == 0 then
         ShowNotification("没有保存的坐标")
         return
     end
-
+    
     local SelectionGui = Instance.new("ScreenGui")
     SelectionGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
+    
     local SelectionFrame = Instance.new("Frame")
     SelectionFrame.Parent = SelectionGui
     SelectionFrame.Size = UDim2.new(0, 280, 0, 350)
@@ -283,16 +261,16 @@ local function ShowCoordinateSelectionPopup(title, actionCallback)
     SelectionFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
     SelectionFrame.Active = true
     SelectionFrame.Draggable = true
-
+    
     local SelectionCorner = Instance.new("UICorner")
     SelectionCorner.Parent = SelectionFrame
     SelectionCorner.CornerRadius = UDim.new(0, 10)
-
+    
     local SelectionStroke = Instance.new("UIStroke")
     SelectionStroke.Parent = SelectionFrame
     SelectionStroke.Color = Color3.fromRGB(80, 120, 200)
     SelectionStroke.Thickness = 2
-
+    
     local Title = Instance.new("TextLabel")
     Title.Parent = SelectionFrame
     Title.Size = UDim2.new(1, -20, 0, 30)
@@ -302,7 +280,7 @@ local function ShowCoordinateSelectionPopup(title, actionCallback)
     Title.TextColor3 = Color3.fromRGB(220, 220, 255)
     Title.TextSize = 14
     Title.Font = Enum.Font.GothamBold
-
+    
     local ScrollFrame = Instance.new("ScrollingFrame")
     ScrollFrame.Parent = SelectionFrame
     ScrollFrame.Size = UDim2.new(1, -20, 1, -80)
@@ -310,7 +288,7 @@ local function ShowCoordinateSelectionPopup(title, actionCallback)
     ScrollFrame.BackgroundTransparency = 1
     ScrollFrame.ScrollBarThickness = 4
     ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, #CoordinateManager.SavedCoordinates * 45)
-
+    
     local CloseButton = Instance.new("TextButton")
     CloseButton.Parent = SelectionFrame
     CloseButton.Size = UDim2.new(0, 80, 0, 25)
@@ -320,58 +298,56 @@ local function ShowCoordinateSelectionPopup(title, actionCallback)
     CloseButton.TextColor3 = Color3.fromRGB(220, 220, 255)
     CloseButton.TextSize = 12
     CloseButton.Font = Enum.Font.Gotham
-
+    
     local CloseCorner = Instance.new("UICorner")
     CloseCorner.Parent = CloseButton
     CloseCorner.CornerRadius = UDim.new(0, 5)
-
+    
     for i, coord in ipairs(CoordinateManager.SavedCoordinates) do
         local CoordButton = Instance.new("TextButton")
         CoordButton.Size = UDim2.new(1, 0, 0, 40)
         CoordButton.Position = UDim2.new(0, 0, 0, (i-1)*45)
         CoordButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-        CoordButton.Text = string.format("%s\nX: %.1f, Y: %.1f, Z: %.1f", 
-            coord.name, coord.x, coord.y, coord.z)
+        CoordButton.Text = string.format("%s\nX:%.1f,Y:%.1f,Z:%.1f", coord.name, coord.x, coord.y, coord.z)
         CoordButton.TextColor3 = Color3.fromRGB(220, 220, 255)
         CoordButton.TextSize = 10
         CoordButton.Font = Enum.Font.Gotham
         CoordButton.TextWrapped = true
         CoordButton.Parent = ScrollFrame
-
+        
         local CoordCorner = Instance.new("UICorner")
         CoordCorner.Parent = CoordButton
         CoordCorner.CornerRadius = UDim.new(0, 6)
-
+        
         local CoordStroke = Instance.new("UIStroke")
         CoordStroke.Parent = CoordButton
         CoordStroke.Color = Color3.fromRGB(80, 120, 200)
         CoordStroke.Thickness = 1
-
+        
         CoordButton.MouseButton1Click:Connect(function()
             actionCallback(coord, i)
             SelectionGui:Destroy()
         end)
     end
-
+    
     CloseButton.MouseButton1Click:Connect(function()
         SelectionGui:Destroy()
     end)
 end
 
--- 坐标管理功能
 local function SaveCurrentCoordinate()
     local character = Players.LocalPlayer.Character
     if not character then
         ShowNotification("角色未找到")
         return
     end
-
+    
     local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
     if not humanoidRootPart then
         ShowNotification("未找到HumanoidRootPart")
         return
     end
-
+    
     CreateTextInputPopup("保存坐标", "输入坐标名称", function(coordinateName)
         local position = humanoidRootPart.Position
         local coordinate = {
@@ -381,10 +357,8 @@ local function SaveCurrentCoordinate()
             z = math.round(position.Z * 100) / 100,
             timestamp = os.time()
         }
-
         table.insert(CoordinateManager.SavedCoordinates, coordinate)
         SaveCoordinates()
-
         ShowNotification("坐标已保存: " .. coordinateName)
     end)
 end
@@ -396,13 +370,13 @@ local function TeleportToCoordinate()
             ShowNotification("角色未找到")
             return
         end
-
+        
         local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
         if not humanoidRootPart then
             ShowNotification("未找到HumanoidRootPart")
             return
         end
-
+        
         humanoidRootPart.CFrame = CFrame.new(coord.x, coord.y, coord.z)
         ShowNotification("已传送到: " .. coord.name)
     end)
@@ -416,17 +390,14 @@ local function DeleteCoordinate()
     end)
 end
 
--- 初始化坐标管理器
 LoadCoordinates()
 
--- ================ ESP透视功能 ================
 local function CreateESP(player)
     if player == Players.LocalPlayer then return end
-
+    
     local character = player.Character
     if not character then return end
-
-    -- 创建高亮效果
+    
     local highlight = Instance.new("Highlight")
     highlight.Name = "ESP_Highlight"
     highlight.FillColor = Color3.fromRGB(255, 255, 255)
@@ -435,19 +406,18 @@ local function CreateESP(player)
     highlight.OutlineTransparency = 0.3
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = character
-
     ESPHighlights[player] = highlight
-
-    -- 创建名称标签
+    
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "ESP_NameTag"
     billboard.Size = UDim2.new(0, 200, 0, 50)
     billboard.StudsOffset = Vector3.new(0, 3, 0)
     billboard.AlwaysOnTop = true
+    
     local head = character:FindFirstChild("Head")
     local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
     billboard.Adornee = head or humanoidRootPart
-
+    
     local nameLabel = Instance.new("TextLabel")
     nameLabel.Size = UDim2.new(1, 0, 1, 0)
     nameLabel.BackgroundTransparency = 1
@@ -458,7 +428,7 @@ local function CreateESP(player)
     nameLabel.TextSize = 14
     nameLabel.Font = Enum.Font.GothamBold
     nameLabel.Parent = billboard
-
+    
     if head or humanoidRootPart then
         billboard.Parent = character
         ESPLabels[player] = billboard
@@ -470,7 +440,7 @@ local function RemoveESP(player)
         ESPHighlights[player]:Destroy()
         ESPHighlights[player] = nil
     end
-
+    
     if ESPLabels[player] then
         ESPLabels[player]:Destroy()
         ESPLabels[player] = nil
@@ -480,41 +450,35 @@ end
 local function EnableESP()
     if ESPEnabled then return end
     ESPEnabled = true
-
+    
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= Players.LocalPlayer then
             CreateESP(player)
         end
     end
-
-    ShowNotification("ESP透视已开启")
+    ShowNotification("玩家ESP透视已开启")
 end
 
 local function DisableESP()
     if not ESPEnabled then return end
     ESPEnabled = false
-
+    
     for _, player in pairs(Players:GetPlayers()) do
         RemoveESP(player)
     end
-
-    ShowNotification("ESP透视已关闭")
+    ShowNotification("玩家ESP透视已关闭")
 end
 
--- ================ NPC透视功能 ================
 local function CreateNPCESP(npc)
     if not npc:IsA("Model") then return end
-
+    
     local humanoid = npc:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
-
-    -- 检查是否已经是玩家角色
+    
     for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character == npc then
-            return
-        end
+        if player.Character == npc then return end
     end
-
+    
     local highlight = Instance.new("Highlight")
     highlight.Name = "NPC_ESP_Highlight"
     highlight.FillColor = Color3.fromRGB(255, 255, 255)
@@ -523,7 +487,6 @@ local function CreateNPCESP(npc)
     highlight.OutlineTransparency = 0.3
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = npc
-
     NPCESPHighlights[npc] = highlight
 end
 
@@ -546,7 +509,6 @@ local function ScanForNPCs()
                         break
                     end
                 end
-
                 if not isPlayer then
                     CreateNPCESP(obj)
                 end
@@ -565,15 +527,13 @@ end
 local function DisableNPCESP()
     if not NPCESPEnabled then return end
     NPCESPEnabled = false
-
+    
     for npc, _ in pairs(NPCESPHighlights) do
         RemoveNPCESP(npc)
     end
-
     ShowNotification("NPC透视已关闭")
 end
 
--- ================ 夜视功能 ================
 local function ToggleNightVision(value)
     if value then
         originalAmbient = Lighting.Ambient
@@ -591,7 +551,6 @@ local function ToggleNightVision(value)
     end
 end
 
--- ================ 无限跳功能 ================
 local function ToggleInfiniteJump(value)
     if value then
         infiniteJumpEnabled = true
@@ -615,7 +574,6 @@ local function ToggleInfiniteJump(value)
     end
 end
 
--- ================ 穿墙功能 ================
 local function ToggleNoclip(value)
     if value then
         noclipEnabled = true
@@ -652,7 +610,6 @@ local function ToggleNoclip(value)
     end
 end
 
--- ================ 速度设置功能 ================
 local function SetWalkSpeed(value)
     lastWalkSpeed = value
     local character = player.Character
@@ -666,12 +623,10 @@ local function SetWalkSpeed(value)
     return false
 end
 
--- ================ 强制跳跃高度功能 ================
 local function ApplyJumpPower(value)
     lastJumpPower = value
     forceJumpPower = true
-
-    -- 立即应用一次
+    
     local character = player.Character
     if character then
         local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -679,18 +634,16 @@ local function ApplyJumpPower(value)
             humanoid.JumpPower = value
         end
     end
-
-    -- 使用类似无限跳的持续监控机制
+    
     if jumpPowerConnection then
         jumpPowerConnection:Disconnect()
     end
-
+    
     jumpPowerConnection = RunService.Heartbeat:Connect(function()
         if not forceJumpPower then
             jumpPowerConnection:Disconnect()
             return
         end
-
         local character = player.Character
         if character then
             local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -701,14 +654,12 @@ local function ApplyJumpPower(value)
     end)
 end
 
--- ================ 重力设置功能 ================
 local function SetGravity(value)
     Workspace.Gravity = value
     lastGravity = value
     ShowNotification("重力已设置为: " .. value)
 end
 
--- ================ 获取Humanoid函数 ================
 local function GetHumanoid(character)
     if character then
         local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -719,7 +670,6 @@ local function GetHumanoid(character)
     return nil
 end
 
--- ================ 应用速度设置 ================
 local function ApplySpeed(speed)
     speed = math.clamp(tonumber(speed) or 0, 0, 200)
     lastWalkSpeed = speed
@@ -730,7 +680,6 @@ local function ApplySpeed(speed)
     end
 end
 
--- ================ 传送功能 ================
 local function GetAllPlayers()
     local players = {}
     for _, player in ipairs(Players:GetPlayers()) do
@@ -747,12 +696,12 @@ local function TeleportToPlayer()
         ShowNotification("没有其他玩家")
         return
     end
-
+    
     local playerNames = {}
     for _, player in ipairs(players) do
         table.insert(playerNames, player.Name)
     end
-
+    
     Rayfield:Dropdown({
         Name = "选择要传送的玩家",
         Options = playerNames,
@@ -763,23 +712,17 @@ local function TeleportToPlayer()
                 if targetPlayer.Name == selectedName then
                     local myChar = Players.LocalPlayer.Character
                     local targetChar = targetPlayer.Character
-
                     if not myChar or not targetChar then
                         ShowNotification("角色未找到")
                         return
                     end
-
+                    
                     local myRoot = myChar:FindFirstChild("HumanoidRootPart")
                     local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-
                     if myRoot and targetRoot then
-                        local newPos = Vector3.new(
-                            targetRoot.Position.X,
-                            targetRoot.Position.Y + 5,
-                            targetRoot.Position.Z
-                        )
+                        local newPos = Vector3.new(targetRoot.Position.X, targetRoot.Position.Y + 5, targetRoot.Position.Z)
                         myRoot.CFrame = CFrame.new(newPos)
-                        ShowNotification("已传送到 "..targetPlayer.Name.." 的头上")
+                        ShowNotification("已传送到 " .. targetPlayer.Name .. " 的头上")
                     else
                         ShowNotification("未找到HumanoidRootPart")
                     end
@@ -790,29 +733,28 @@ local function TeleportToPlayer()
     })
 end
 
--- ================ 角色重生事件处理（修复版） ================
 local function OnCharacterAdded(character)
     character:WaitForChild("Humanoid")
     wait(0.5)
-
+    
     if infiniteJumpEnabled then
         if jumpConnection then
             jumpConnection:Disconnect()
         end
         ToggleInfiniteJump(true)
     end
-
+    
     if noclipEnabled then
         ToggleNoclip(true)
     end
-
+    
     if forceJumpPower then
         if jumpPowerConnection then
             jumpPowerConnection:Disconnect()
         end
         ApplyJumpPower(lastJumpPower)
     end
-
+    
     local humanoid = character:FindFirstChild("Humanoid")
     if humanoid then
         humanoid.WalkSpeed = lastWalkSpeed
@@ -822,14 +764,13 @@ end
 
 player.CharacterAdded:Connect(OnCharacterAdded)
 
--- ================ 主功能选项卡 ================
 MainTab:CreateSection("基本功能")
 
 local FlyToggle = MainTab:CreateToggle({
-   Name = "飞行模式",
-   CurrentValue = false,
-   Flag = "FlyToggle",
-   Callback = function(Value)
+    Name = "飞行模式",
+    CurrentValue = false,
+    Flag = "FlyToggle",
+    Callback = function(Value)
         if Value then
             local success, result = pcall(function()
                 loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/666-/main/%E5%8F%AA%E8%83%BD%E8%87%AA%E5%B7%B1%E6%90%9E%E4%B8%80%E4%B8%AA%E4%BA%86"))()
@@ -843,136 +784,132 @@ local FlyToggle = MainTab:CreateToggle({
         else
             ShowNotification("飞行功能已关闭")
         end
-   end,
+    end,
 })
 
 local SpeedSlider = MainTab:CreateSlider({
-   Name = "移动速度",
-   Range = {0, 200},
-   Increment = 1,
-   Suffix = "速度",
-   CurrentValue = 16,
-   Flag = "SpeedSlider",
-   Callback = function(Value)
+    Name = "移动速度",
+    Range = {0, 200},
+    Increment = 1,
+    Suffix = "速度",
+    CurrentValue = 16,
+    Flag = "SpeedSlider",
+    Callback = function(Value)
         ApplySpeed(Value)
         ShowNotification("移动速度已设置为: " .. Value)
-   end,
+    end,
 })
 
--- ================ 修复的跳跃高度滑块 ================
 local JumpPowerSlider = MainTab:CreateSlider({
-   Name = "跳跃高度",
-   Range = {0, 200},
-   Increment = 1,
-   Suffix = "高度",
-   CurrentValue = 50,
-   Flag = "JumpPowerSlider",
-   Callback = function(Value)
+    Name = "跳跃高度",
+    Range = {0, 200},
+    Increment = 1,
+    Suffix = "高度",
+    CurrentValue = 50,
+    Flag = "JumpPowerSlider",
+    Callback = function(Value)
         ApplyJumpPower(Value)
         ShowNotification("跳跃高度已设置为: " .. Value)
-   end,
+    end,
 })
 
--- ================ 添加重力设置滑块 ================
 local GravitySlider = MainTab:CreateSlider({
-   Name = "重力设置",
-   Range = {0, 200},
-   Increment = 1,
-   Suffix = "重力",
-   CurrentValue = 196,
-   Flag = "GravitySlider",
-   Callback = function(Value)
+    Name = "重力设置",
+    Range = {0, 200},
+    Increment = 1,
+    Suffix = "重力",
+    CurrentValue = 196,
+    Flag = "GravitySlider",
+    Callback = function(Value)
         SetGravity(Value)
-   end,
+    end,
 })
 
 MainTab:CreateSection("其他功能")
 
 MainTab:CreateButton({
-   Name = "传送工具",
-   Callback = function()
-        local mouse = player:GetMouse() 
-        local tool = Instance.new("Tool") 
-        tool.RequiresHandle = false 
+    Name = "传送工具",
+    Callback = function()
+        local mouse = player:GetMouse()
+        local tool = Instance.new("Tool")
+        tool.RequiresHandle = false
         tool.Name = "[茗噩]传送工具"
-        tool.Activated:connect(function() 
-            local pos = mouse.Hit + Vector3.new(0, 2.5, 0) 
-            pos = CFrame.new(pos.X, pos.Y, pos.Z) 
+        tool.Activated:connect(function()
+            local pos = mouse.Hit + Vector3.new(0, 2.5, 0)
+            pos = CFrame.new(pos.X, pos.Y, pos.Z)
             if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                player.Character.HumanoidRootPart.CFrame = pos 
+                player.Character.HumanoidRootPart.CFrame = pos
             end
-        end) 
+        end)
         tool.Parent = player.Backpack
         ShowNotification("传送工具已添加到背包")
-   end,
+    end,
 })
 
--- ================ 视觉功能选项卡 ================
 VisualTab:CreateSection("透视功能")
 
 local ESPToggle = VisualTab:CreateToggle({
-   Name = "ESP透视",
-   CurrentValue = false,
-   Flag = "ESPToggle",
-   Callback = function(Value)
+    Name = "ESP透视",
+    CurrentValue = false,
+    Flag = "ESPToggle",
+    Callback = function(Value)
         if Value then
             EnableESP()
         else
             DisableESP()
         end
-   end,
+    end,
 })
 
 local NPCESPToggle = VisualTab:CreateToggle({
-   Name = "NPC透视",
-   CurrentValue = false,
-   Flag = "NPCESPToggle",
-   Callback = function(Value)
+    Name = "NPC透视",
+    CurrentValue = false,
+    Flag = "NPCESPToggle",
+    Callback = function(Value)
         if Value then
             EnableNPCESP()
         else
             DisableNPCESP()
         end
-   end,
+    end,
 })
 
 VisualTab:CreateSection("视觉效果")
 
 local NightVisionToggle = VisualTab:CreateToggle({
-   Name = "夜视",
-   CurrentValue = false,
-   Flag = "NightVisionToggle",
-   Callback = function(Value)
+    Name = "夜视",
+    CurrentValue = false,
+    Flag = "NightVisionToggle",
+    Callback = function(Value)
         ToggleNightVision(Value)
-   end,
+    end,
 })
 
--- ================ 移动功能选项卡 ================
 MovementTab:CreateSection("移动增强")
 
 local InfiniteJumpToggle = MovementTab:CreateToggle({
-   Name = "无限跳",
-   CurrentValue = false,
-   Flag = "InfiniteJumpToggle",
-   Callback = function(Value)
+    Name = "无限跳",
+    CurrentValue = false,
+    Flag = "InfiniteJumpToggle",
+    Callback = function(Value)
         ToggleInfiniteJump(Value)
-   end,
+    end,
 })
 
 local NoclipToggle = MovementTab:CreateToggle({
-   Name = "穿墙模式",
-   CurrentValue = false,
-   Flag = "NoclipToggle",
-   Callback = function(Value)
+    Name = "穿墙模式",
+    CurrentValue = false,
+    Flag = "NoclipToggle",
+    Callback = function(Value)
         ToggleNoclip(Value)
-   end,
+    end,
 })
 
 MovementTab:CreateSection("特殊移动")
 
 MovementTab:CreateButton({
-   Name = "爬墙功能",
-   Callback = function()
+    Name = "爬墙功能",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://pastebin.com/raw/zXk4Rq2r"))()
         end)
@@ -981,12 +918,12 @@ MovementTab:CreateButton({
         else
             ShowNotification("爬墙功能加载失败")
         end
-   end,
+    end,
 })
 
 MovementTab:CreateButton({
-   Name = "踏空行走",
-   Callback = function()
+    Name = "踏空行走",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostPlayer352/Test4/main/Float'))()
         end)
@@ -995,24 +932,23 @@ MovementTab:CreateButton({
         else
             ShowNotification("踏空行走加载失败")
         end
-   end,
+    end,
 })
 
--- ================ 玩家功能选项卡 ================
 PlayerTab:CreateSection("传送功能")
 
 PlayerTab:CreateButton({
-   Name = "传送到玩家",
-   Callback = function()
+    Name = "传送到玩家",
+    Callback = function()
         TeleportToPlayer()
-   end,
+    end,
 })
 
 PlayerTab:CreateSection("玩家互动")
 
 PlayerTab:CreateButton({
-   Name = "走路创人",
-   Callback = function()
+    Name = "走路创人",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Throw/main/Throw"))()
         end)
@@ -1021,12 +957,12 @@ PlayerTab:CreateButton({
         else
             ShowNotification("走路创人功能加载失败")
         end
-   end,
+    end,
 })
 
 PlayerTab:CreateButton({
-   Name = "甩飞功能",
-   Callback = function()
+    Name = "甩飞功能",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/hknvh/main/%E7%94%A9%E9%A3%9E.txt"))()
         end)
@@ -1035,48 +971,46 @@ PlayerTab:CreateButton({
         else
             ShowNotification("甩飞功能加载失败")
         end
-   end,
+    end,
 })
 
--- ================ 实用工具选项卡 ================
 UtilityTab:CreateSection("坐标管理")
 
 UtilityTab:CreateButton({
-   Name = "保存当前坐标",
-   Callback = function()
+    Name = "保存当前坐标",
+    Callback = function()
         SaveCurrentCoordinate()
-   end,
+    end,
 })
 
 UtilityTab:CreateButton({
-   Name = "传送保存坐标",
-   Callback = function()
+    Name = "传送保存坐标",
+    Callback = function()
         TeleportToCoordinate()
-   end,
+    end,
 })
 
 UtilityTab:CreateButton({
-   Name = "删除保存坐标",
-   Callback = function()
+    Name = "删除保存坐标",
+    Callback = function()
         DeleteCoordinate()
-   end,
+    end,
 })
 
--- ================ 添加玩家进入提示功能 ================
 UtilityTab:CreateSection("提示功能")
 
 UtilityTab:CreateButton({
-   Name = "玩家进入提示",
-   Callback = function()
+    Name = "玩家进入提示",
+    Callback = function()
         EnablePlayerJoinNotifier()
-   end,
+    end,
 })
 
 UtilityTab:CreateSection("其他工具")
 
 UtilityTab:CreateButton({
-   Name = "防止摔落伤害",
-   Callback = function()
+    Name = "防止摔落伤害",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Fall-injury/main/%E9%98%B2%E6%AD%A2%E6%91%94%E8%90%BD%E4%BC%A4%E5%AE%B3"))()
         end)
@@ -1085,12 +1019,12 @@ UtilityTab:CreateButton({
         else
             ShowNotification("防止摔落伤害加载失败")
         end
-   end,
+    end,
 })
 
 UtilityTab:CreateButton({
-   Name = "全局物体漂浮",
-   Callback = function()
+    Name = "全局物体漂浮",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/%E5%85%A8%E5%B1%80%E7%89%A9%E4%BD%93%E6%BC%82%E6%B5%AE%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%89%88"))()
         end)
@@ -1099,12 +1033,12 @@ UtilityTab:CreateButton({
         else
             ShowNotification("全局物体漂浮加载失败")
         end
-   end,
+    end,
 })
 
 UtilityTab:CreateButton({
-   Name = "单一物体飞行",
-   Callback = function()
+    Name = "单一物体飞行",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/单一物体飞行载自己最终优化版"))()
         end)
@@ -1113,12 +1047,12 @@ UtilityTab:CreateButton({
         else
             ShowNotification("单一物体飞行加载失败")
         end
-   end,
+    end,
 })
 
 UtilityTab:CreateButton({
-   Name = "零件破坏者",
-   Callback = function()
+    Name = "零件破坏者",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/-/main/零件破坏者v2"))()
         end)
@@ -1127,12 +1061,12 @@ UtilityTab:CreateButton({
         else
             ShowNotification("零件破坏者加载失败")
         end
-   end,
+    end,
 })
 
 UtilityTab:CreateButton({
-   Name = "隐身功能",
-   Callback = function()
+    Name = "隐身功能",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet('https://pastebin.com/raw/3Rnd9rHf'))()
         end)
@@ -1141,12 +1075,12 @@ UtilityTab:CreateButton({
         else
             ShowNotification("隐身功能加载失败")
         end
-   end,
+    end,
 })
 
 UtilityTab:CreateButton({
-   Name = "Egor功能",
-   Callback = function()
+    Name = "Egor功能",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fake-Lag-Runner-read-description-44701"))()
         end)
@@ -1155,16 +1089,14 @@ UtilityTab:CreateButton({
         else
             ShowNotification("Egor功能加载失败")
         end
-   end,
+    end,
 })
 
--- ================ 其他脚本选项卡 ================
 OtherScriptsTab:CreateSection("外部脚本集")
 
--- DOLL脚本
 OtherScriptsTab:CreateButton({
-   Name = "DOLL脚本",
-   Callback = function()
+    Name = "DOLL脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/lool8/-/refs/heads/main/DOLL.lua"))()
         end)
@@ -1173,13 +1105,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("DOLL脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 皮脚本
 OtherScriptsTab:CreateButton({
-   Name = "皮脚本",
-   Callback = function()
+    Name = "皮脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/xiaopi77/xiaopi77/main/QQ1002100032-Roblox-Pi-script.lua"))()
         end)
@@ -1188,13 +1119,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("皮脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 叶脚本
 OtherScriptsTab:CreateButton({
-   Name = "叶脚本",
-   Callback = function()
+    Name = "叶脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/roblox-ye/QQ515966991/refs/heads/main/ROBLOX-CNVIP-XIAOYE.lua"))()
         end)
@@ -1203,13 +1133,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("叶脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 驰脚本
 OtherScriptsTab:CreateButton({
-   Name = "驰脚本",
-   Callback = function()
+    Name = "驰脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/qwrt5589/eododo/main/%E9%A9%B0%E8%84%9A%E6%9C%AC.txt"))()
         end)
@@ -1218,13 +1147,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("驰脚本加载失败")
         end
-   end,
+    end,
 })
 
--- BS黑洞中心脚本
 OtherScriptsTab:CreateButton({
-   Name = "BS黑洞中心脚本",
-   Callback = function()
+    Name = "BS黑洞中心脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://api.junkie-development.de/api/v1/luascripts/public/d6dffe74a774f7983c29a61dbfaef705a7c1bbd193c1bb68d778cb4bb4c302ae/download"))()
         end)
@@ -1233,13 +1161,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("BS黑洞中心脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 混脚本
 OtherScriptsTab:CreateButton({
-   Name = "混脚本",
-   Callback = function()
+    Name = "混脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/Twbtx/tiamxiabuwu/main/txbw666"))()
         end)
@@ -1248,13 +1175,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("混脚本加载失败")
         end
-   end,
+    end,
 })
 
--- XA脚本
 OtherScriptsTab:CreateButton({
-   Name = "XA脚本",
-   Callback = function()
+    Name = "XA脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.gitcode.com/Xingtaiduan/Scripts/raw/main/Loader.lua"))()
         end)
@@ -1263,13 +1189,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("XA脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 天空脚本
 OtherScriptsTab:CreateButton({
-   Name = "天空脚本",
-   Callback = function()
+    Name = "天空脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/hdjsjjdgrhj/script-hub/refs/heads/main/skyhub"))()
         end)
@@ -1278,13 +1203,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("天空脚本加载失败")
         end
-   end,
+    end,
 })
 
--- X_SCRIPT脚本
 OtherScriptsTab:CreateButton({
-   Name = "X_SCRIPT脚本",
-   Callback = function()
+    Name = "X_SCRIPT脚本",
+    Callback = function()
         local success, result = pcall(function()
             X_SCRIPT = "XXXXXX"
             loadstring(game:HttpGet("https://raw.githubusercontent.com/XSCRIPT-NB/XSCRIPT/refs/heads/main/X-SCRIPT"))()
@@ -1294,13 +1218,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("X_SCRIPT脚本加载失败")
         end
-   end,
+    end,
 })
 
--- FIN脚本
 OtherScriptsTab:CreateButton({
-   Name = "FIN脚本",
-   Callback = function()
+    Name = "FIN脚本",
+    Callback = function()
         local success, result = pcall(function()
             FIN_Script = "XingQing"
             loadstring(game:HttpGet("https://raw.githubusercontent.com/finendss/FIN/refs/heads/main/FIN-Loading"))()
@@ -1310,13 +1233,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("FIN脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 安脚本
 OtherScriptsTab:CreateButton({
-   Name = "安脚本",
-   Callback = function()
+    Name = "安脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet(('https://raw.githubusercontent.com/wucan114514/gegeyxjb/refs/heads/main/%E5%AE%89%E8%84%9A%E6%9C%AC.lua')))()
         end)
@@ -1325,15 +1247,14 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("安脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 逆光脚本
 OtherScriptsTab:CreateButton({
-   Name = "逆光脚本",
-   Callback = function()
+    Name = "逆光脚本",
+    Callback = function()
         local success, result = pcall(function()
-            getgenv().NiGuang="逆光Q群980694674" 
+            getgenv().NiGuang = "逆光Q群980694674"
             loadstring(game:HttpGet("https://raw.githubusercontent.com/lool8/-/refs/heads/main/%E9%80%86%E5%85%89.lua"))()
         end)
         if success then
@@ -1341,13 +1262,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("逆光脚本加载失败")
         end
-   end,
+    end,
 })
 
--- DE HUB脚本
 OtherScriptsTab:CreateButton({
-   Name = "DE HUB脚本",
-   Callback = function()
+    Name = "DE HUB脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/gycgchgyfytdttr/DE/refs/heads/main/DE%20HUB.lua"))()
         end)
@@ -1356,13 +1276,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("DE HUB脚本加载失败")
         end
-   end,
+    end,
 })
 
--- KG脚本
 OtherScriptsTab:CreateButton({
-   Name = "KG脚本",
-   Callback = function()
+    Name = "KG脚本",
+    Callback = function()
         local success, result = pcall(function()
             KG_SCRIPT = "张硕制作"
             loadstring(game:HttpGet("https://github.com/ZS-NB/KG/raw/main/Zhang-Shuo.lua"))()
@@ -1372,13 +1291,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("KG脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 本熊脚本
 OtherScriptsTab:CreateButton({
-   Name = "本熊脚本",
-   Callback = function()
+    Name = "本熊脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("\104\116\116\112\115\58\47\47\112\97\115\116\101\102\121\46\97\112\112\47\115\57\80\105\106\110\118\84\47\114\97\119"))()
         end)
@@ -1387,13 +1305,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("本熊脚本加载失败")
         end
-   end,
+    end,
 })
 
--- APEX HUB脚本
 OtherScriptsTab:CreateButton({
-   Name = "APEX HUB脚本",
-   Callback = function()
+    Name = "APEX HUB脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/b2004278b4735e1ca615931116373d48.lua"))()
         end)
@@ -1402,15 +1319,14 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("APEX HUB脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 走马观花脚本
 OtherScriptsTab:CreateButton({
-   Name = "走马观花脚本",
-   Callback = function()
+    Name = "走马观花脚本",
+    Callback = function()
         local success, result = pcall(function()
-            _ZOUMAGUANHUAGUI='走马观花X'
+            _ZOUMAGUANHUAGUI = '走马观花X'
             loadstring(game:HttpGet("\104\116\116\112\115\58\47\47\112\97\115\116\101\98\105\110\46\99\111\109\47\114\97\119\47\88\80\84\105\86\75\87\120"))()
         end)
         if success then
@@ -1418,13 +1334,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("走马观花脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 导管脚本中心
 OtherScriptsTab:CreateButton({
-   Name = "导管脚本中心",
-   Callback = function()
+    Name = "导管脚本中心",
+    Callback = function()
         local success, result = pcall(function()
             loadstring("\108\111\97\100\115\116\114\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\40\34\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\117\115\101\114\97\110\101\119\114\102\102\47\114\111\98\108\111\120\45\47\109\97\105\110\47\37\69\54\37\57\68\37\65\49\37\69\54\37\65\67\37\66\69\37\69\53\37\56\68\37\56\70\37\69\56\37\65\69\37\65\69\34\41\41\40\41\10")()
         end)
@@ -1433,13 +1348,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("导管脚本中心加载失败")
         end
-   end,
+    end,
 })
 
--- 情云脚本
 OtherScriptsTab:CreateButton({
-   Name = "情云脚本",
-   Callback = function()
+    Name = "情云脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\67\104\105\110\97\81\89\47\83\99\114\105\112\116\115\47\77\97\105\110\47\83\99\114\105\112\116"))()
         end)
@@ -1448,13 +1362,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("情云脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 黄脚本
 OtherScriptsTab:CreateButton({
-   Name = "黄脚本",
-   Callback = function()
+    Name = "黄脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\46\99\111\109\47\67\78\72\77\47\67\104\105\110\101\115\101\47\114\101\102\115\47\104\101\97\100\115\47\109\97\105\110\47\233\187\132\230\159\144\232\135\170\229\138\168\230\177\137\229\140\150"))()
         end)
@@ -1463,13 +1376,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("黄脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 大司马脚本
 OtherScriptsTab:CreateButton({
-   Name = "大司马脚本",
-   Callback = function()
+    Name = "大司马脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/whenheer/dasimav6/refs/heads/main/dasimaV6.txt"))()
         end)
@@ -1478,13 +1390,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("大司马脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 南宁脚本
 OtherScriptsTab:CreateButton({
-   Name = "南宁脚本",
-   Callback = function()
+    Name = "南宁脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring("\108\111\97\100\115\116\114\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\34\104\116\116\112\115\58\47\47\112\97\115\116\101\98\105\110\46\99\111\109\47\114\97\119\47\54\88\67\87\82\87\110\76\34\41\40\41\40\103\97\109\101\58\72\116\116\112\71\101\116\34\104\116\116\112\115\58\47\47\112\97\115\116\101\98\105\110\46\99\111\109\47\114\97\119\47\78\112\86\65\110\119\110\104\34\41\40\41\10")()
         end)
@@ -1493,15 +1404,14 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("南宁脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 禁漫中心脚本
 OtherScriptsTab:CreateButton({
-   Name = "禁漫中心脚本",
-   Callback = function()
+    Name = "禁漫中心脚本",
+    Callback = function()
         local success, result = pcall(function()
-            getgenv().LS="禁漫中心" 
+            getgenv().LS = "禁漫中心"
             loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/ng/main/jmlllllllIIIIlllllII.lua"))()
         end)
         if success then
@@ -1509,13 +1419,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("禁漫中心脚本加载失败")
         end
-   end,
+    end,
 })
 
--- Rb脚本
 OtherScriptsTab:CreateButton({
-   Name = "Rb脚本",
-   Callback = function()
+    Name = "Rb脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/Yungengxin/roblox/refs/heads/main/Rb-Hub"))()
         end)
@@ -1524,13 +1433,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("Rb脚本加载失败")
         end
-   end,
+    end,
 })
 
--- 沙脚本
 OtherScriptsTab:CreateButton({
-   Name = "沙脚本",
-   Callback = function()
+    Name = "沙脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/JsYb666/TX-Free-YYDS/refs/heads/main/ShaHUB"))()
         end)
@@ -1539,13 +1447,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("沙脚本加载失败")
         end
-   end,
+    end,
 })
 
--- TX脚本
 OtherScriptsTab:CreateButton({
-   Name = "TX脚本",
-   Callback = function()
+    Name = "TX脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/JsYb666/TX-Free-YYDS/refs/heads/main/FREE-TX-TEAM"))()
         end)
@@ -1554,13 +1461,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("TX脚本加载失败")
         end
-   end,
+    end,
 })
 
--- FXM脚本
 OtherScriptsTab:CreateButton({
-   Name = "FXM脚本",
-   Callback = function()
+    Name = "FXM脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/HB-ksdb/-HB-FXM/main/HB%20FXM%20%E5%8A%A0%E8%BD%BD%E5%99%A8.lua"))()
         end)
@@ -1569,13 +1475,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("FXM脚本加载失败")
         end
-   end,
+    end,
 })
 
--- NOL免费版脚本
 OtherScriptsTab:CreateButton({
-   Name = "NOL免费版脚本",
-   Callback = function()
+    Name = "NOL免费版脚本",
+    Callback = function()
         local success, result = pcall(function()
             getgenv().ADittoKey = "NOL_中文FREEKEY"
             pcall(function()
@@ -1587,13 +1492,12 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("NOL免费版脚本加载失败")
         end
-   end,
+    end,
 })
 
--- Frost脚本
 OtherScriptsTab:CreateButton({
-   Name = "Frost脚本",
-   Callback = function()
+    Name = "Frost脚本",
+    Callback = function()
         local success, result = pcall(function()
             loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/1139e311eaabc1aced70509c7caf1982.lua"))()
         end)
@@ -1602,22 +1506,18 @@ OtherScriptsTab:CreateButton({
         else
             ShowNotification("Frost脚本加载失败")
         end
-   end,
+    end,
 })
 
--- ================ 显示加载完成消息并开启反挂机 ================
 ShowNotification("茗噩脚本中心", "脚本加载完成！", 3)
 
--- 使用较短的延迟来显示第二个通知
 spawn(function()
-    wait(0.5) -- 等待0.5秒后显示第二个通知
+    wait(0.5)
     ShowNotification("系统提示", "反挂机功能已自动开启", 3)
 end)
 
--- 自动开启反挂机功能
 EnableAntiAFK()
 
--- 初始化应用当前设置
 if player.Character then
     wait(1)
     ApplySpeed(lastWalkSpeed)
