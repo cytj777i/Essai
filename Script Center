@@ -1516,6 +1516,11 @@ spawn(function()
     ShowNotification("系统提示", "反挂机功能已自动开启", 3)
 end)
 
+spawn(function()
+    wait(1.5)
+    ShowNotification("脚本声明", "此脚本为缝合脚本，感谢使用", 5)
+end)
+
 EnableAntiAFK()
 
 if player.Character then
