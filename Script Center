@@ -97,6 +97,7 @@ local VisualTab = Window:CreateTab("视觉功能", "eye")
 local MovementTab = Window:CreateTab("移动功能", "move")
 local PlayerTab = Window:CreateTab("玩家功能", "users")
 local UtilityTab = Window:CreateTab("实用工具", "settings")
+local OtherScriptsTab = Window:CreateTab("其他脚本", "code") -- 新增的其他脚本选项卡
 
 -- ================ 通知函数 ================
 local function ShowNotification(title, content, duration)
@@ -669,7 +670,7 @@ end
 local function ApplyJumpPower(value)
     lastJumpPower = value
     forceJumpPower = true
-    
+
     -- 立即应用一次
     local character = player.Character
     if character then
@@ -678,18 +679,18 @@ local function ApplyJumpPower(value)
             humanoid.JumpPower = value
         end
     end
-    
+
     -- 使用类似无限跳的持续监控机制
     if jumpPowerConnection then
         jumpPowerConnection:Disconnect()
     end
-    
+
     jumpPowerConnection = RunService.Heartbeat:Connect(function()
         if not forceJumpPower then
             jumpPowerConnection:Disconnect()
             return
         end
-        
+
         local character = player.Character
         if character then
             local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -1153,6 +1154,453 @@ UtilityTab:CreateButton({
             ShowNotification("Egor功能已开启")
         else
             ShowNotification("Egor功能加载失败")
+        end
+   end,
+})
+
+-- ================ 其他脚本选项卡 ================
+OtherScriptsTab:CreateSection("外部脚本集")
+
+-- DOLL脚本
+OtherScriptsTab:CreateButton({
+   Name = "DOLL脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/lool8/-/refs/heads/main/DOLL.lua"))()
+        end)
+        if success then
+            ShowNotification("DOLL脚本加载成功")
+        else
+            ShowNotification("DOLL脚本加载失败")
+        end
+   end,
+})
+
+-- 皮脚本
+OtherScriptsTab:CreateButton({
+   Name = "皮脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/xiaopi77/xiaopi77/main/QQ1002100032-Roblox-Pi-script.lua"))()
+        end)
+        if success then
+            ShowNotification("皮脚本加载成功")
+        else
+            ShowNotification("皮脚本加载失败")
+        end
+   end,
+})
+
+-- 叶脚本
+OtherScriptsTab:CreateButton({
+   Name = "叶脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/roblox-ye/QQ515966991/refs/heads/main/ROBLOX-CNVIP-XIAOYE.lua"))()
+        end)
+        if success then
+            ShowNotification("叶脚本加载成功")
+        else
+            ShowNotification("叶脚本加载失败")
+        end
+   end,
+})
+
+-- 驰脚本
+OtherScriptsTab:CreateButton({
+   Name = "驰脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/qwrt5589/eododo/main/%E9%A9%B0%E8%84%9A%E6%9C%AC.txt"))()
+        end)
+        if success then
+            ShowNotification("驰脚本加载成功")
+        else
+            ShowNotification("驰脚本加载失败")
+        end
+   end,
+})
+
+-- BS黑洞中心脚本
+OtherScriptsTab:CreateButton({
+   Name = "BS黑洞中心脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://api.junkie-development.de/api/v1/luascripts/public/d6dffe74a774f7983c29a61dbfaef705a7c1bbd193c1bb68d778cb4bb4c302ae/download"))()
+        end)
+        if success then
+            ShowNotification("BS黑洞中心脚本加载成功")
+        else
+            ShowNotification("BS黑洞中心脚本加载失败")
+        end
+   end,
+})
+
+-- 混脚本
+OtherScriptsTab:CreateButton({
+   Name = "混脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Twbtx/tiamxiabuwu/main/txbw666"))()
+        end)
+        if success then
+            ShowNotification("混脚本加载成功")
+        else
+            ShowNotification("混脚本加载失败")
+        end
+   end,
+})
+
+-- XA脚本
+OtherScriptsTab:CreateButton({
+   Name = "XA脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.gitcode.com/Xingtaiduan/Scripts/raw/main/Loader.lua"))()
+        end)
+        if success then
+            ShowNotification("XA脚本加载成功")
+        else
+            ShowNotification("XA脚本加载失败")
+        end
+   end,
+})
+
+-- 天空脚本
+OtherScriptsTab:CreateButton({
+   Name = "天空脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/hdjsjjdgrhj/script-hub/refs/heads/main/skyhub"))()
+        end)
+        if success then
+            ShowNotification("天空脚本加载成功")
+        else
+            ShowNotification("天空脚本加载失败")
+        end
+   end,
+})
+
+-- X_SCRIPT脚本
+OtherScriptsTab:CreateButton({
+   Name = "X_SCRIPT脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            X_SCRIPT = "XXXXXX"
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/XSCRIPT-NB/XSCRIPT/refs/heads/main/X-SCRIPT"))()
+        end)
+        if success then
+            ShowNotification("X_SCRIPT脚本加载成功")
+        else
+            ShowNotification("X_SCRIPT脚本加载失败")
+        end
+   end,
+})
+
+-- FIN脚本
+OtherScriptsTab:CreateButton({
+   Name = "FIN脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            FIN_Script = "XingQing"
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/finendss/FIN/refs/heads/main/FIN-Loading"))()
+        end)
+        if success then
+            ShowNotification("FIN脚本加载成功")
+        else
+            ShowNotification("FIN脚本加载失败")
+        end
+   end,
+})
+
+-- 安脚本
+OtherScriptsTab:CreateButton({
+   Name = "安脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet(('https://raw.githubusercontent.com/wucan114514/gegeyxjb/refs/heads/main/%E5%AE%89%E8%84%9A%E6%9C%AC.lua')))()
+        end)
+        if success then
+            ShowNotification("安脚本加载成功")
+        else
+            ShowNotification("安脚本加载失败")
+        end
+   end,
+})
+
+-- 逆光脚本
+OtherScriptsTab:CreateButton({
+   Name = "逆光脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            getgenv().NiGuang="逆光Q群980694674" 
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/lool8/-/refs/heads/main/%E9%80%86%E5%85%89.lua"))()
+        end)
+        if success then
+            ShowNotification("逆光脚本加载成功")
+        else
+            ShowNotification("逆光脚本加载失败")
+        end
+   end,
+})
+
+-- DE HUB脚本
+OtherScriptsTab:CreateButton({
+   Name = "DE HUB脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/gycgchgyfytdttr/DE/refs/heads/main/DE%20HUB.lua"))()
+        end)
+        if success then
+            ShowNotification("DE HUB脚本加载成功")
+        else
+            ShowNotification("DE HUB脚本加载失败")
+        end
+   end,
+})
+
+-- KG脚本
+OtherScriptsTab:CreateButton({
+   Name = "KG脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            KG_SCRIPT = "张硕制作"
+            loadstring(game:HttpGet("https://github.com/ZS-NB/KG/raw/main/Zhang-Shuo.lua"))()
+        end)
+        if success then
+            ShowNotification("KG脚本加载成功")
+        else
+            ShowNotification("KG脚本加载失败")
+        end
+   end,
+})
+
+-- 本熊脚本
+OtherScriptsTab:CreateButton({
+   Name = "本熊脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("\104\116\116\112\115\58\47\47\112\97\115\116\101\102\121\46\97\112\112\47\115\57\80\105\106\110\118\84\47\114\97\119"))()
+        end)
+        if success then
+            ShowNotification("本熊脚本加载成功")
+        else
+            ShowNotification("本熊脚本加载失败")
+        end
+   end,
+})
+
+-- APEX HUB脚本
+OtherScriptsTab:CreateButton({
+   Name = "APEX HUB脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/b2004278b4735e1ca615931116373d48.lua"))()
+        end)
+        if success then
+            ShowNotification("APEX HUB脚本加载成功")
+        else
+            ShowNotification("APEX HUB脚本加载失败")
+        end
+   end,
+})
+
+-- 走马观花脚本
+OtherScriptsTab:CreateButton({
+   Name = "走马观花脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            _ZOUMAGUANHUAGUI='走马观花X'
+            loadstring(game:HttpGet("\104\116\116\112\115\58\47\47\112\97\115\116\101\98\105\110\46\99\111\109\47\114\97\119\47\88\80\84\105\86\75\87\120"))()
+        end)
+        if success then
+            ShowNotification("走马观花脚本加载成功")
+        else
+            ShowNotification("走马观花脚本加载失败")
+        end
+   end,
+})
+
+-- 导管脚本中心
+OtherScriptsTab:CreateButton({
+   Name = "导管脚本中心",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring("\108\111\97\100\115\116\114\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\40\34\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\117\115\101\114\97\110\101\119\114\102\102\47\114\111\98\108\111\120\45\47\109\97\105\110\47\37\69\54\37\57\68\37\65\49\37\69\54\37\65\67\37\66\69\37\69\53\37\56\68\37\56\70\37\69\56\37\65\69\37\65\69\34\41\41\40\41\10")()
+        end)
+        if success then
+            ShowNotification("导管脚本中心加载成功")
+        else
+            ShowNotification("导管脚本中心加载失败")
+        end
+   end,
+})
+
+-- 情云脚本
+OtherScriptsTab:CreateButton({
+   Name = "情云脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\67\104\105\110\97\81\89\47\83\99\114\105\112\116\115\47\77\97\105\110\47\83\99\114\105\112\116"))()
+        end)
+        if success then
+            ShowNotification("情云脚本加载成功")
+        else
+            ShowNotification("情云脚本加载失败")
+        end
+   end,
+})
+
+-- 黄脚本
+OtherScriptsTab:CreateButton({
+   Name = "黄脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\46\99\111\109\47\67\78\72\77\47\67\104\105\110\101\115\101\47\114\101\102\115\47\104\101\97\100\115\47\109\97\105\110\47\233\187\132\230\159\144\232\135\170\229\138\168\230\177\137\229\140\150"))()
+        end)
+        if success then
+            ShowNotification("黄脚本加载成功")
+        else
+            ShowNotification("黄脚本加载失败")
+        end
+   end,
+})
+
+-- 大司马脚本
+OtherScriptsTab:CreateButton({
+   Name = "大司马脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/whenheer/dasimav6/refs/heads/main/dasimaV6.txt"))()
+        end)
+        if success then
+            ShowNotification("大司马脚本加载成功")
+        else
+            ShowNotification("大司马脚本加载失败")
+        end
+   end,
+})
+
+-- 南宁脚本
+OtherScriptsTab:CreateButton({
+   Name = "南宁脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring("\108\111\97\100\115\116\114\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\34\104\116\116\112\115\58\47\47\112\97\115\116\101\98\105\110\46\99\111\109\47\114\97\119\47\54\88\67\87\82\87\110\76\34\41\40\41\40\103\97\109\101\58\72\116\116\112\71\101\116\34\104\116\116\112\115\58\47\47\112\97\115\116\101\98\105\110\46\99\111\109\47\114\97\119\47\78\112\86\65\110\119\110\104\34\41\40\41\10")()
+        end)
+        if success then
+            ShowNotification("南宁脚本加载成功")
+        else
+            ShowNotification("南宁脚本加载失败")
+        end
+   end,
+})
+
+-- 禁漫中心脚本
+OtherScriptsTab:CreateButton({
+   Name = "禁漫中心脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            getgenv().LS="禁漫中心" 
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/ng/main/jmlllllllIIIIlllllII.lua"))()
+        end)
+        if success then
+            ShowNotification("禁漫中心脚本加载成功")
+        else
+            ShowNotification("禁漫中心脚本加载失败")
+        end
+   end,
+})
+
+-- Rb脚本
+OtherScriptsTab:CreateButton({
+   Name = "Rb脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Yungengxin/roblox/refs/heads/main/Rb-Hub"))()
+        end)
+        if success then
+            ShowNotification("Rb脚本加载成功")
+        else
+            ShowNotification("Rb脚本加载失败")
+        end
+   end,
+})
+
+-- 沙脚本
+OtherScriptsTab:CreateButton({
+   Name = "沙脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/JsYb666/TX-Free-YYDS/refs/heads/main/ShaHUB"))()
+        end)
+        if success then
+            ShowNotification("沙脚本加载成功")
+        else
+            ShowNotification("沙脚本加载失败")
+        end
+   end,
+})
+
+-- TX脚本
+OtherScriptsTab:CreateButton({
+   Name = "TX脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/JsYb666/TX-Free-YYDS/refs/heads/main/FREE-TX-TEAM"))()
+        end)
+        if success then
+            ShowNotification("TX脚本加载成功")
+        else
+            ShowNotification("TX脚本加载失败")
+        end
+   end,
+})
+
+-- FXM脚本
+OtherScriptsTab:CreateButton({
+   Name = "FXM脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/HB-ksdb/-HB-FXM/main/HB%20FXM%20%E5%8A%A0%E8%BD%BD%E5%99%A8.lua"))()
+        end)
+        if success then
+            ShowNotification("FXM脚本加载成功")
+        else
+            ShowNotification("FXM脚本加载失败")
+        end
+   end,
+})
+
+-- NOL免费版脚本
+OtherScriptsTab:CreateButton({
+   Name = "NOL免费版脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            getgenv().ADittoKey = "NOL_中文FREEKEY"
+            pcall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/Potato5466794/Loader/refs/heads/main/ChineseFreeLoader.luau", true))()
+            end)
+        end)
+        if success then
+            ShowNotification("NOL免费版脚本加载成功")
+        else
+            ShowNotification("NOL免费版脚本加载失败")
+        end
+   end,
+})
+
+-- Frost脚本
+OtherScriptsTab:CreateButton({
+   Name = "Frost脚本",
+   Callback = function()
+        local success, result = pcall(function()
+            loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/1139e311eaabc1aced70509c7caf1982.lua"))()
+        end)
+        if success then
+            ShowNotification("Frost脚本加载成功")
+        else
+            ShowNotification("Frost脚本加载失败")
         end
    end,
 })
