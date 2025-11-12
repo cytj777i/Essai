@@ -73,7 +73,6 @@ local function EnableAntiAFK()
         wait(1)
         vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
     end)
-    print("反挂机已开启")
 end
 
 -- ================ 玩家进入提示功能 ================
@@ -650,26 +649,26 @@ end
 
 -- ================ 速度设置功能 ================
 local function SetWalkSpeed(value)
+    lastWalkSpeed = value
     local character = player.Character
     if character then
         local humanoid = character:FindFirstChild("Humanoid")
         if humanoid then
             humanoid.WalkSpeed = value
-            lastWalkSpeed = value
             return true
         end
     end
     return false
 end
 
--- ================ 跳跃高度设置功能（修复版） ================
+-- ================ 修复跳跃高度设置功能 ================
 local function SetJumpPower(value)
+    lastJumpPower = value
     local character = player.Character
     if character then
         local humanoid = character:FindFirstChild("Humanoid")
         if humanoid then
             humanoid.JumpPower = value
-            lastJumpPower = value
             return true
         end
     end
@@ -681,6 +680,39 @@ local function SetGravity(value)
     Workspace.Gravity = value
     lastGravity = value
     ShowNotification("重力已设置为: " .. value)
+end
+
+-- ================ 获取Humanoid函数 ================
+local function GetHumanoid(character)
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            return humanoid
+        end
+    end
+    return nil
+end
+
+-- ================ 应用速度设置 ================
+local function ApplySpeed(speed)
+    speed = math.clamp(tonumber(speed) or 0, 0, 200)
+    lastWalkSpeed = speed
+    local character = player.Character
+    local humanoid = GetHumanoid(character)
+    if humanoid then
+        humanoid.WalkSpeed = speed
+    end
+end
+
+-- ================ 应用跳跃高度设置 ================
+local function ApplyJump(jump)
+    jump = math.clamp(tonumber(jump) or 0, 0, 200)
+    lastJumpPower = jump
+    local character = player.Character
+    local humanoid = GetHumanoid(character)
+    if humanoid then
+        humanoid.JumpPower = jump
+    end
 end
 
 -- ================ 传送功能 ================
@@ -743,10 +775,12 @@ local function TeleportToPlayer()
     })
 end
 
--- ================ 角色重生事件处理 ================
-player.CharacterAdded:Connect(function(character)
+-- ================ 角色重生事件处理（修复版） ================
+local function OnCharacterAdded(character)
+    character:WaitForChild("Humanoid")
+    wait(0.5)
+    
     if infiniteJumpEnabled then
-        character:WaitForChild("Humanoid")
         if jumpConnection then
             jumpConnection:Disconnect()
         end
@@ -754,14 +788,17 @@ player.CharacterAdded:Connect(function(character)
     end
 
     if noclipEnabled then
-        character:WaitForChild("Humanoid")
         ToggleNoclip(true)
     end
 
-    local humanoid = character:WaitForChild("Humanoid")
-    humanoid.WalkSpeed = lastWalkSpeed
-    humanoid.JumpPower = lastJumpPower
-end)
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = lastWalkSpeed
+        humanoid.JumpPower = lastJumpPower
+    end
+end
+
+player.CharacterAdded:Connect(OnCharacterAdded)
 
 -- ================ 主功能选项卡 ================
 MainTab:CreateSection("基本功能")
@@ -789,34 +826,28 @@ local FlyToggle = MainTab:CreateToggle({
 
 local SpeedSlider = MainTab:CreateSlider({
    Name = "移动速度",
-   Range = {16, 200},
+   Range = {0, 200},
    Increment = 1,
    Suffix = "速度",
    CurrentValue = 16,
    Flag = "SpeedSlider",
    Callback = function(Value)
-        if SetWalkSpeed(Value) then
-            ShowNotification("移动速度已设置为: " .. Value)
-        else
-            ShowNotification("设置失败，请确保角色存在")
-        end
+        ApplySpeed(Value)
+        ShowNotification("移动速度已设置为: " .. Value)
    end,
 })
 
 -- ================ 修复跳跃高度滑块 ================
 local JumpPowerSlider = MainTab:CreateSlider({
    Name = "跳跃高度",
-   Range = {50, 200},
+   Range = {0, 200},
    Increment = 1,
    Suffix = "高度",
    CurrentValue = 50,
    Flag = "JumpPowerSlider",
    Callback = function(Value)
-        if SetJumpPower(Value) then
-            ShowNotification("跳跃高度已设置为: " .. Value)
-        else
-            ShowNotification("设置失败，请确保角色存在")
-        end
+        ApplyJump(Value)
+        ShowNotification("跳跃高度已设置为: " .. Value)
    end,
 })
 
@@ -1106,16 +1137,20 @@ UtilityTab:CreateButton({
 })
 
 -- ================ 显示加载完成消息并开启反挂机 ================
-ShowNotification("茗噩脚本中心", "脚本加载完成！反挂机已开启", 5)
-print("茗噩脚本中心UI已成功加载！")
-print("反挂机开启")
+ShowNotification("茗噩脚本中心", "脚本加载完成！", 3)
+
+-- 使用较短的延迟来显示第二个通知
+spawn(function()
+    wait(0.5) -- 等待0.5秒后显示第二个通知
+    ShowNotification("系统提示", "反挂机功能已自动开启", 3)
+end)
 
 -- 自动开启反挂机功能
 EnableAntiAFK()
 
--- 同时发送Roblox原生通知
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "茗噩脚本中心",
-    Text = "茗噩脚本中心加载完成（反挂机已开启）",
-    Duration = 5, 
-})
+-- 初始化应用当前设置
+if player.Character then
+    wait(1)
+    ApplySpeed(lastWalkSpeed)
+    ApplyJump(lastJumpPower)
+end
