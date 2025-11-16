@@ -11,8 +11,8 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 -- 发送加载成功通知
 game:GetService("StarterGui"):SetCore("SendNotification",{
-    Title = "作者：ROBLOX.T7",
-    Text = "合作：XTTT",
+    Title = "投稿：ROBLOX.T7",
+    Text = "制作：XTTT",
     Duration = 5
 })
 
