@@ -10,13 +10,7 @@ WindUI:Localization({
             ["WINDUI_TITLE"] = "SGLOA HUB",
             ["MAIN_FEATURES"] = "主功能",
             ["OTHER_SCRIPTS"] = "其他脚本",
-            ["NATURAL_DISASTER"] = "自然灾害",
-            ["LOADING"] = "正在加载功能...",
-            ["SCRIPT_LOADED"] = "脚本加载完成！",
-            ["SYSTEM_TIP"] = "系统提示",
-            ["SCRIPT_NOTICE"] = "脚本声明",
-            ["ANTI_AFK_ENABLED"] = "反挂机功能已自动开启",
-            ["STITCHED_SCRIPT"] = "SGLOA HUB - 多功能脚本中心"
+            ["NATURAL_DISASTER"] = "自然灾害"
         }
     }
 })
@@ -150,7 +144,7 @@ local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
     -- 创建选择GUI
     local SelectionGui = Instance.new("ScreenGui")
     SelectionGui.Name = "CoordinateSelectionUI"
-    SelectionGui.Parent = game:GetService("CoreGui") -- 放在CoreGui确保覆盖WindUI
+    SelectionGui.Parent = game:GetService("CoreGui")
     SelectionGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     SelectionGui.ResetOnSpawn = false
 
@@ -844,24 +838,14 @@ local Tabs = {
 }
 
 local TabHandles = {
-    Main = Tabs.Main:Tab({ Title = "loc:MAIN_FEATURES", Icon = "home" }),
-    OtherScripts = Tabs.OtherScripts:Tab({ Title = "loc:OTHER_SCRIPTS", Icon = "code" }),
-    NaturalDisaster = Tabs.NaturalDisaster:Tab({ Title = "loc:NATURAL_DISASTER", Icon = "tornado" })
+    Main = Tabs.Main:Tab({ Title = "loc:MAIN_FEATURES" }),
+    OtherScripts = Tabs.OtherScripts:Tab({ Title = "loc:OTHER_SCRIPTS" }),
+    NaturalDisaster = Tabs.NaturalDisaster:Tab({ Title = "loc:NATURAL_DISASTER" })
 }
-
--- 主功能标签 - 合并所有功能到这里
-TabHandles.Main:Paragraph({
-    Title = "基本功能",
-    Desc = "主要游戏功能设置",
-    Image = "zap",
-    ImageSize = 20,
-    Color = "White"
-})
 
 -- 飞行功能
 TabHandles.Main:Button({
     Title = "普通飞行",
-    Icon = "wind",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/666-/main/%E5%8F%AA%E8%83%BD%E8%87%AA%E5%B7%B1%E6%90%9E%E4%B8%80%E4%B8%AA%E4%BA%86"))()
@@ -876,7 +860,6 @@ TabHandles.Main:Button({
 
 TabHandles.Main:Button({
     Title = "无敌少侠飞行",
-    Icon = "wind",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet("https://pastebin.com/raw/19aJhM6B"))()
@@ -922,7 +905,6 @@ TabHandles.Main:Divider()
 -- 传送工具
 TabHandles.Main:Button({
     Title = "传送工具",
-    Icon = "navigation",
     Callback = function()
         local mouse = LocalPlayer:GetMouse()
         local tool = Instance.new("Tool")
@@ -943,14 +925,6 @@ TabHandles.Main:Button({
 TabHandles.Main:Divider()
 
 -- 透视功能
-TabHandles.Main:Paragraph({
-    Title = "透视功能",
-    Desc = "视觉增强和透视功能",
-    Image = "eye",
-    ImageSize = 20,
-    Color = "White"
-})
-
 TabHandles.Main:Toggle({
     Title = "ESP透视",
     Desc = "显示其他玩家位置",
@@ -989,14 +963,6 @@ TabHandles.Main:Toggle({
 TabHandles.Main:Divider()
 
 -- 移动增强功能
-TabHandles.Main:Paragraph({
-    Title = "移动增强",
-    Desc = "移动相关功能增强",
-    Image = "move",
-    ImageSize = 20,
-    Color = "White"
-})
-
 TabHandles.Main:Toggle({
     Title = "无限跳",
     Desc = "允许无限跳跃",
@@ -1017,7 +983,6 @@ TabHandles.Main:Toggle({
 
 TabHandles.Main:Button({
     Title = "爬墙功能",
-    Icon = "mountain",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet("https://pastebin.com/raw/zXk4Rq2r"))()
@@ -1032,7 +997,6 @@ TabHandles.Main:Button({
 
 TabHandles.Main:Button({
     Title = "踏空行走",
-    Icon = "cloud",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostPlayer352/Test4/main/Float'))()
@@ -1048,17 +1012,8 @@ TabHandles.Main:Button({
 TabHandles.Main:Divider()
 
 -- 玩家功能
-TabHandles.Main:Paragraph({
-    Title = "玩家功能",
-    Desc = "玩家间互动功能",
-    Image = "users",
-    ImageSize = 20,
-    Color = "White"
-})
-
 TabHandles.Main:Button({
     Title = "传送到玩家",
-    Icon = "navigation",
     Callback = function()
         local otherPlayers = {}
         for _, player in ipairs(Players:GetPlayers()) do
@@ -1113,7 +1068,6 @@ TabHandles.Main:Button({
 
 TabHandles.Main:Button({
     Title = "走路创人",
-    Icon = "user-x",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Throw/main/Throw"))()
@@ -1128,7 +1082,6 @@ TabHandles.Main:Button({
 
 TabHandles.Main:Button({
     Title = "甩飞功能",
-    Icon = "wind",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/hknvh/main/%E7%94%A9%E9%A3%9E.txt"))()
@@ -1143,49 +1096,27 @@ TabHandles.Main:Button({
 
 TabHandles.Main:Divider()
 
--- 实用工具
-TabHandles.Main:Paragraph({
-    Title = "实用工具",
-    Desc = "各种实用工具",
-    Image = "tool",
-    ImageSize = 20,
-    Color = "White"
-})
-
--- 坐标管理 - 使用新的UI
+-- 坐标管理
 TabHandles.Main:Button({
     Title = "保存当前坐标",
-    Icon = "save",
     Callback = SaveCurrentCoordinate
 })
 
 TabHandles.Main:Button({
     Title = "传送保存坐标",
-    Icon = "navigation",
     Callback = TeleportToCoordinate
 })
 
 TabHandles.Main:Button({
     Title = "删除保存坐标",
-    Icon = "trash-2",
     Callback = DeleteCoordinate
 })
 
 TabHandles.Main:Divider()
 
 -- 其他工具
-TabHandles.Main:Paragraph({
-    Title = "其他工具",
-    Desc = "各种实用工具",
-    Image = "tool",
-    ImageSize = 20,
-    Color = "White"
-})
-
--- 拿起未固定物体功能现在移动到物体漂浮这一列
 TabHandles.Main:Button({
     Title = "拿起未固定物体",
-    Icon = "package",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/fly-boat"))()
@@ -1200,7 +1131,6 @@ TabHandles.Main:Button({
 
 TabHandles.Main:Button({
     Title = "全局物体漂浮",
-    Icon = "package",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/%E5%85%A8%E5%B1%80%E7%89%A9%E4%BD%93%E6%BC%82%E6%B5%AE%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%89%88"))()
@@ -1215,7 +1145,6 @@ TabHandles.Main:Button({
 
 TabHandles.Main:Button({
     Title = "单一物体飞行",
-    Icon = "package",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/单一物体飞行载自己最终优化版"))()
@@ -1230,7 +1159,6 @@ TabHandles.Main:Button({
 
 TabHandles.Main:Button({
     Title = "零件破坏者",
-    Icon = "hammer",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/-/main/零件破坏者v2"))()
@@ -1245,7 +1173,6 @@ TabHandles.Main:Button({
 
 TabHandles.Main:Button({
     Title = "隐身功能",
-    Icon = "eye-off",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet('https://pastebin.com/raw/3Rnd9rHf'))()
@@ -1260,7 +1187,6 @@ TabHandles.Main:Button({
 
 TabHandles.Main:Button({
     Title = "Egor功能",
-    Icon = "zap",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fake-Lag-Runner-read-description-44701"))()
@@ -1274,14 +1200,6 @@ TabHandles.Main:Button({
 })
 
 -- 其他脚本标签
-TabHandles.OtherScripts:Paragraph({
-    Title = "外部脚本集",
-    Desc = "加载各种外部脚本",
-    Image = "code",
-    ImageSize = 20,
-    Color = "White"
-})
-
 local externalScripts = {
     { name = "殺脚本", url = "https://raw.githubusercontent.com/FengYu-3/FengYu/refs/heads/Feng/QQ1926190957" },
     { name = "DOLL脚本", url = "https://raw.githubusercontent.com/lool8/-/refs/heads/main/DOLL.lua" },
@@ -1344,7 +1262,6 @@ local externalScripts = {
 for _, scriptInfo in ipairs(externalScripts) do
     TabHandles.OtherScripts:Button({
         Title = scriptInfo.name,
-        Icon = "external-link",
         Callback = function()
             local success = pcall(function()
                 if scriptInfo.name == "NOL免费版脚本" then
@@ -1371,17 +1288,8 @@ for _, scriptInfo in ipairs(externalScripts) do
 end
 
 -- 自然灾害标签
-TabHandles.NaturalDisaster:Paragraph({
-    Title = "其他功能",
-    Desc = "自然灾害相关功能",
-    Image = "alert-triangle",
-    ImageSize = 20,
-    Color = "White"
-})
-
 TabHandles.NaturalDisaster:Button({
     Title = "防止摔落伤害",
-    Icon = "shield",
     Callback = function()
         local success = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Fall-injury/main/防止摔落伤害"))()
@@ -1396,14 +1304,6 @@ TabHandles.NaturalDisaster:Button({
 
 TabHandles.NaturalDisaster:Divider()
 
-TabHandles.NaturalDisaster:Paragraph({
-    Title = "黑洞功能",
-    Desc = "各种黑洞效果",
-    Image = "circle",
-    ImageSize = 20,
-    Color = "White"
-})
-
 local blackHoleScripts = {
     { name = "黑洞1", url = "https://raw.githubusercontent.com/cytj777i/Soul-Ring/main/零件环绕倾斜" },
     { name = "黑洞2", url = "https://rawscripts.net/raw/Universal-Script-Projeto-LKB-I-Super-Ring-V3-I-Cracked-23346" },
@@ -1416,7 +1316,6 @@ local blackHoleScripts = {
 for _, holeInfo in ipairs(blackHoleScripts) do
     TabHandles.NaturalDisaster:Button({
         Title = holeInfo.name,
-        Icon = "circle",
         Callback = function()
             local success = pcall(function()
                 loadstring(game:HttpGet(holeInfo.url))()
@@ -1430,350 +1329,156 @@ for _, holeInfo in ipairs(blackHoleScripts) do
     })
 end
 
--- 添加AXiosHub黑洞功能
+-- 将原来的"加载自然灾害脚本"按钮改名为"AXiosHub黑洞"
 TabHandles.NaturalDisaster:Button({
     Title = "AXiosHub黑洞",
-    Icon = "circle",
+    Callback = function()
+        local CONFIG = {
+            API_URL = "https://robloxserver2.tagonmiku.workers.dev",
+            MAP_DATA = {
+                name = "自然灾害",
+                mapId = "natural_disaster", 
+                requireKey = true
+            }
+        }
+
+        local NATURAL_DISASTER_KEY = "6bce9a543936bae2c6038a6585b8a948_NDS"
+
+        local function urlEncode(text)
+            if not text then return "" end
+            text = string.gsub(text, "\n", "\r\n")
+            text = string.gsub(text, "([^%w _%%%-%.~])", function(c)
+                return string.format("%%%02X", string.byte(c))
+            end)
+            return string.gsub(text, " ", "+")
+        end
+
+        local function extractJson(text)
+            if not text then return "" end
+            local startPos = string.find(text, "{")
+            local jsonText
+            if startPos then
+                jsonText = string.sub(text, startPos)
+                if not jsonText then jsonText = text end
+            else
+                jsonText = text
+            end
+            return jsonText
+        end
+
+        local function showNotification(message)
+            local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+            
+            local notification = Instance.new("ScreenGui")
+            notification.Name = "NDLauncherNotification"
+            notification.ResetOnSpawn = false
+            notification.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+            notification.Parent = PlayerGui
+
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(0, 300, 0, 60)
+            frame.Position = UDim2.new(0.5, -150, 0, 20)
+            frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            frame.BorderSizePixel = 0
+            frame.Parent = notification
+            
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 8)
+            corner.Parent = frame
+            
+            local stroke = Instance.new("UIStroke")
+            stroke.Color = Color3.fromRGB(0, 255, 0)
+            stroke.Thickness = 2
+            stroke.Parent = frame
+            
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, -20, 1, 0)
+            label.Position = UDim2.new(0, 10, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Text = message
+            label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            label.TextSize = 14
+            label.Font = Enum.Font.Gotham
+            label.TextWrapped = true
+            label.Parent = frame
+            
+            task.delay(4, function()
+                notification:Destroy()
+            end)
+        end
+
+        showNotification("🌪️ 正在启动自然灾害脚本...")
+        
+        if not NATURAL_DISASTER_KEY or NATURAL_DISASTER_KEY == "" then
+            showNotification("❌ 错误：未提供密钥")
+            return false
+        end
+        
+        local hwid = tostring(game:GetService("RbxAnalyticsService"):GetClientId())
+        local checksum = HttpService:GenerateGUID(false)
+        
+        local url = string.format("%s/check_key?key=%s&hwid=%s&map_id=%s&checksum=%s", 
+            CONFIG.API_URL, 
+            urlEncode(NATURAL_DISASTER_KEY), 
+            urlEncode(hwid), 
+            urlEncode(CONFIG.MAP_DATA.mapId), 
+            urlEncode(checksum))
+        
+        showNotification("🔑 正在验证密钥...")
+        
+        local success, response = pcall(function()
+            return game:HttpGet(url)
+        end)
+        
+        if not success then
+            showNotification("❌ 连接失败 - 请检查网络连接")
+            return false
+        end
+        
+        local jsonText = extractJson(response)
+        local decodeSuccess, result = pcall(function()
+            return HttpService:JSONDecode(jsonText)
+        end)
+        
+        if not decodeSuccess then
+            showNotification("❌ 服务器响应无效")
+            return false
+        end
+        
+        if result.status == "success" and result.data and result.data.script then
+            showNotification("✅ 密钥验证成功！正在加载脚本...")
+            
+            _G.Key = NATURAL_DISASTER_KEY
+            _G.MapID = CONFIG.MAP_DATA.mapId
+            _G.KeyInfo = result.data
+            
+            task.wait(1)
+            local execSuccess, errorMsg = pcall(function()
+                loadstring(result.data.script)()
+            end)
+            
+            if execSuccess then
+                showNotification("🎮 自然灾害脚本已激活！")
+                return true
+            else
+                showNotification("❌ 脚本执行失败")
+                warn("自然灾害脚本错误:", errorMsg)
+                return false
+            end
+        else
+            showNotification("❌ 密钥无效: " .. (result.message or "未知错误"))
+            return false
+        end
+    end
+})
+
+-- 原来的AXiosHub黑洞按钮功能保留但隐藏（注释掉）
+--[[
+TabHandles.NaturalDisaster:Button({
+    Title = "AXiosHub黑洞",
     Callback = function()
         local success, err = pcall(function()
-            -- Kenny泛滥外部汉化脚本
-            local Translations = {
-                ["Toggle"] = "切换",
-                ["Lock"] = "锁定",
-                ["AxiosHub"] = "Axios中心",
-                ["Main"] = "主界面",
-                ["Player Target"] = "玩家目标",
-                ["UI Settings"] = "界面设置",
-                ["Search"] = "搜索",
-                ["Shape Controls"] = "形状控制",
-                ["Enable Shape"] = "启用形状",
-                ["Shape Type"] = "形状类型",
-                ["Fibonacci Sphere"] = "斐波那契球面",
-                ["Size"] = "尺寸",
-                ["Rotation Speed"] = "旋转速度",
-                ["Distance from Player"] = "与玩家的距离",
-                ["No Clip Parts"] = "无碰撞部件",
-                ["Other Scripts"] = "其他脚本",
-                ["Infinite Yield"] = "无限等待",
-                ["version"] = "版本",
-                ["Target Player"] = "目标玩家",
-                ["Follow Target"] = "跟随目标",
-                ["Select Player"] = "选择玩家",
-                ["Teleport to Target"] = "传送到目标",
-                ["Menu"] = "菜单",
-                ["Custom Cursor"] = "自定义光标",
-                ["Menu Keybind"] = "菜单快捷键",
-                ["RightShift"] = "右Shift",
-                ["Unload"] = "卸载",
-                ["Themes"] = "主题",
-                ["Background color"] = "背景颜色",
-                ["Main color"] = "主色调",
-                ["Accent color"] = "强调色",
-                ["Outline color"] = "轮廓颜色",
-                ["Configuration"] = "配置",
-                ["Config name"] = "配置名称",
-                ["Create config"] = "创建配置",
-                ["Config list"] = "配置列表",
-                ["Load config"] = "加载配置",
-                ["Overwrite config"] = "覆盖配置",
-                ["Delete config"] = "删除配置",
-                ["Refresh list"] = "刷新列表",
-                ["Font color"] = "字体颜色",
-                ["Font Face"] = "字体样式",
-                ["RobotoMono"] = "RobotoMono字体",
-                ["Theme list"] = "主题列表",
-                ["Mint"] = "薄荷绿",
-                ["Set as default"] = "设为默认",
-                ["Custom theme name"] = "自定义主题名称",
-                ["Create theme"] = "创建主题",
-                ["Custom themes"] = "自定义主题",
-                ["Load theme"] = "加载主题",
-                ["Overwrite theme"] = "覆盖主题",
-                ["Delete theme"] = "删除主题",
-                ["Set as autoload"] = "设为自动加载",
-                ["Reset autoload"] = "重置自动加载",
-                ["Current autoload config: none"] = "当前自动加载配置：无",
-                ["Reset default"] = "重置默认"
-            }
-
-            local function translateText(text)
-                if not text or type(text) ~= "string" then return text end
-                
-                if Translations[text] then
-                    return Translations[text]
-                end
-                
-                for en, cn in pairs(Translations) do
-                    if text:find(en) then
-                        return text:gsub(en, cn)
-                    end
-                end
-                
-                return text
-            end
-
-            local function setupTranslationEngine()
-                local success, err = pcall(function()
-                    local oldIndex = getrawmetatable(game).__newindex
-                    setreadonly(getrawmetatable(game), false)
-                    
-                    getrawmetatable(game).__newindex = newcclosure(function(t, k, v)
-                        if (t:IsA("TextLabel") or t:IsA("TextButton") or t:IsA("TextBox")) and k == "Text" then
-                            v = translateText(tostring(v))
-                        end
-                        return oldIndex(t, k, v)
-                    end)
-                    
-                    setreadonly(getrawmetatable(game), true)
-                end)
-                
-                if not success then
-                    warn("元表劫持失败:", err)
-                   
-                    local translated = {}
-                    local function scanAndTranslate()
-                        for _, gui in ipairs(game:GetService("CoreGui"):GetDescendants()) do
-                            if (gui:IsA("TextLabel") or gui:IsA("TextButton") or gui:IsA("TextBox")) and not translated[gui] then
-                                pcall(function()
-                                    local text = gui.Text
-                                    if text and text ~= "" then
-                                        local translatedText = translateText(text)
-                                        if translatedText ~= text then
-                                            gui.Text = translatedText
-                                            translated[gui] = true
-                                        end
-                                    end
-                                end)
-                            end
-                        end
-                        
-                        local player = game:GetService("Players").LocalPlayer
-                        if player and player:FindFirstChild("PlayerGui") then
-                            for _, gui in ipairs(player.PlayerGui:GetDescendants()) do
-                                if (gui:IsA("TextLabel") or gui:IsA("TextButton") or gui:IsA("TextBox")) and not translated[gui] then
-                                    pcall(function()
-                                        local text = gui.Text
-                                        if text and text ~= "" then
-                                            local translatedText = translateText(text)
-                                            if translatedText ~= text then
-                                                gui.Text = translatedText
-                                                translated[gui] = true
-                                            end
-                                        end
-                                    end)
-                                end
-                            end
-                        end
-                    end
-                    
-                    local function setupDescendantListener(parent)
-                        parent.DescendantAdded:Connect(function(descendant)
-                            if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
-                                task.wait(0.1)
-                                pcall(function()
-                                    local text = descendant.Text
-                                    if text and text ~= "" then
-                                        local translatedText = translateText(text)
-                                        if translatedText ~= text then
-                                            descendant.Text = translatedText
-                                        end
-                                    end
-                                end)
-                            end
-                        end)
-                    end
-                    
-                    pcall(setupDescendantListener, game:GetService("CoreGui"))
-                    local player = game:GetService("Players").LocalPlayer
-                    if player and player:FindFirstChild("PlayerGui") then
-                        pcall(setupDescendantListener, player.PlayerGui)
-                    end
-                    
-                    while true do
-                        scanAndTranslate()
-                        task.wait(3)
-                    end
-                end
-            end
-
-            task.wait(2)
-            setupTranslationEngine()
-
-            local success, err = pcall(function()
-                -- 加载外部脚本
-                local CONFIG = {
-                    API_URL = "https://robloxserver2.tagonmiku.workers.dev",
-                    MAP_DATA = {
-                        name = "自然灾害",
-                        mapId = "natural_disaster", 
-                        requireKey = true
-                    }
-                }
-
-                -- 服务
-                local Players = game:GetService("Players")
-                local HttpService = game:GetService("HttpService")
-
-                -- 您提供的密钥
-                local NATURAL_DISASTER_KEY = "6bce9a543936bae2c6038a6585b8a948_NDS"
-
-                -- 辅助函数
-                local function urlEncode(text)
-                    if not text then return "" end
-                    text = string.gsub(text, "\n", "\r\n")
-                    text = string.gsub(text, "([^%w _%%%-%.~])", function(c)
-                        return string.format("%%%02X", string.byte(c))
-                    end)
-                    return string.gsub(text, " ", "+")
-                end
-
-                local function extractJson(text)
-                    if not text then return "" end
-                    local startPos = string.find(text, "{")
-                    local jsonText
-                    if startPos then
-                        jsonText = string.sub(text, startPos)
-                        if not jsonText then jsonText = text end
-                    else
-                        jsonText = text
-                    end
-                    return jsonText
-                end
-
-                local function showNotification(message)
-                    local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-                    
-                    -- 创建通知GUI
-                    local notification = Instance.new("ScreenGui")
-                    notification.Name = "NDLauncherNotification"
-                    notification.ResetOnSpawn = false
-                    notification.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-                    notification.Parent = PlayerGui
-
-                    local frame = Instance.new("Frame")
-                    frame.Size = UDim2.new(0, 300, 0, 60)
-                    frame.Position = UDim2.new(0.5, -150, 0, 20)
-                    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-                    frame.BorderSizePixel = 0
-                    frame.Parent = notification
-                    
-                    local corner = Instance.new("UICorner")
-                    corner.CornerRadius = UDim.new(0, 8)
-                    corner.Parent = frame
-                    
-                    local stroke = Instance.new("UIStroke")
-                    stroke.Color = Color3.fromRGB(0, 255, 0)
-                    stroke.Thickness = 2
-                    stroke.Parent = frame
-                    
-                    local label = Instance.new("TextLabel")
-                    label.Size = UDim2.new(1, -20, 1, 0)
-                    label.Position = UDim2.new(0, 10, 0, 0)
-                    label.BackgroundTransparency = 1
-                    label.Text = message
-                    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    label.TextSize = 14
-                    label.Font = Enum.Font.Gotham
-                    label.TextWrapped = true
-                    label.Parent = frame
-                    
-                    -- 4秒后自动移除
-                    task.delay(4, function()
-                        notification:Destroy()
-                    end)
-                end
-
-                -- 主要加载函数
-                local function loadNaturalDisasterScript()
-                    showNotification("🌪️ 正在启动自然灾害脚本...")
-                    
-                    -- 验证密钥格式
-                    if not NATURAL_DISASTER_KEY or NATURAL_DISASTER_KEY == "" then
-                        showNotification("❌ 错误：未提供密钥")
-                        return false
-                    end
-                    
-                    -- 构建验证URL
-                    local hwid = tostring(game:GetService("RbxAnalyticsService"):GetClientId())
-                    local checksum = HttpService:GenerateGUID(false)
-                    
-                    local url = string.format("%s/check_key?key=%s&hwid=%s&map_id=%s&checksum=%s", 
-                        CONFIG.API_URL, 
-                        urlEncode(NATURAL_DISASTER_KEY), 
-                        urlEncode(hwid), 
-                        urlEncode(CONFIG.MAP_DATA.mapId), 
-                        urlEncode(checksum))
-                    
-                    showNotification("🔑 正在验证密钥...")
-                    
-                    -- 发送API请求
-                    local success, response = pcall(function()
-                        return game:HttpGet(url)
-                    end)
-                    
-                    if not success then
-                        showNotification("❌ 连接失败 - 请检查网络连接")
-                        return false
-                    end
-                    
-                    -- 解析响应
-                    local jsonText = extractJson(response)
-                    local decodeSuccess, result = pcall(function()
-                        return HttpService:JSONDecode(jsonText)
-                    end)
-                    
-                    if not decodeSuccess then
-                        showNotification("❌ 服务器响应无效")
-                        return false
-                    end
-                    
-                    -- 检查密钥是否有效
-                    if result.status == "success" and result.data and result.data.script then
-                        showNotification("✅ 密钥验证成功！正在加载脚本...")
-                        
-                        -- 为脚本设置全局变量
-                        _G.Key = NATURAL_DISASTER_KEY
-                        _G.MapID = CONFIG.MAP_DATA.mapId
-                        _G.KeyInfo = result.data
-                        
-                        -- 执行脚本
-                        task.wait(1)
-                        local execSuccess, errorMsg = pcall(function()
-                            loadstring(result.data.script)()
-                        end)
-                        
-                        if execSuccess then
-                            showNotification("🎮 自然灾害脚本已激活！")
-                            return true
-                        else
-                            showNotification("❌ 脚本执行失败")
-                            warn("自然灾害脚本错误:", errorMsg)
-                            return false
-                        end
-                    else
-                        showNotification("❌ 密钥无效: " .. (result.message or "未知错误"))
-                        return false
-                    end
-                end
-
-                -- 自动执行并处理错误
-                local function initialize()
-                    local success, err = pcall(function()
-                        loadNaturalDisasterScript()
-                    end)
-                    
-                    if not success then
-                        showNotification("❌ 启动器错误: " .. tostring(err))
-                    end
-                end
-
-                -- 启动过程
-                initialize()
-            end)
-
-            if not success then
-                warn("加载失败:", err)
-            end
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/kennyjumps/Axios-Hub/main/Loader.lua"))()
         end)
         if success then
             Notify("AXiosHub黑洞", "AXiosHub黑洞已加载")
@@ -1782,6 +1487,173 @@ TabHandles.NaturalDisaster:Button({
         end
     end
 })
+--]]
+
+-- 翻译功能（修复后的版本）
+local Translations = {
+    ["Toggle"] = "切换",
+    ["Lock"] = "锁定",
+    ["AxiosHub"] = "Axios中心",
+    ["Main"] = "主界面",
+    ["Player Target"] = "玩家目标",
+    ["UI Settings"] = "界面设置",
+    ["Search"] = "搜索",
+    ["Shape Controls"] = "形状控制",
+    ["Enable Shape"] = "启用形状",
+    ["Shape Type"] = "形状类型",
+    ["Fibonacci Sphere"] = "斐波那契球面",
+    ["Size"] = "尺寸",
+    ["Rotation Speed"] = "旋转速度",
+    ["Distance from Player"] = "与玩家的距离",
+    ["No Clip Parts"] = "无碰撞部件",
+    ["Other Scripts"] = "其他脚本",
+    ["Infinite Yield"] = "无限等待",
+    ["version"] = "版本",
+    ["Target Player"] = "目标玩家",
+    ["Follow Target"] = "跟随目标",
+    ["Select Player"] = "选择玩家",
+    ["Teleport to Target"] = "传送到目标",
+    ["Menu"] = "菜单",
+    ["Custom Cursor"] = "自定义光标",
+    ["Menu Keybind"] = "菜单快捷键",
+    ["RightShift"] = "右Shift",
+    ["Unload"] = "卸载",
+    ["Themes"] = "主题",
+    ["Background color"] = "背景颜色",
+    ["Main color"] = "主色调",
+    ["Accent color"] = "强调色",
+    ["Outline color"] = "轮廓颜色",
+    ["Configuration"] = "配置",
+    ["Config name"] = "配置名称",
+    ["Create config"] = "创建配置",
+    ["Config list"] = "配置列表",
+    ["Load config"] = "加载配置",
+    ["Overwrite config"] = "覆盖配置",
+    ["Delete config"] = "删除配置",
+    ["Refresh list"] = "刷新列表",
+    ["Font color"] = "字体颜色",
+    ["Font Face"] = "字体样式",
+    ["RobotoMono"] = "RobotoMono字体",
+    ["Theme list"] = "主题列表",
+    ["Mint"] = "薄荷绿",
+    ["Set as default"] = "设为默认",
+    ["Custom theme name"] = "自定义主题名称",
+    ["Create theme"] = "创建主题",
+    ["Custom themes"] = "自定义主题",
+    ["Load theme"] = "加载主题",
+    ["Overwrite theme"] = "覆盖主题",
+    ["Delete theme"] = "删除主题",
+    ["Set as autoload"] = "设为自动加载",
+    ["Reset autoload"] = "重置自动加载",
+    ["Current autoload config: none"] = "当前自动加载配置：无",
+    ["Reset default"] = "重置默认"
+}
+
+local function translateText(text)
+    if not text or type(text) ~= "string" then return text end
+    
+    if Translations[text] then
+        return Translations[text]
+    end
+    
+    for en, cn in pairs(Translations) do
+        if text:find(en) then
+            return text:gsub(en, cn)
+        end
+    end
+    
+    return text
+end
+
+local function setupTranslationEngine()
+    local success, err = pcall(function()
+        local oldIndex = getrawmetatable(game).__newindex
+        setreadonly(getrawmetatable(game), false)
+        
+        getrawmetatable(game).__newindex = newcclosure(function(t, k, v)
+            if (t:IsA("TextLabel") or t:IsA("TextButton") or t:IsA("TextBox")) and k == "Text" then
+                v = translateText(tostring(v))
+            end
+            return oldIndex(t, k, v)
+        end)
+        
+        setreadonly(getrawmetatable(game), true)
+    end)
+    
+    if not success then
+        warn("元表劫持失败:", err)
+       
+        local translated = {}
+        local function scanAndTranslate()
+            for _, gui in ipairs(game:GetService("CoreGui"):GetDescendants()) do
+                if (gui:IsA("TextLabel") or gui:IsA("TextButton") or gui:IsA("TextBox")) and not translated[gui] then
+                    pcall(function()
+                        local text = gui.Text
+                        if text and text ~= "" then
+                            local translatedText = translateText(text)
+                            if translatedText ~= text then
+                                gui.Text = translatedText
+                                translated[gui] = true
+                            end
+                        end
+                    end)
+                end
+            end
+            
+            local player = game:GetService("Players").LocalPlayer
+            if player and player:FindFirstChild("PlayerGui") then
+                for _, gui in ipairs(player.PlayerGui:GetDescendants()) do
+                    if (gui:IsA("TextLabel") or gui:IsA("TextButton") or gui:IsA("TextBox")) and not translated[gui] then
+                        pcall(function()
+                            local text = gui.Text
+                            if text and text ~= "" then
+                                local translatedText = translateText(text)
+                                if translatedText ~= text then
+                                    gui.Text = translatedText
+                                    translated[gui] = true
+                                end
+                            end
+                        end)
+                    end
+                end
+            end
+        end
+        
+        local function setupDescendantListener(parent)
+            parent.DescendantAdded:Connect(function(descendant)
+                if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
+                    task.wait(0.1)
+                    pcall(function()
+                        local text = descendant.Text
+                        if text and text ~= "" then
+                            local translatedText = translateText(text)
+                            if translatedText ~= text then
+                                descendant.Text = translatedText
+                            end
+                        end
+                    end)
+                end
+            end)
+        end
+        
+        pcall(setupDescendantListener, game:GetService("CoreGui"))
+        local player = game:GetService("Players").LocalPlayer
+        if player and player:FindFirstChild("PlayerGui") then
+            pcall(setupDescendantListener, player.PlayerGui)
+        end
+        
+        while true do
+            scanAndTranslate()
+            task.wait(3)
+        end
+    end
+end
+
+-- 初始化翻译引擎
+task.spawn(function()
+    task.wait(2)
+    setupTranslationEngine()
+end)
 
 -- 初始化
 LoadCoordinates()
@@ -1793,24 +1665,10 @@ if LocalPlayer.Character then
     SetJumpPower(JumpPower)
 end
 
--- 加载完成通知
-Notify("SGLOA HUB", "loc:SCRIPT_LOADED", 3)
-
-spawn(function()
-    wait(0.5)
-    Notify("loc:SYSTEM_TIP", "loc:ANTI_AFK_ENABLED", 3)
-end)
-
-spawn(function()
-    wait(1.5)
-    Notify("loc:SCRIPT_NOTICE", "loc:STITCHED_SCRIPT", 5)
-end)
-
 -- 窗口关闭时的清理
 Window:OnClose(function()
     print("SGLOA HUB窗口已关闭")
     
-    -- 清理所有连接
     if CurrentJumpConnection then
         CurrentJumpConnection:Disconnect()
     end
@@ -1821,7 +1679,6 @@ Window:OnClose(function()
         CurrentJumpPowerConnection:Disconnect()
     end
     
-    -- 关闭所有ESP
     DisableESP()
     DisableNPCESP()
     if NightVisionEnabled then
