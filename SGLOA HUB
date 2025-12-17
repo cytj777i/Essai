@@ -1,5 +1,5 @@
+--[[★/This file is protected by TIEYJ X v1.0.0/https://discord.gg/BXm9cjDw/★]]
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
-
 
 WindUI:Localization({
     Enabled = true,
@@ -18,7 +18,6 @@ WindUI:Localization({
 
 WindUI.TransparencyValue = 0.00
 WindUI:SetTheme("Emerald")
-
 
 local Window = WindUI:CreateWindow({
     Title = "loc:WINDUI_TITLE",
@@ -39,7 +38,6 @@ Window:Tag({
     Color = Color3.fromHex("#30ff6a")
 })
 
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -50,7 +48,6 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
-
 
 local ESPEnabled = false
 local NPCESPEnabled = false
@@ -74,21 +71,18 @@ local CurrentJumpConnection
 local CurrentNoclipConnection
 local CurrentJumpPowerConnection
 
-
 local SelectedPlayer = nil
 local PlayerList = {}
 local PlayerDropdown
-
 
 local NaturalDisasterPredictionEnabled = false
 local PredictionCoroutine = nil
 local lastDisaster = ""
 local predictionInterval = 6
 
-
-local function SendChatMessage(message)
+local function func0BwKZ7(message)
     local success, errorMessage = pcall(function()
-        -- 方法1: 使用默认聊天系统
+        
         if ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") then
             local SayMessageRequest = ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest
             if SayMessageRequest then
@@ -96,8 +90,7 @@ local function SendChatMessage(message)
                 return true
             end
         end
-        
-        -- 方法2: 使用游戏的服务
+
         local TextChatService = game:GetService("TextChatService")
         if TextChatService then
             local channels = TextChatService:WaitForChild("TextChannels")
@@ -109,8 +102,7 @@ local function SendChatMessage(message)
                 end
             end
         end
-        
-        -- 方法3: 使用玩家聊天的替代方法
+
         local success2 = pcall(function()
             game.Players:Chat(message)
             return true
@@ -119,8 +111,7 @@ local function SendChatMessage(message)
         if success2 then
             return true
         end
-        
-        -- 方法4: 尝试使用旧的聊天事件
+
         local ChatEvents = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
         if ChatEvents then
             local SayMessageEvent = ChatEvents:FindFirstChild("SayMessageRequest")
@@ -140,27 +131,22 @@ local function SendChatMessage(message)
     return success
 end
 
-
-local function AutoChat()
+local function ___1wS0a2()
     if not AutoChatEnabled then return end
-    
-    -- 等待一小段时间确保游戏完全加载
+
     wait(5)
-    
-    -- 发送第一条消息
-    SendChatMessage("SGLOA HUB 启动成功")
-    
-    -- 等待一段时间后发送第二条消息
+
+    func0BwKZ7("SGLOA HUB 启动成功")
+
     wait(0.1)
-    SendChatMessage("慢脚sou ciTiy免费教开脚本🤓")
+    func0BwKZ7("慢脚sou ciTiy免费教开脚本🤓")
     
-    Notify("自动发言", "已发送消息", 3)
+    _nx6Ss6("自动发言", "已发送消息", 3)
 end
 
-
-local function Notify(title, content, duration)
+local function _nx6Ss6(title, content, duration)
     duration = duration or 3
-    WindUI:Notify({
+    WindUI:_nx6Ss6({
         Title = title,
         Content = content,
         Duration = duration,
@@ -168,8 +154,7 @@ local function Notify(title, content, duration)
     })
 end
 
-
-local function ReadFile(path)
+local function fneHTDs1(path)
     local success, data = pcall(function()
         if readfile then
             return readfile(path)
@@ -182,7 +167,7 @@ local function ReadFile(path)
     return success and data or nil
 end
 
-local function WriteFile(path, content)
+local function ____XCIZG2(path, content)
     local success, result = pcall(function()
         if writefile then
             writefile(path, content)
@@ -197,9 +182,8 @@ local function WriteFile(path, content)
     return success and result or false
 end
 
-
-local function LoadCoordinates()
-    local data = ReadFile(FilePath)
+local function handlerDl7vP4()
+    local data = fneHTDs1(FilePath)
     if data then
         local success, decoded = pcall(function()
             return HttpService:JSONDecode(data)
@@ -212,28 +196,25 @@ local function LoadCoordinates()
     return false
 end
 
-local function SaveCoordinates()
+local function _tgbMg9()
     local success = pcall(function()
         local encoded = HttpService:JSONEncode(SavedCoordinates)
-        return WriteFile(FilePath, encoded)
+        return ____XCIZG2(FilePath, encoded)
     end)
     return success
 end
 
-
-local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
+local function fnuH4v9(title, actionCallback, isDelete)
     if #SavedCoordinates == 0 then
-        Notify("坐标管理", "没有保存的坐标", 2)
+        _nx6Ss6("坐标管理", "没有保存的坐标", 2)
         return
     end
-
 
     local SelectionGui = Instance.new("ScreenGui")
     SelectionGui.Name = "CoordinateSelectionUI"
     SelectionGui.Parent = game:GetService("CoreGui")
     SelectionGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     SelectionGui.ResetOnSpawn = false
-
 
     local MainFrame = Instance.new("Frame")
     MainFrame.Parent = SelectionGui
@@ -244,17 +225,14 @@ local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
     MainFrame.Active = true
     MainFrame.Draggable = true
 
-
     local Corner = Instance.new("UICorner")
     Corner.CornerRadius = UDim.new(0, 12)
     Corner.Parent = MainFrame
-
 
     local Stroke = Instance.new("UIStroke")
     Stroke.Color = Color3.fromHex("#10b981")
     Stroke.Thickness = 2
     Stroke.Parent = MainFrame
-
 
     local Header = Instance.new("Frame")
     Header.Parent = MainFrame
@@ -278,7 +256,6 @@ local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
     TitleLabel.Font = Enum.Font.GothamBold
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-
     local CloseButton = Instance.new("TextButton")
     CloseButton.Parent = Header
     CloseButton.Size = UDim2.new(0, 30, 0, 30)
@@ -294,7 +271,6 @@ local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
     CloseCorner.CornerRadius = UDim.new(0, 6)
     CloseCorner.Parent = CloseButton
 
-
     local ScrollFrame = Instance.new("ScrollingFrame")
     ScrollFrame.Parent = MainFrame
     ScrollFrame.Size = UDim2.new(1, -20, 1, -90)
@@ -305,13 +281,11 @@ local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
     ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, #SavedCoordinates * 50)
     ScrollFrame.BorderSizePixel = 0
 
-
     local ButtonContainer = Instance.new("Frame")
     ButtonContainer.Parent = MainFrame
     ButtonContainer.Size = UDim2.new(1, -20, 0, 40)
     ButtonContainer.Position = UDim2.new(0, 10, 1, -50)
     ButtonContainer.BackgroundTransparency = 1
-
 
     for i, coord in ipairs(SavedCoordinates) do
         local CoordButton = Instance.new("TextButton")
@@ -331,7 +305,6 @@ local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
         ButtonStroke.Thickness = 1
         ButtonStroke.Parent = CoordButton
 
-
         local NameLabel = Instance.new("TextLabel")
         NameLabel.Parent = CoordButton
         NameLabel.Size = UDim2.new(1, -10, 0, 18)
@@ -343,7 +316,6 @@ local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
         NameLabel.Font = Enum.Font.GothamBold
         NameLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-
         local PosLabel = Instance.new("TextLabel")
         PosLabel.Parent = CoordButton
         PosLabel.Size = UDim2.new(1, -10, 0, 16)
@@ -354,7 +326,6 @@ local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
         PosLabel.TextSize = 11
         PosLabel.Font = Enum.Font.Gotham
         PosLabel.TextXAlignment = Enum.TextXAlignment.Left
-
 
         CoordButton.MouseEnter:Connect(function()
             TweenService:Create(CoordButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#334155")}):Play()
@@ -370,11 +341,9 @@ local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
         end)
     end
 
-
     CloseButton.MouseButton1Click:Connect(function()
         SelectionGui:Destroy()
     end)
-
 
     local InputConnection
     InputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -391,20 +360,18 @@ local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
     end)
 end
 
-
-local function SaveCurrentCoordinate()
+local function ___fCi6N2()
     local character = LocalPlayer.Character
     if not character then
-        Notify("保存坐标", "角色未找到", 2)
+        _nx6Ss6("保存坐标", "角色未找到", 2)
         return
     end
 
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not rootPart then
-        Notify("保存坐标", "未找到HumanoidRootPart", 2)
+        _nx6Ss6("保存坐标", "未找到HumanoidRootPart", 2)
         return
     end
-
 
     local InputGui = Instance.new("ScreenGui")
     InputGui.Name = "CoordinateInputUI"
@@ -430,7 +397,6 @@ local function SaveCurrentCoordinate()
     Stroke.Thickness = 2
     Stroke.Parent = MainFrame
 
-
     local TitleLabel = Instance.new("TextLabel")
     TitleLabel.Parent = MainFrame
     TitleLabel.Size = UDim2.new(1, 0, 0, 40)
@@ -445,7 +411,6 @@ local function SaveCurrentCoordinate()
     local TitleCorner = Instance.new("UICorner")
     TitleCorner.CornerRadius = UDim.new(0, 12)
     TitleCorner.Parent = TitleLabel
-
 
     local InputBox = Instance.new("TextBox")
     InputBox.Parent = MainFrame
@@ -469,13 +434,11 @@ local function SaveCurrentCoordinate()
     InputStroke.Thickness = 1
     InputStroke.Parent = InputBox
 
-
     local ButtonContainer = Instance.new("Frame")
     ButtonContainer.Parent = MainFrame
     ButtonContainer.Size = UDim2.new(1, -40, 0, 35)
     ButtonContainer.Position = UDim2.new(0, 20, 1, -50)
     ButtonContainer.BackgroundTransparency = 1
-
 
     local ConfirmButton = Instance.new("TextButton")
     ConfirmButton.Parent = ButtonContainer
@@ -492,7 +455,6 @@ local function SaveCurrentCoordinate()
     ConfirmCorner.CornerRadius = UDim.new(0, 6)
     ConfirmCorner.Parent = ConfirmButton
 
-
     local CancelButton = Instance.new("TextButton")
     CancelButton.Parent = ButtonContainer
     CancelButton.Size = UDim2.new(0.5, -5, 1, 0)
@@ -508,9 +470,7 @@ local function SaveCurrentCoordinate()
     CancelCorner.CornerRadius = UDim.new(0, 6)
     CancelCorner.Parent = CancelButton
 
-
     InputBox:CaptureFocus()
-
 
     ConfirmButton.MouseButton1Click:Connect(function()
         local coordinateName = InputBox.Text
@@ -524,10 +484,10 @@ local function SaveCurrentCoordinate()
                 timestamp = os.time()
             }
             table.insert(SavedCoordinates, coord)
-            SaveCoordinates()
-            Notify("保存坐标", "坐标已保存: " .. coordinateName, 2)
+            _tgbMg9()
+            _nx6Ss6("保存坐标", "坐标已保存: " .. coordinateName, 2)
         else
-            Notify("保存坐标", "请输入坐标名称", 2)
+            _nx6Ss6("保存坐标", "请输入坐标名称", 2)
         end
         InputGui:Destroy()
     end)
@@ -549,15 +509,14 @@ local function SaveCurrentCoordinate()
                     timestamp = os.time()
                 }
                 table.insert(SavedCoordinates, coord)
-                SaveCoordinates()
-                Notify("保存坐标", "坐标已保存: " .. coordinateName, 2)
+                _tgbMg9()
+                _nx6Ss6("保存坐标", "坐标已保存: " .. coordinateName, 2)
             else
-                Notify("保存坐标", "请输入坐标名称", 2)
+                _nx6Ss6("保存坐标", "请输入坐标名称", 2)
             end
             InputGui:Destroy()
         end
     end)
-
 
     local InputConnection
     InputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -574,37 +533,34 @@ local function SaveCurrentCoordinate()
     end)
 end
 
-
-local function TeleportToCoordinate()
-    CreateCoordinateSelectionUI("选择要传送的坐标", function(coord)
+local function __jMbVN4()
+    fnuH4v9("选择要传送的坐标", function(coord)
         local character = LocalPlayer.Character
         if not character then
-            Notify("传送坐标", "角色未找到", 2)
+            _nx6Ss6("传送坐标", "角色未找到", 2)
             return
         end
 
         local rootPart = character:FindFirstChild("HumanoidRootPart")
         if not rootPart then
-            Notify("传送坐标", "未找到HumanoidRootPart", 2)
+            _nx6Ss6("传送坐标", "未找到HumanoidRootPart", 2)
             return
         end
 
         rootPart.CFrame = CFrame.new(coord.x, coord.y, coord.z)
-        Notify("传送坐标", "已传送到: " .. coord.name, 2)
+        _nx6Ss6("传送坐标", "已传送到: " .. coord.name, 2)
     end)
 end
 
-
-local function DeleteCoordinate()
-    CreateCoordinateSelectionUI("选择要删除的坐标", function(coord, index)
+local function funcCElSj7()
+    fnuH4v9("选择要删除的坐标", function(coord, index)
         table.remove(SavedCoordinates, index)
-        SaveCoordinates()
-        Notify("删除坐标", "已删除坐标: " .. coord.name, 2)
+        _tgbMg9()
+        _nx6Ss6("删除坐标", "已删除坐标: " .. coord.name, 2)
     end, true)
 end
 
-
-local function EnableAntiAFK()
+local function handlerySTVu0()
     local VirtualUser = game:GetService("VirtualUser")
     Players.LocalPlayer.Idled:connect(function()
         VirtualUser:Button2Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
@@ -613,8 +569,7 @@ local function EnableAntiAFK()
     end)
 end
 
-
-local function CreateESP(player)
+local function cbXmixu9(player)
     if player == LocalPlayer then return end
 
     local character = player.Character
@@ -657,7 +612,7 @@ local function CreateESP(player)
     end
 end
 
-local function RemoveESP(player)
+local function fnaKhox8(player)
     if ESPHighlights[player] then
         ESPHighlights[player]:Destroy()
         ESPHighlights[player] = nil
@@ -669,30 +624,29 @@ local function RemoveESP(player)
     end
 end
 
-local function EnableESP()
+local function fnLhgzZ6()
     if ESPEnabled then return end
     ESPEnabled = true
 
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            CreateESP(player)
+            cbXmixu9(player)
         end
     end
-    Notify("玩家ESP透视", "玩家ESP透视已开启")
+    _nx6Ss6("玩家ESP透视", "玩家ESP透视已开启")
 end
 
-local function DisableESP()
+local function cbYYUnA5()
     if not ESPEnabled then return end
     ESPEnabled = false
 
     for _, player in pairs(Players:GetPlayers()) do
-        RemoveESP(player)
+        fnaKhox8(player)
     end
-    Notify("玩家ESP透视", "玩家ESP透视已关闭")
+    _nx6Ss6("玩家ESP透视", "玩家ESP透视已关闭")
 end
 
-
-local function CreateNPCESP(model)
+local function ___4hBla0(model)
     if not model:IsA("Model") then return end
 
     local humanoid = model:FindFirstChildOfClass("Humanoid")
@@ -713,14 +667,14 @@ local function CreateNPCESP(model)
     NPCHighlights[model] = highlight
 end
 
-local function RemoveNPCESP(model)
+local function fnHUJma2(model)
     if NPCHighlights[model] then
         NPCHighlights[model]:Destroy()
         NPCHighlights[model] = nil
     end
 end
 
-local function EnableNPCESP()
+local function funcTRKaq9()
     if NPCESPEnabled then return end
     NPCESPEnabled = true
     
@@ -736,32 +690,31 @@ local function EnableNPCESP()
                     end
                 end
                 if not isPlayer then
-                    CreateNPCESP(descendant)
+                    ___4hBla0(descendant)
                 end
             end
         end
     end
-    Notify("NPC透视", "NPC透视已开启")
+    _nx6Ss6("NPC透视", "NPC透视已开启")
 end
 
-local function DisableNPCESP()
+local function _rYBBp1()
     if not NPCESPEnabled then return end
     NPCESPEnabled = false
 
     for model, _ in pairs(NPCHighlights) do
-        RemoveNPCESP(model)
+        fnHUJma2(model)
     end
-    Notify("NPC透视", "NPC透视已关闭")
+    _nx6Ss6("NPC透视", "NPC透视已关闭")
 end
 
-
 local OriginalAmbient
-local function ToggleNightVision(enabled)
+local function ___Pwl0q2(enabled)
     if enabled then
         OriginalAmbient = Lighting.Ambient
         Lighting.Ambient = Color3.new(1, 1, 1)
         NightVisionEnabled = true
-        Notify("夜视", "夜视已开启")
+        _nx6Ss6("夜视", "夜视已开启")
     else
         if OriginalAmbient then
             Lighting.Ambient = OriginalAmbient
@@ -769,12 +722,11 @@ local function ToggleNightVision(enabled)
             Lighting.Ambient = Color3.new(0, 0, 0)
         end
         NightVisionEnabled = false
-        Notify("夜视", "夜视已关闭")
+        _nx6Ss6("夜视", "夜视已关闭")
     end
 end
 
-
-local function ToggleInfiniteJump(enabled)
+local function cbcfdpE7(enabled)
     if enabled then
         InfiniteJumpEnabled = true
         CurrentJumpConnection = UserInputService.JumpRequest:Connect(function()
@@ -786,19 +738,18 @@ local function ToggleInfiniteJump(enabled)
                 end
             end
         end)
-        Notify("无限跳", "无限跳已开启")
+        _nx6Ss6("无限跳", "无限跳已开启")
     else
         InfiniteJumpEnabled = false
         if CurrentJumpConnection then
             CurrentJumpConnection:Disconnect()
             CurrentJumpConnection = nil
         end
-        Notify("无限跳", "无限跳已关闭")
+        _nx6Ss6("无限跳", "无限跳已关闭")
     end
 end
 
-
-local function ToggleNoclip(enabled)
+local function __Xs96B0(enabled)
     if enabled then
         NoclipEnabled = true
         CurrentNoclipConnection = RunService.Stepped:Connect(function()
@@ -815,7 +766,7 @@ local function ToggleNoclip(enabled)
                 end
             end
         end)
-        Notify("穿墙模式", "穿墙模式已开启")
+        _nx6Ss6("穿墙模式", "穿墙模式已开启")
     else
         NoclipEnabled = false
         if CurrentNoclipConnection then
@@ -830,13 +781,11 @@ local function ToggleNoclip(enabled)
                 end
             end
         end
-        Notify("穿墙模式", "穿墙模式已关闭")
+        _nx6Ss6("穿墙模式", "穿墙模式已关闭")
     end
 end
 
-
-
-local function SetWalkSpeed(speed)
+local function cbrzOBR(speed)
     WalkSpeed = speed
     local character = LocalPlayer.Character
     if character then
@@ -847,8 +796,7 @@ local function SetWalkSpeed(speed)
     end
 end
 
-
-local function SetJumpPower(power)
+local function ____lDYwr(power)
     JumpPower = power
     JumpPowerEnabled = true
 
@@ -879,14 +827,12 @@ local function SetJumpPower(power)
     end)
 end
 
-
-local function SetGravity(value)
+local function func07e9p9(value)
     Workspace.Gravity = value
     Gravity = value
 end
 
-
-local function OnCharacterAdded(character)
+local function ____kbGnM8(character)
     character:WaitForChild("Humanoid")
     wait(0.5)
 
@@ -894,18 +840,18 @@ local function OnCharacterAdded(character)
         if CurrentJumpConnection then
             CurrentJumpConnection:Disconnect()
         end
-        ToggleInfiniteJump(true)
+        cbcfdpE7(true)
     end
 
     if NoclipEnabled then
-        ToggleNoclip(true)
+        __Xs96B0(true)
     end
 
     if JumpPowerEnabled then
         if CurrentJumpPowerConnection then
             CurrentJumpPowerConnection:Disconnect()
         end
-        SetJumpPower(JumpPower)
+        ____lDYwr(JumpPower)
     end
 
     local humanoid = character:FindFirstChild("Humanoid")
@@ -915,10 +861,9 @@ local function OnCharacterAdded(character)
     end
 end
 
-LocalPlayer.CharacterAdded:Connect(OnCharacterAdded)
+LocalPlayer.CharacterAdded:Connect(____kbGnM8)
 
-
-local function UpdatePlayerList()
+local function fnLtUU61()
     PlayerList = {}
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
@@ -927,21 +872,19 @@ local function UpdatePlayerList()
     end
     table.sort(PlayerList)
 
-
     if PlayerDropdown then
         PlayerDropdown:UpdateValues(PlayerList)
     end
 end
 
-local function OnPlayerAdded(player)
+local function _C1WCB3(player)
     wait(0.5)
-    UpdatePlayerList()
+    fnLtUU61()
 end
 
-local function OnPlayerRemoving(player)
+local function funcmljw27(player)
     wait(0.5)
-    UpdatePlayerList()
-
+    fnLtUU61()
 
     if SelectedPlayer == player.Name then
         SelectedPlayer = nil
@@ -951,8 +894,7 @@ local function OnPlayerRemoving(player)
     end
 end
 
-
-local function PredictDisaster()
+local function ____xJ7bD3()
     if not NaturalDisasterPredictionEnabled then return end
     
     local localPlayer = game.Players.LocalPlayer
@@ -961,13 +903,11 @@ local function PredictDisaster()
     local survivalTag = localPlayer.Character:FindFirstChild("SurvivalTag")
     if survivalTag then
         local disasterName = survivalTag.Value
-        
-        
+
         if disasterName ~= lastDisaster then
             lastDisaster = disasterName
         end
-        
-        
+
         local disasterText = ""
         
         if disasterName == "Blizzard" then
@@ -997,8 +937,7 @@ local function PredictDisaster()
         else
             disasterText = "下一个灾难是：" .. disasterName
         end
-        
-        
+
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "灾害预测",
             Text = disasterText,
@@ -1008,11 +947,11 @@ local function PredictDisaster()
     end
 end
 
-local function StartPrediction()
+local function ___456fb4()
     NaturalDisasterPredictionEnabled = true
     PredictionCoroutine = coroutine.create(function()
         while NaturalDisasterPredictionEnabled do
-            PredictDisaster()
+            ____xJ7bD3()
             wait(predictionInterval)
         end
     end)
@@ -1026,7 +965,7 @@ local function StartPrediction()
     })
 end
 
-local function StopPrediction()
+local function _s5wJt3()
     NaturalDisasterPredictionEnabled = false
     if PredictionCoroutine then
         coroutine.close(PredictionCoroutine)
@@ -1041,19 +980,17 @@ local function StopPrediction()
     })
 end
 
-local function ToggleDisasterPrediction()
+local function _732rR3()
     if NaturalDisasterPredictionEnabled then
-        StopPrediction()
+        _s5wJt3()
     else
-        StartPrediction()
+        ___456fb4()
     end
 end
 
-
-UpdatePlayerList()
-Players.PlayerAdded:Connect(OnPlayerAdded)
-Players.PlayerRemoving:Connect(OnPlayerRemoving)
-
+fnLtUU61()
+Players.PlayerAdded:Connect(_C1WCB3)
+Players.PlayerRemoving:Connect(funcmljw27)
 
 local Tabs = {
     Main = Window:Section({ Title = "loc:MAIN_FEATURES", Opened = true }),
@@ -1069,7 +1006,6 @@ local TabHandles = {
     NaturalDisaster = Tabs.NaturalDisaster:Tab({ Title = "loc:NATURAL_DISASTER" })
 }
 
-
 TabHandles.Main:Button({
     Title = "普通飞行",
     Callback = function()
@@ -1077,9 +1013,9 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/666-/main/%E5%8F%AA%E8%83%BD%E8%87%AA%E5%B7%B1%E6%90%9E%E4%B8%80%E4%B8%AA%E4%BA%86"))()
         end)
         if success then
-            Notify("飞行功能", "飞行功能已加载")
+            _nx6Ss6("飞行功能", "飞行功能已加载")
         else
-            Notify("飞行功能", "飞行功能加载失败")
+            _nx6Ss6("飞行功能", "飞行功能加载失败")
         end
     end
 })
@@ -1114,7 +1050,7 @@ TabHandles.Main:Button({
                 ["More GUI themes will be available in future updates!"] = "未来更新中将提供更多界面主题！",
                 ["Lantern"] = "灯笼"
             }
-            local function translateText(text)
+            local function _yM2cR5(text)
                 if not text or type(text) ~= "string" then return text end
                 
                 if Translations[text] then
@@ -1130,14 +1066,14 @@ TabHandles.Main:Button({
                 return text
             end
 
-            local function setupTranslationEngine()
+            local function ____iDvvv5()
                 local success, err = pcall(function()
                     local oldIndex = getrawmetatable(game).__newindex
                     setreadonly(getrawmetatable(game), false)
                     
                     getrawmetatable(game).__newindex = newcclosure(function(t, k, v)
                         if (t:IsA("TextLabel") or t:IsA("TextButton") or t:IsA("TextBox")) and k == "Text" then
-                            v = translateText(tostring(v))
+                            v = _yM2cR5(tostring(v))
                         end
                         return oldIndex(t, k, v)
                     end)
@@ -1149,13 +1085,13 @@ TabHandles.Main:Button({
                     warn("元表劫持失败:", err)
                    
                     local translated = {}
-                    local function scanAndTranslate()
+                    local function ___pQmbc9()
                         for _, gui in ipairs(game:GetService("CoreGui"):GetDescendants()) do
                             if (gui:IsA("TextLabel") or gui:IsA("TextButton") or gui:IsA("TextBox")) and not translated[gui] then
                                 pcall(function()
                                     local text = gui.Text
                                     if text and text ~= "" then
-                                        local translatedText = translateText(text)
+                                        local translatedText = _yM2cR5(text)
                                         if translatedText ~= text then
                                             gui.Text = translatedText
                                             translated[gui] = true
@@ -1172,7 +1108,7 @@ TabHandles.Main:Button({
                                     pcall(function()
                                         local text = gui.Text
                                         if text and text ~= "" then
-                                            local translatedText = translateText(text)
+                                            local translatedText = _yM2cR5(text)
                                             if translatedText ~= text then
                                                 gui.Text = translatedText
                                                 translated[gui] = true
@@ -1184,14 +1120,14 @@ TabHandles.Main:Button({
                         end
                     end
                     
-                    local function setupDescendantListener(parent)
+                    local function _qxJLx2(parent)
                         parent.DescendantAdded:Connect(function(descendant)
                             if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
                                 task.wait(0.1)
                                 pcall(function()
                                     local text = descendant.Text
                                     if text and text ~= "" then
-                                        local translatedText = translateText(text)
+                                        local translatedText = _yM2cR5(text)
                                         if translatedText ~= text then
                                             descendant.Text = translatedText
                                         end
@@ -1201,14 +1137,14 @@ TabHandles.Main:Button({
                         end)
                     end
                     
-                    pcall(setupDescendantListener, game:GetService("CoreGui"))
+                    pcall(_qxJLx2, game:GetService("CoreGui"))
                     local player = game:GetService("Players").LocalPlayer
                     if player and player:FindFirstChild("PlayerGui") then
-                        pcall(setupDescendantListener, player.PlayerGui)
+                        pcall(_qxJLx2, player.PlayerGui)
                     end
                     
                     while true do
-                        scanAndTranslate()
+                        ___pQmbc9()
                         task.wait(3)
                     end
                 end
@@ -1216,7 +1152,7 @@ TabHandles.Main:Button({
 
             task.wait(2)
 
-            setupTranslationEngine()
+            ____iDvvv5()
 
             local success, err = pcall(function()
                 
@@ -1228,20 +1164,19 @@ TabHandles.Main:Button({
             end
         end)
         if success then
-            Notify("无敌少侠飞行", "无敌少侠飞行已加载")
+            _nx6Ss6("无敌少侠飞行", "无敌少侠飞行已加载")
         else
-            Notify("无敌少侠飞行", "无敌少侠飞行加载失败")
+            _nx6Ss6("无敌少侠飞行", "无敌少侠飞行加载失败")
         end
     end
 })
-
 
 TabHandles.Main:Slider({
     Title = "移动速度",
     Desc = "设置角色移动速度",
     Value = { Min = 0, Max = 200, Default = 16 },
     Callback = function(value)
-        SetWalkSpeed(value)
+        cbrzOBR(value)
     end
 })
 
@@ -1250,7 +1185,7 @@ TabHandles.Main:Slider({
     Desc = "设置角色跳跃高度",
     Value = { Min = 0, Max = 200, Default = 50 },
     Callback = function(value)
-        SetJumpPower(value)
+        ____lDYwr(value)
     end
 })
 
@@ -1259,12 +1194,11 @@ TabHandles.Main:Slider({
     Desc = "设置游戏重力",
     Value = { Min = 0, Max = 200, Default = 196 },
     Callback = function(value)
-        SetGravity(value)
+        func07e9p9(value)
     end
 })
 
 TabHandles.Main:Divider()
-
 
 TabHandles.Main:Button({
     Title = "传送工具",
@@ -1281,12 +1215,11 @@ TabHandles.Main:Button({
             end
         end)
         tool.Parent = LocalPlayer.Backpack
-        Notify("传送工具", "传送工具已添加到背包")
+        _nx6Ss6("传送工具", "传送工具已添加到背包")
     end
 })
 
 TabHandles.Main:Divider()
-
 
 TabHandles.Main:Toggle({
     Title = "ESP透视",
@@ -1294,9 +1227,9 @@ TabHandles.Main:Toggle({
     Value = false,
     Callback = function(state)
         if state then
-            EnableESP()
+            fnLhgzZ6()
         else
-            DisableESP()
+            cbYYUnA5()
         end
     end
 })
@@ -1307,9 +1240,9 @@ TabHandles.Main:Toggle({
     Value = false,
     Callback = function(state)
         if state then
-            EnableNPCESP()
+            funcTRKaq9()
         else
-            DisableNPCESP()
+            _rYBBp1()
         end
     end
 })
@@ -1319,19 +1252,18 @@ TabHandles.Main:Toggle({
     Desc = "增强夜间视觉效果",
     Value = false,
     Callback = function(state)
-        ToggleNightVision(state)
+        ___Pwl0q2(state)
     end
 })
 
 TabHandles.Main:Divider()
-
 
 TabHandles.Main:Toggle({
     Title = "无限跳",
     Desc = "允许无限跳跃",
     Value = false,
     Callback = function(state)
-        ToggleInfiniteJump(state)
+        cbcfdpE7(state)
     end
 })
 
@@ -1340,7 +1272,7 @@ TabHandles.Main:Toggle({
     Desc = "允许穿过墙壁",
     Value = false,
     Callback = function(state)
-        ToggleNoclip(state)
+        __Xs96B0(state)
     end
 })
 
@@ -1351,9 +1283,9 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet("https://pastebin.com/raw/zXk4Rq2r"))()
         end)
         if success then
-            Notify("爬墙功能", "爬墙功能已加载")
+            _nx6Ss6("爬墙功能", "爬墙功能已加载")
         else
-            Notify("爬墙功能", "爬墙功能加载失败")
+            _nx6Ss6("爬墙功能", "爬墙功能加载失败")
         end
     end
 })
@@ -1365,15 +1297,14 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostPlayer352/Test4/main/Float'))()
         end)
         if success then
-            Notify("踏空行走", "踏空行走已加载")
+            _nx6Ss6("踏空行走", "踏空行走已加载")
         else
-            Notify("踏空行走", "踏空行走加载失败")
+            _nx6Ss6("踏空行走", "踏空行走加载失败")
         end
     end
 })
 
 TabHandles.Main:Divider()
-
 
 PlayerDropdown = TabHandles.Main:Dropdown({
     Title = "选择玩家",
@@ -1381,7 +1312,7 @@ PlayerDropdown = TabHandles.Main:Dropdown({
     Values = PlayerList,
     Callback = function(selected)
         SelectedPlayer = selected
-        Notify("玩家选择", "已选择玩家: " .. selected, 2)
+        _nx6Ss6("玩家选择", "已选择玩家: " .. selected, 2)
     end
 })
 
@@ -1389,7 +1320,7 @@ TabHandles.Main:Button({
     Title = "传送到玩家",
     Callback = function()
         if not SelectedPlayer then
-            Notify("传送到玩家", "请先选择要传送的玩家", 2)
+            _nx6Ss6("传送到玩家", "请先选择要传送的玩家", 2)
             return
         end
         
@@ -1398,7 +1329,7 @@ TabHandles.Main:Button({
                 local localChar = LocalPlayer.Character
                 local targetChar = player.Character
                 if not localChar or not targetChar then
-                    Notify("传送到玩家", "角色未找到", 2)
+                    _nx6Ss6("传送到玩家", "角色未找到", 2)
                     return
                 end
 
@@ -1407,9 +1338,9 @@ TabHandles.Main:Button({
                 if localRoot and targetRoot then
                     local targetPos = Vector3.new(targetRoot.Position.X, targetRoot.Position.Y + 5, targetRoot.Position.Z)
                     localRoot.CFrame = CFrame.new(targetPos)
-                    Notify("传送到玩家", "已传送到 " .. player.Name .. " 的头上", 2)
+                    _nx6Ss6("传送到玩家", "已传送到 " .. player.Name .. " 的头上", 2)
                 else
-                    Notify("传送到玩家", "未找到HumanoidRootPart", 2)
+                    _nx6Ss6("传送到玩家", "未找到HumanoidRootPart", 2)
                 end
                 break
             end
@@ -1424,9 +1355,9 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Throw/main/Throw"))()
         end)
         if success then
-            Notify("走路创人", "走路创人功能已加载")
+            _nx6Ss6("走路创人", "走路创人功能已加载")
         else
-            Notify("走路创人", "走路创人功能加载失败")
+            _nx6Ss6("走路创人", "走路创人功能加载失败")
         end
     end
 })
@@ -1438,13 +1369,12 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/hknvh/main/%E7%94%A9%E9%A3%9E.txt"))()
         end)
         if success then
-            Notify("甩飞功能", "甩飞功能已加载")
+            _nx6Ss6("甩飞功能", "甩飞功能已加载")
         else
-            Notify("甩飞功能", "甩飞功能加载失败")
+            _nx6Ss6("甩飞功能", "甩飞功能加载失败")
         end
     end
 })
-
 
 TabHandles.Main:Button({
     Title = "防甩飞",
@@ -1453,33 +1383,31 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Throw/main/Anti-throw"))()
         end)
         if success then
-            Notify("防甩飞", "防甩飞功能已加载")
+            _nx6Ss6("防甩飞", "防甩飞功能已加载")
         else
-            Notify("防甩飞", "防甩飞功能加载失败")
+            _nx6Ss6("防甩飞", "防甩飞功能加载失败")
         end
     end
 })
 
 TabHandles.Main:Divider()
 
-
 TabHandles.Main:Button({
     Title = "保存当前坐标",
-    Callback = SaveCurrentCoordinate
+    Callback = ___fCi6N2
 })
 
 TabHandles.Main:Button({
     Title = "传送保存坐标",
-    Callback = TeleportToCoordinate
+    Callback = __jMbVN4
 })
 
 TabHandles.Main:Button({
     Title = "删除保存坐标",
-    Callback = DeleteCoordinate
+    Callback = funcCElSj7
 })
 
 TabHandles.Main:Divider()
-
 
 TabHandles.Main:Button({
     Title = "拿起未固定物体",
@@ -1488,9 +1416,9 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/fly-boat"))()
         end)
         if success then
-            Notify("拿起未固定物体", "拿起未固定物体功能已加载")
+            _nx6Ss6("拿起未固定物体", "拿起未固定物体功能已加载")
         else
-            Notify("拿起未固定物体", "拿起未固定物体功能加载失败")
+            _nx6Ss6("拿起未固定物体", "拿起未固定物体功能加载失败")
         end
     end
 })
@@ -1502,9 +1430,9 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/%E5%85%A8%E5%B1%80%E7%89%A9%E4%BD%93%E6%BC%82%E6%B5%AE%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%89%88"))()
         end)
         if success then
-            Notify("全局物体漂浮", "全局物体漂浮已开启")
+            _nx6Ss6("全局物体漂浮", "全局物体漂浮已开启")
         else
-            Notify("全局物体漂浮", "全局物体漂浮加载失败")
+            _nx6Ss6("全局物体漂浮", "全局物体漂浮加载失败")
         end
     end
 })
@@ -1516,9 +1444,9 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/单一物体飞行载自己最终优化版"))()
         end)
         if success then
-            Notify("单一物体飞行", "单一物体飞行已加载")
+            _nx6Ss6("单一物体飞行", "单一物体飞行已加载")
         else
-            Notify("单一物体飞行", "单一物体飞行加载失败")
+            _nx6Ss6("单一物体飞行", "单一物体飞行加载失败")
         end
     end
 })
@@ -1530,9 +1458,9 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/-/main/零件破坏者v2"))()
         end)
         if success then
-            Notify("零件破坏者", "零件破坏者已加载")
+            _nx6Ss6("零件破坏者", "零件破坏者已加载")
         else
-            Notify("零件破坏者", "零件破坏者加载失败")
+            _nx6Ss6("零件破坏者", "零件破坏者加载失败")
         end
     end
 })
@@ -1544,9 +1472,9 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet('https://pastebin.com/raw/3Rnd9rHf'))()
         end)
         if success then
-            Notify("隐身功能", "隐身功能已开启")
+            _nx6Ss6("隐身功能", "隐身功能已开启")
         else
-            Notify("隐身功能", "隐身功能加载失败")
+            _nx6Ss6("隐身功能", "隐身功能加载失败")
         end
     end
 })
@@ -1558,9 +1486,9 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fake-Lag-Runner-read-description-44701"))()
         end)
         if success then
-            Notify("Egor功能", "Egor功能已开启")
+            _nx6Ss6("Egor功能", "Egor功能已开启")
         else
-            Notify("Egor功能", "Egor功能加载失败")
+            _nx6Ss6("Egor功能", "Egor功能加载失败")
         end
     end
 })
@@ -1572,13 +1500,12 @@ TabHandles.Main:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/0Ben1/fe./main/L"))()
         end)
         if success then
-            Notify("时间回溯", "时间回溯功能已开启")
+            _nx6Ss6("时间回溯", "时间回溯功能已开启")
         else
-            Notify("时间回溯", "时间回溯功能加载失败")
+            _nx6Ss6("时间回溯", "时间回溯功能加载失败")
         end
     end
 })
-
 
 TabHandles.Mystery:Button({
     Title = "抓远程",
@@ -1588,9 +1515,9 @@ TabHandles.Mystery:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/xiaopi77/xiaopi77/refs/heads/main/spy%E6%B1%89%E5%8C%96%20(1).txt"))()
         end)
         if success then
-            Notify("抓远程", "抓远程功能已加载")
+            _nx6Ss6("抓远程", "抓远程功能已加载")
         else
-            Notify("抓远程", "抓远程功能加载失败")
+            _nx6Ss6("抓远程", "抓远程功能加载失败")
         end
     end
 })
@@ -1602,13 +1529,12 @@ TabHandles.Mystery:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/BS58dL/BS/refs/heads/main/请多多支持BS脚本系列.Lua"))()
         end)
         if success then
-            Notify("抓链接", "抓链接功能已加载")
+            _nx6Ss6("抓链接", "抓链接功能已加载")
         else
-            Notify("抓链接", "抓链接功能加载失败")
+            _nx6Ss6("抓链接", "抓链接功能加载失败")
         end
     end
 })
-
 
 local externalScripts = {
     { name = "殺脚本", url = "https://raw.githubusercontent.com/FengYu-3/FengYu/refs/heads/Feng/QQ1926190957" },
@@ -1692,14 +1618,13 @@ for _, scriptInfo in ipairs(externalScripts) do
                 end
             end)
             if success then
-                Notify(scriptInfo.name, scriptInfo.name .. "加载成功")
+                _nx6Ss6(scriptInfo.name, scriptInfo.name .. "加载成功")
             else
-                Notify(scriptInfo.name, scriptInfo.name .. "加载失败")
+                _nx6Ss6(scriptInfo.name, scriptInfo.name .. "加载失败")
             end
         end
     })
 end
-
 
 TabHandles.NaturalDisaster:Button({
     Title = "防止摔落伤害",
@@ -1708,17 +1633,16 @@ TabHandles.NaturalDisaster:Button({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Fall-injury/main/防止摔落伤害"))()
         end)
         if success then
-            Notify("防止摔落伤害", "防止摔落伤害已开启")
+            _nx6Ss6("防止摔落伤害", "防止摔落伤害已开启")
         else
-            Notify("防止摔落伤害", "防止摔落伤害加载失败")
+            _nx6Ss6("防止摔落伤害", "防止摔落伤害加载失败")
         end
     end
 })
 
-
 TabHandles.NaturalDisaster:Button({
     Title = "预测灾害",
-    Callback = ToggleDisasterPrediction
+    Callback = _732rR3
 })
 
 TabHandles.NaturalDisaster:Divider()
@@ -1741,14 +1665,13 @@ for _, holeInfo in ipairs(blackHoleScripts) do
                 loadstring(game:HttpGet(holeInfo.url))()
             end)
             if success then
-                Notify(holeInfo.name, holeInfo.name .. "已加载")
+                _nx6Ss6(holeInfo.name, holeInfo.name .. "已加载")
             else
-                Notify(holeInfo.name, holeInfo.name .. "加载失败")
+                _nx6Ss6(holeInfo.name, holeInfo.name .. "加载失败")
             end
         end
     })
 end
-
 
 TabHandles.NaturalDisaster:Button({
     Title = "AXiosHub黑洞",
@@ -1757,13 +1680,12 @@ TabHandles.NaturalDisaster:Button({
             loadstring(game:HttpGet('https://raw.githubusercontent.com/axioshubxmirror/ScriptLoaderV2/refs/heads/main/Mirror',true))()
         end)
         if success then
-            Notify("AXiosHub黑洞", "AXiosHub黑洞已加载")
+            _nx6Ss6("AXiosHub黑洞", "AXiosHub黑洞已加载")
         else
-            Notify("AXiosHub黑洞", "AXiosHub黑洞加载失败")
+            _nx6Ss6("AXiosHub黑洞", "AXiosHub黑洞加载失败")
         end
     end
 })
-
 
 local Translations = {
     ["Toggle"] = "切换",
@@ -1824,7 +1746,7 @@ local Translations = {
     ["Reset default"] = "重置默认"
 }
 
-local function translateText(text)
+local function _yM2cR5(text)
     if not text or type(text) ~= "string" then return text end
     
     if Translations[text] then
@@ -1840,14 +1762,14 @@ local function translateText(text)
     return text
 end
 
-local function setupTranslationEngine()
+local function ____iDvvv5()
     local success, err = pcall(function()
         local oldIndex = getrawmetatable(game).__newindex
         setreadonly(getrawmetatable(game), false)
         
         getrawmetatable(game).__newindex = newcclosure(function(t, k, v)
             if (t:IsA("TextLabel") or t:IsA("TextButton") or t:IsA("TextBox")) and k == "Text" then
-                v = translateText(tostring(v))
+                v = _yM2cR5(tostring(v))
             end
             return oldIndex(t, k, v)
         end)
@@ -1859,13 +1781,13 @@ local function setupTranslationEngine()
         warn("元表劫持失败:", err)
        
         local translated = {}
-        local function scanAndTranslate()
+        local function ___pQmbc9()
             for _, gui in ipairs(game:GetService("CoreGui"):GetDescendants()) do
                 if (gui:IsA("TextLabel") or gui:IsA("TextButton") or gui:IsA("TextBox")) and not translated[gui] then
                     pcall(function()
                         local text = gui.Text
                         if text and text ~= "" then
-                            local translatedText = translateText(text)
+                            local translatedText = _yM2cR5(text)
                             if translatedText ~= text then
                                 gui.Text = translatedText
                                 translated[gui] = true
@@ -1882,7 +1804,7 @@ local function setupTranslationEngine()
                         pcall(function()
                             local text = gui.Text
                             if text and text ~= "" then
-                                local translatedText = translateText(text)
+                                local translatedText = _yM2cR5(text)
                                 if translatedText ~= text then
                                     gui.Text = translatedText
                                     translated[gui] = true
@@ -1894,14 +1816,14 @@ local function setupTranslationEngine()
             end
         end
         
-        local function setupDescendantListener(parent)
+        local function _qxJLx2(parent)
             parent.DescendantAdded:Connect(function(descendant)
                 if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
                     task.wait(0.1)
                     pcall(function()
                         local text = descendant.Text
                         if text and text ~= "" then
-                            local translatedText = translateText(text)
+                            local translatedText = _yM2cR5(text)
                             if translatedText ~= text then
                                 descendant.Text = translatedText
                             end
@@ -1911,39 +1833,34 @@ local function setupTranslationEngine()
             end)
         end
         
-        pcall(setupDescendantListener, game:GetService("CoreGui"))
+        pcall(_qxJLx2, game:GetService("CoreGui"))
         local player = game:GetService("Players").LocalPlayer
         if player and player:FindFirstChild("PlayerGui") then
-            pcall(setupDescendantListener, player.PlayerGui)
+            pcall(_qxJLx2, player.PlayerGui)
         end
         
         while true do
-            scanAndTranslate()
+            ___pQmbc9()
             task.wait(3)
         end
     end
 end
 
-
 task.spawn(function()
     task.wait(2)
-    setupTranslationEngine()
+    ____iDvvv5()
 end)
 
-
-LoadCoordinates()
-EnableAntiAFK()
+handlerDl7vP4()
+handlerySTVu0()
 
 if LocalPlayer.Character then
     wait(1)
-    SetWalkSpeed(WalkSpeed)
-    SetJumpPower(JumpPower)
+    cbrzOBR(WalkSpeed)
+    ____lDYwr(JumpPower)
 end
 
-
--- 启动自动发言功能
-task.spawn(AutoChat)
-
+task.spawn(___1wS0a2)
 
 Window:OnClose(function()
     print("SGLOA HUB窗口已最小化")
@@ -1952,8 +1869,7 @@ end)
 
 Window:OnDestroy(function()
     print("SGLOA HUB窗口已销毁")
-    
-    
+
     if CurrentJumpConnection then
         CurrentJumpConnection:Disconnect()
     end
@@ -1963,24 +1879,21 @@ Window:OnDestroy(function()
     if CurrentJumpPowerConnection then
         CurrentJumpPowerConnection:Disconnect()
     end
-    
-    
+
     if NaturalDisasterPredictionEnabled then
-        StopPrediction()
+        _s5wJt3()
     end
 end)
 
-
-local function SetupPersistentFeatures()
+local function funcj7stw4()
     
     Players.PlayerAdded:Connect(function(player)
         if ESPEnabled then
             wait(1)
-            CreateESP(player)
+            cbXmixu9(player)
         end
     end)
-    
-    
+
     if NPCESPEnabled then
         Workspace.DescendantAdded:Connect(function(descendant)
             if descendant:IsA("Model") and descendant ~= LocalPlayer.Character then
@@ -1994,7 +1907,7 @@ local function SetupPersistentFeatures()
                         end
                     end
                     if not isPlayer then
-                        CreateNPCESP(descendant)
+                        ___4hBla0(descendant)
                     end
                 end
             end
@@ -2002,5 +1915,4 @@ local function SetupPersistentFeatures()
     end
 end
 
-
-SetupPersistentFeatures()
+funcj7stw4()
