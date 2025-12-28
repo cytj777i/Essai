@@ -1,0 +1,2186 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- 全局变量
+local ESPEnabled = false
+local NPCESPEnabled = false
+local NightVisionEnabled = false
+local InfiniteJumpEnabled = false
+local NoclipEnabled = false
+local JumpPowerEnabled = false
+
+local ESPHighlights = {}
+local ESPNameTags = {}
+local NPCHighlights = {}
+local SavedCoordinates = {}
+local FilePath = "SGLOA_SavedCoordinates.json"
+
+local WalkSpeed = 16
+local JumpPower = 50
+local Gravity = 196.2
+
+local CurrentJumpConnection
+local CurrentNoclipConnection
+local CurrentJumpPowerConnection
+
+-- 玩家选择相关变量
+local SelectedPlayer = nil
+local PlayerSelectionUI = nil
+local PlayerList = {}
+
+-- 自然灾害预测相关变量
+local NaturalDisasterPredictionEnabled = false
+local PredictionCoroutine = nil
+local lastDisaster = ""
+local predictionInterval = 6 -- 提示间隔时间（秒）
+
+-- 加载Luna UI
+local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/master/source.lua", true))()
+
+-- 创建Luna UI窗口
+local Window = Luna:CreateWindow({
+    Name = "788891 HUB",
+    Subtitle = "v1.0.0",
+    LogoID = nil,
+    LoadingEnabled = true,
+    LoadingTitle = "788891 HUB v1.0.0",
+    LoadingSubtitle = "加载中...",
+    ConfigSettings = {
+        RootFolder = nil,
+        ConfigFolder = "788891_HUB"
+    },
+    KeySystem = false,
+    KeySettings = {
+        Title = "788891 HUB",
+        Subtitle = "无需密钥",
+        Note = "免费使用",
+        SaveInRoot = false,
+        SaveKey = false,
+        Key = {"无需密钥"},
+        SecondAction = {
+            Enabled = false
+        }
+    }
+})
+
+-- 创建首页标签页
+Window:CreateHomeTab({
+    SupportedExecutors = {
+        "Synapse X", "Krnl", "ProtoSmasher", "Fluxus", "Script-Ware",
+        "EasyExploits", "Electron", "JJSploit", "Calamari", "SirHurt",
+        "Sentinel", "WEAREDEVS", "Comet", "Cellery", "Wave", "CODex", "Delta"
+    },
+    DiscordInvite = "",
+    Icon = 1
+})
+
+-- 创建标签页
+local TabMain = Window:CreateTab({
+    Name = "主要功能",
+    Icon = "tune",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+local TabOtherScripts = Window:CreateTab({
+    Name = "其他脚本",
+    Icon = "widgets",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+local TabMystery = Window:CreateTab({
+    Name = "神秘功能",
+    Icon = "psychology",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+local TabNaturalDisaster = Window:CreateTab({
+    Name = "自然灾害",
+    Icon = "flash_on",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+local TabTheme = Window:CreateTab({
+    Name = "主题设置",
+    Icon = "palette",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+local TabConfig = Window:CreateTab({
+    Name = "配置",
+    Icon = "settings",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+-- Luna UI 通知函数
+local function Notify(title, content, duration)
+    duration = duration or 3
+    Luna:Notification({
+        Title = title,
+        Content = content,
+        Duration = duration,
+        Icon = "info",
+        ImageSource = "Material"
+    })
+end
+
+-- 文件操作函数
+local function ReadFile(path)
+    local success, data = pcall(function()
+        if readfile then
+            return readfile(path)
+        elseif syn and syn.readfile then
+            return syn.readfile(path)
+        else
+            return nil
+        end
+    end)
+    return success and data or nil
+end
+
+local function WriteFile(path, content)
+    local success, result = pcall(function()
+        if writefile then
+            writefile(path, content)
+            return true
+        elseif syn and syn.writefile then
+            syn.writefile(path, content)
+            return true
+        else
+            return false
+        end
+    end)
+    return success and result or false
+end
+
+-- 坐标管理
+local function LoadCoordinates()
+    local data = ReadFile(FilePath)
+    if data then
+        local success, decoded = pcall(function()
+            return HttpService:JSONDecode(data)
+        end)
+        if success and type(decoded) == "table" then
+            SavedCoordinates = decoded
+            return true
+        end
+    end
+    return false
+end
+
+local function SaveCoordinates()
+    local success = pcall(function()
+        local encoded = HttpService:JSONEncode(SavedCoordinates)
+        return WriteFile(FilePath, encoded)
+    end)
+    return success
+end
+
+-- 创建覆盖在Luna UI上的坐标选择UI（可滚动）
+local function CreateCoordinateSelectionUI(title, actionCallback, isDelete)
+    if #SavedCoordinates == 0 then
+        Notify("坐标管理", "没有保存的坐标", 2)
+        return
+    end
+
+    -- 创建选择GUI - 使用高ZIndex覆盖在Luna UI上
+    local SelectionGui = Instance.new("ScreenGui")
+    SelectionGui.Name = "CoordinateSelectionUI"
+    SelectionGui.Parent = game:GetService("CoreGui")
+    SelectionGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    SelectionGui.ResetOnSpawn = false
+    SelectionGui.DisplayOrder = 1000  -- 高显示顺序确保覆盖Luna UI
+
+    -- 主框架 - 高度保持180
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Parent = SelectionGui
+    MainFrame.Size = UDim2.new(0, 320, 0, 180)
+    MainFrame.Position = UDim2.new(0.5, -160, 0.5, -90)
+    MainFrame.BackgroundColor3 = Color3.fromHex("#1e1e1e")
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.ZIndex = 1001  -- 高于Luna UI
+
+    -- 圆角
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 8)
+    Corner.Parent = MainFrame
+
+    -- 边框
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromHex("#444444")
+    Stroke.Thickness = 2
+    Stroke.Parent = MainFrame
+
+    -- 标题栏
+    local Header = Instance.new("Frame")
+    Header.Parent = MainFrame
+    Header.Size = UDim2.new(1, 0, 0, 30)
+    Header.Position = UDim2.new(0, 0, 0, 0)
+    Header.BackgroundColor3 = Color3.fromHex("#2c2c2c")
+    Header.BorderSizePixel = 0
+    Header.ZIndex = 1002
+
+    local HeaderCorner = Instance.new("UICorner")
+    HeaderCorner.CornerRadius = UDim.new(0, 8)
+    HeaderCorner.Parent = Header
+
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Parent = Header
+    TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+    TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Text = title
+    TitleLabel.TextColor3 = Color3.fromHex("#ffffff")
+    TitleLabel.TextSize = 14
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLabel.ZIndex = 1003
+
+    -- 关闭按钮
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Parent = Header
+    CloseButton.Size = UDim2.new(0, 25, 0, 25)
+    CloseButton.Position = UDim2.new(1, -30, 0.5, -12.5)
+    CloseButton.BackgroundColor3 = Color3.fromHex("#444444")
+    CloseButton.Text = "×"
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseButton.TextSize = 16
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.BorderSizePixel = 0
+    CloseButton.ZIndex = 1003
+
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 4)
+    CloseCorner.Parent = CloseButton
+
+    -- 滚动框架 - 固定高度110像素
+    local ScrollFrame = Instance.new("ScrollingFrame")
+    ScrollFrame.Parent = MainFrame
+    ScrollFrame.Size = UDim2.new(1, -20, 0, 110)  -- 固定高度
+    ScrollFrame.Position = UDim2.new(0, 10, 0, 40)
+    ScrollFrame.BackgroundTransparency = 1
+    ScrollFrame.ScrollBarThickness = 4
+    ScrollFrame.ScrollBarImageColor3 = Color3.fromHex("#666666")
+    ScrollFrame.BorderSizePixel = 0
+    ScrollFrame.ZIndex = 1002
+    ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y  -- 自动调整画布大小
+
+    -- 用于自动排列按钮的UIListLayout
+    local ListLayout = Instance.new("UIListLayout")
+    ListLayout.Parent = ScrollFrame
+    ListLayout.Padding = UDim.new(0, 5)  -- 按钮之间的间隔
+    ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    -- 创建坐标按钮
+    for i, coord in ipairs(SavedCoordinates) do
+        local CoordButton = Instance.new("TextButton")
+        CoordButton.Size = UDim2.new(1, 0, 0, 35)
+        CoordButton.LayoutOrder = i
+        CoordButton.BackgroundColor3 = Color3.fromHex("#2c2c2c")
+        CoordButton.Text = ""
+        CoordButton.BorderSizePixel = 0
+        CoordButton.Parent = ScrollFrame
+        CoordButton.ZIndex = 1003
+
+        local ButtonCorner = Instance.new("UICorner")
+        ButtonCorner.CornerRadius = UDim.new(0, 6)
+        ButtonCorner.Parent = CoordButton
+
+        local ButtonStroke = Instance.new("UIStroke")
+        ButtonStroke.Color = Color3.fromHex("#444444")
+        ButtonStroke.Thickness = 1
+        ButtonStroke.Parent = CoordButton
+
+        -- 坐标名称
+        local NameLabel = Instance.new("TextLabel")
+        NameLabel.Parent = CoordButton
+        NameLabel.Size = UDim2.new(1, -10, 0, 16)
+        NameLabel.Position = UDim2.new(0, 10, 0, 4)
+        NameLabel.BackgroundTransparency = 1
+        NameLabel.Text = coord.name
+        NameLabel.TextColor3 = Color3.fromHex("#ffffff")
+        NameLabel.TextSize = 13
+        NameLabel.Font = Enum.Font.GothamBold
+        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        NameLabel.ZIndex = 1004
+
+        -- 坐标位置
+        local PosLabel = Instance.new("TextLabel")
+        PosLabel.Parent = CoordButton
+        PosLabel.Size = UDim2.new(1, -10, 0, 14)
+        PosLabel.Position = UDim2.new(0, 10, 0, 20)
+        PosLabel.BackgroundTransparency = 1
+        PosLabel.Text = string.format("X: %.1f, Y: %.1f, Z: %.1f", coord.x, coord.y, coord.z)
+        PosLabel.TextColor3 = Color3.fromHex("#aaaaaa")
+        PosLabel.TextSize = 11
+        PosLabel.Font = Enum.Font.Gotham
+        PosLabel.TextXAlignment = Enum.TextXAlignment.Left
+        PosLabel.ZIndex = 1004
+
+        -- 悬停效果
+        CoordButton.MouseEnter:Connect(function()
+            TweenService:Create(CoordButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#3c3c3c")}):Play()
+        end)
+
+        CoordButton.MouseLeave:Connect(function()
+            TweenService:Create(CoordButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#2c2c2c")}):Play()
+        end)
+
+        CoordButton.MouseButton1Click:Connect(function()
+            actionCallback(coord, i)
+            SelectionGui:Destroy()
+        end)
+    end
+
+    -- 关闭按钮事件
+    CloseButton.MouseButton1Click:Connect(function()
+        SelectionGui:Destroy()
+    end)
+
+    CloseButton.MouseEnter:Connect(function()
+        TweenService:Create(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#555555")}):Play()
+    end)
+
+    CloseButton.MouseLeave:Connect(function()
+        TweenService:Create(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#444444")}):Play()
+    end)
+
+    -- ESC键关闭
+    local InputConnection
+    InputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if input.KeyCode == Enum.KeyCode.Escape then
+            SelectionGui:Destroy()
+            InputConnection:Disconnect()
+        end
+    end)
+
+    SelectionGui.Destroying:Connect(function()
+        if InputConnection then
+            InputConnection:Disconnect()
+        end
+    end)
+end
+
+-- 保存坐标函数 - 覆盖在Luna UI上
+local function SaveCurrentCoordinate()
+    local character = LocalPlayer.Character
+    if not character then
+        Notify("保存坐标", "角色未找到", 2)
+        return
+    end
+
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then
+        Notify("保存坐标", "未找到HumanoidRootPart", 2)
+        return
+    end
+
+    -- 创建输入对话框 - 使用高ZIndex覆盖在Luna UI上
+    local InputGui = Instance.new("ScreenGui")
+    InputGui.Name = "CoordinateInputUI"
+    InputGui.Parent = game:GetService("CoreGui")
+    InputGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    InputGui.ResetOnSpawn = false
+    InputGui.DisplayOrder = 1000  -- 高显示顺序确保覆盖Luna UI
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Parent = InputGui
+    MainFrame.Size = UDim2.new(0, 300, 0, 160)
+    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -80)
+    MainFrame.BackgroundColor3 = Color3.fromHex("#1e1e1e")
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.ZIndex = 1001  -- 高于Luna UI
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 8)
+    Corner.Parent = MainFrame
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromHex("#444444")
+    Stroke.Thickness = 2
+    Stroke.Parent = MainFrame
+
+    -- 标题
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Parent = MainFrame
+    TitleLabel.Size = UDim2.new(1, 0, 0, 30)
+    TitleLabel.Position = UDim2.new(0, 0, 0, 0)
+    TitleLabel.BackgroundColor3 = Color3.fromHex("#2c2c2c")
+    TitleLabel.Text = "保存坐标"
+    TitleLabel.TextColor3 = Color3.fromHex("#ffffff")
+    TitleLabel.TextSize = 14
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.BorderSizePixel = 0
+    TitleLabel.ZIndex = 1002
+
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 8)
+    TitleCorner.Parent = TitleLabel
+
+    -- 输入框
+    local InputBox = Instance.new("TextBox")
+    InputBox.Parent = MainFrame
+    InputBox.Size = UDim2.new(1, -40, 0, 35)
+    InputBox.Position = UDim2.new(0, 20, 0, 50)
+    InputBox.BackgroundColor3 = Color3.fromHex("#2c2c2c")
+    InputBox.Text = ""
+    InputBox.PlaceholderText = "输入坐标名称..."
+    InputBox.TextColor3 = Color3.fromHex("#ffffff")
+    InputBox.PlaceholderColor3 = Color3.fromHex("#888888")
+    InputBox.TextSize = 14
+    InputBox.Font = Enum.Font.Gotham
+    InputBox.ClearTextOnFocus = false
+    InputBox.ZIndex = 1002
+
+    local InputCorner = Instance.new("UICorner")
+    InputCorner.CornerRadius = UDim.new(0, 6)
+    InputCorner.Parent = InputBox
+
+    local InputStroke = Instance.new("UIStroke")
+    InputStroke.Color = Color3.fromHex("#444444")
+    InputStroke.Thickness = 1
+    InputStroke.Parent = InputBox
+
+    -- 按钮容器
+    local ButtonContainer = Instance.new("Frame")
+    ButtonContainer.Parent = MainFrame
+    ButtonContainer.Size = UDim2.new(1, -40, 0, 35)
+    ButtonContainer.Position = UDim2.new(0, 20, 1, -50)
+    ButtonContainer.BackgroundTransparency = 1
+    ButtonContainer.ZIndex = 1002
+
+    -- 确认按钮
+    local ConfirmButton = Instance.new("TextButton")
+    ConfirmButton.Parent = ButtonContainer
+    ConfirmButton.Size = UDim2.new(0.5, -5, 1, 0)
+    ConfirmButton.Position = UDim2.new(0, 0, 0, 0)
+    ConfirmButton.BackgroundColor3 = Color3.fromHex("#444444")
+    ConfirmButton.Text = "保存"
+    ConfirmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ConfirmButton.TextSize = 14
+    ConfirmButton.Font = Enum.Font.GothamBold
+    ConfirmButton.BorderSizePixel = 0
+    ConfirmButton.ZIndex = 1003
+
+    local ConfirmCorner = Instance.new("UICorner")
+    ConfirmCorner.CornerRadius = UDim.new(0, 6)
+    ConfirmCorner.Parent = ConfirmButton
+
+    -- 取消按钮
+    local CancelButton = Instance.new("TextButton")
+    CancelButton.Parent = ButtonContainer
+    CancelButton.Size = UDim2.new(0.5, -5, 1, 0)
+    CancelButton.Position = UDim2.new(0.5, 5, 0, 0)
+    CancelButton.BackgroundColor3 = Color3.fromHex("#444444")
+    CancelButton.Text = "取消"
+    CancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CancelButton.TextSize = 14
+    CancelButton.Font = Enum.Font.GothamBold
+    CancelButton.BorderSizePixel = 0
+    CancelButton.ZIndex = 1003
+
+    local CancelCorner = Instance.new("UICorner")
+    CancelCorner.CornerRadius = UDim.new(0, 6)
+    CancelCorner.Parent = CancelButton
+
+    -- 悬停效果
+    ConfirmButton.MouseEnter:Connect(function()
+        TweenService:Create(ConfirmButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#555555")}):Play()
+    end)
+    
+    ConfirmButton.MouseLeave:Connect(function()
+        TweenService:Create(ConfirmButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#444444")}):Play()
+    end)
+    
+    CancelButton.MouseEnter:Connect(function()
+        TweenService:Create(CancelButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#555555")}):Play()
+    end)
+    
+    CancelButton.MouseLeave:Connect(function()
+        TweenService:Create(CancelButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#444444")}):Play()
+    end)
+
+    -- 自动聚焦输入框
+    InputBox:CaptureFocus()
+
+    -- 按钮事件
+    ConfirmButton.MouseButton1Click:Connect(function()
+        local coordinateName = InputBox.Text
+        if coordinateName and coordinateName ~= "" then
+            local position = rootPart.Position
+            local coord = {
+                name = coordinateName,
+                x = math.round(position.X * 100) / 100,
+                y = math.round(position.Y * 100) / 100,
+                z = math.round(position.Z * 100) / 100,
+                timestamp = os.time()
+            }
+            table.insert(SavedCoordinates, coord)
+            SaveCoordinates()
+            Notify("保存坐标", "坐标已保存: " .. coordinateName, 2)
+        else
+            Notify("保存坐标", "请输入坐标名称", 2)
+        end
+        InputGui:Destroy()
+    end)
+
+    CancelButton.MouseButton1Click:Connect(function()
+        InputGui:Destroy()
+    end)
+
+    InputBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            local coordinateName = InputBox.Text
+            if coordinateName and coordinateName ~= "" then
+                local position = rootPart.Position
+                local coord = {
+                    name = coordinateName,
+                    x = math.round(position.X * 100) / 100,
+                    y = math.round(position.Y * 100) / 100,
+                    z = math.round(position.Z * 100) / 100,
+                    timestamp = os.time()
+                }
+                table.insert(SavedCoordinates, coord)
+                SaveCoordinates()
+                Notify("保存坐标", "坐标已保存: " .. coordinateName, 2)
+            else
+                Notify("保存坐标", "请输入坐标名称", 2)
+            end
+            InputGui:Destroy()
+        end
+    end)
+
+    -- ESC键关闭
+    local InputConnection
+    InputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if input.KeyCode == Enum.KeyCode.Escape then
+            InputGui:Destroy()
+            InputConnection:Disconnect()
+        end
+    end)
+
+    InputGui.Destroying:Connect(function()
+        if InputConnection then
+            InputConnection:Disconnect()
+        end
+    end)
+end
+
+-- 传送坐标函数
+local function TeleportToCoordinate()
+    CreateCoordinateSelectionUI("选择要传送的坐标", function(coord)
+        local character = LocalPlayer.Character
+        if not character then
+            Notify("传送坐标", "角色未找到", 2)
+            return
+        end
+
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not rootPart then
+            Notify("传送坐标", "未找到HumanoidRootPart", 2)
+            return
+        end
+
+        rootPart.CFrame = CFrame.new(coord.x, coord.y, coord.z)
+        Notify("传送坐标", "已传送到: " .. coord.name, 2)
+    end)
+end
+
+-- 删除坐标函数
+local function DeleteCoordinate()
+    CreateCoordinateSelectionUI("选择要删除的坐标", function(coord, index)
+        table.remove(SavedCoordinates, index)
+        SaveCoordinates()
+        Notify("删除坐标", "已删除坐标: " .. coord.name, 2)
+    end, true)
+end
+
+-- 反挂机功能
+local function EnableAntiAFK()
+    local VirtualUser = game:GetService("VirtualUser")
+    Players.LocalPlayer.Idled:connect(function()
+        VirtualUser:Button2Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+        wait(1)
+        VirtualUser:Button2Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+    end)
+end
+
+-- ESP功能
+local function CreateESP(player)
+    if player == LocalPlayer then return end
+
+    local character = player.Character
+    if not character then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP_Highlight"
+    highlight.FillColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.7
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.OutlineTransparency = 0.3
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = character
+    ESPHighlights[player] = highlight
+
+    local nameTag = Instance.new("BillboardGui")
+    nameTag.Name = "ESP_NameTag"
+    nameTag.Size = UDim2.new(0, 200, 0, 50)
+    nameTag.StudsOffset = Vector3.new(0, 3, 0)
+    nameTag.AlwaysOnTop = true
+
+    local head = character:FindFirstChild("Head")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    nameTag.Adornee = head or rootPart
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = player.Name
+    label.TextColor3 = Color3.fromRGB(0, 0, 0)
+    label.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextStrokeTransparency = 0
+    label.TextSize = 14
+    label.Font = Enum.Font.GothamBold
+    label.Parent = nameTag
+
+    if head or rootPart then
+        nameTag.Parent = character
+        ESPNameTags[player] = nameTag
+    end
+end
+
+local function RemoveESP(player)
+    if ESPHighlights[player] then
+        ESPHighlights[player]:Destroy()
+        ESPHighlights[player] = nil
+    end
+
+    if ESPNameTags[player] then
+        ESPNameTags[player]:Destroy()
+        ESPNameTags[player] = nil
+    end
+end
+
+local function EnableESP()
+    if ESPEnabled then return end
+    ESPEnabled = true
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            CreateESP(player)
+        end
+    end
+    Notify("玩家ESP透视", "玩家ESP透视已开启")
+end
+
+local function DisableESP()
+    if not ESPEnabled then return end
+    ESPEnabled = false
+
+    for _, player in pairs(Players:GetPlayers()) do
+        RemoveESP(player)
+    end
+    Notify("玩家ESP透视", "玩家ESP透视已关闭")
+end
+
+-- NPC透视功能
+local function CreateNPCESP(model)
+    if not model:IsA("Model") then return end
+
+    local humanoid = model:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character == model then return end
+    end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "NPC_ESP_Highlight"
+    highlight.FillColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.7
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.OutlineTransparency = 0.3
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = model
+    NPCHighlights[model] = highlight
+end
+
+local function RemoveNPCESP(model)
+    if NPCHighlights[model] then
+        NPCHighlights[model]:Destroy()
+        NPCHighlights[model] = nil
+    end
+end
+
+local function EnableNPCESP()
+    if NPCESPEnabled then return end
+    NPCESPEnabled = true
+    
+    for _, descendant in ipairs(Workspace:GetDescendants()) do
+        if descendant:IsA("Model") and descendant ~= LocalPlayer.Character then
+            local humanoid = descendant:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                local isPlayer = false
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player.Character == descendant then
+                        isPlayer = true
+                        break
+                    end
+                end
+                if not isPlayer then
+                    CreateNPCESP(descendant)
+                end
+            end
+        end
+    end
+    Notify("NPC透视", "NPC透视已开启")
+end
+
+local function DisableNPCESP()
+    if not NPCESPEnabled then return end
+    NPCESPEnabled = false
+
+    for model, _ in pairs(NPCHighlights) do
+        RemoveNPCESP(model)
+    end
+    Notify("NPC透视", "NPC透视已关闭")
+end
+
+-- 夜视功能
+local OriginalAmbient
+local function ToggleNightVision(enabled)
+    if enabled then
+        OriginalAmbient = Lighting.Ambient
+        Lighting.Ambient = Color3.new(1, 1, 1)
+        NightVisionEnabled = true
+        Notify("夜视", "夜视已开启")
+    else
+        if OriginalAmbient then
+            Lighting.Ambient = OriginalAmbient
+        else
+            Lighting.Ambient = Color3.new(0, 0, 0)
+        end
+        NightVisionEnabled = false
+        Notify("夜视", "夜视已关闭")
+    end
+end
+
+-- 无限跳功能
+local function ToggleInfiniteJump(enabled)
+    if enabled then
+        InfiniteJumpEnabled = true
+        CurrentJumpConnection = UserInputService.JumpRequest:Connect(function()
+            local character = LocalPlayer.Character
+            if character then
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid:ChangeState("Jumping")
+                end
+            end
+        end)
+        Notify("无限跳", "无限跳已开启")
+    else
+        InfiniteJumpEnabled = false
+        if CurrentJumpConnection then
+            CurrentJumpConnection:Disconnect()
+            CurrentJumpConnection = nil
+        end
+        Notify("无限跳", "无限跳已关闭")
+    end
+end
+
+-- 穿墙模式
+local function ToggleNoclip(enabled)
+    if enabled then
+        NoclipEnabled = true
+        CurrentNoclipConnection = RunService.Stepped:Connect(function()
+            if not NoclipEnabled then
+                CurrentNoclipConnection:Disconnect()
+                return
+            end
+            local character = LocalPlayer.Character
+            if character then
+                for _, part in pairs(character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+        Notify("穿墙模式", "穿墙模式已开启")
+    else
+        NoclipEnabled = false
+        if CurrentNoclipConnection then
+            CurrentNoclipConnection:Disconnect()
+            CurrentNoclipConnection = nil
+        end
+        local character = LocalPlayer.Character
+        if character then
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+        Notify("穿墙模式", "穿墙模式已关闭")
+    end
+end
+
+-- 移动速度设置
+local function SetWalkSpeed(speed)
+    WalkSpeed = speed
+    local character = LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = speed
+        end
+    end
+end
+
+-- 跳跃高度设置
+local function SetJumpPower(power)
+    JumpPower = power
+    JumpPowerEnabled = true
+
+    local character = LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.JumpPower = power
+        end
+    end
+
+    if CurrentJumpPowerConnection then
+        CurrentJumpPowerConnection:Disconnect()
+    end
+
+    CurrentJumpPowerConnection = RunService.Heartbeat:Connect(function()
+        if not JumpPowerEnabled then
+            CurrentJumpPowerConnection:Disconnect()
+            return
+        end
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.JumpPower ~= JumpPower then
+                humanoid.JumpPower = JumpPower
+            end
+        end
+    end)
+end
+
+-- 重力设置
+local function SetGravity(value)
+    Workspace.Gravity = value
+    Gravity = value
+end
+
+-- 角色重生处理
+local function OnCharacterAdded(character)
+    character:WaitForChild("Humanoid")
+    wait(0.5)
+
+    if InfiniteJumpEnabled then
+        if CurrentJumpConnection then
+            CurrentJumpConnection:Disconnect()
+        end
+        ToggleInfiniteJump(true)
+    end
+
+    if NoclipEnabled then
+        ToggleNoclip(true)
+    end
+
+    if JumpPowerEnabled then
+        if CurrentJumpPowerConnection then
+            CurrentJumpPowerConnection:Disconnect()
+        end
+        SetJumpPower(JumpPower)
+    end
+
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = WalkSpeed
+        humanoid.JumpPower = JumpPower
+    end
+end
+
+LocalPlayer.CharacterAdded:Connect(OnCharacterAdded)
+
+-- 更新玩家列表
+local function UpdatePlayerList()
+    local currentPlayers = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(currentPlayers, player.Name)
+        end
+    end
+    table.sort(currentPlayers)
+    PlayerList = currentPlayers
+end
+
+-- 玩家加入/离开事件
+local function OnPlayerAdded(player)
+    wait(0.5)
+    UpdatePlayerList()
+    -- 如果玩家选择UI存在，更新它
+    if PlayerSelectionUI and PlayerSelectionUI.Parent then
+        PlayerSelectionUI:Destroy()
+        CreatePlayerSelectionUI()
+    end
+end
+
+local function OnPlayerRemoving(player)
+    wait(0.5)
+    UpdatePlayerList()
+    -- 如果选中的玩家离开了，清除选择
+    if SelectedPlayer == player.Name then
+        SelectedPlayer = nil
+    end
+    -- 如果玩家选择UI存在，更新它
+    if PlayerSelectionUI and PlayerSelectionUI.Parent then
+        PlayerSelectionUI:Destroy()
+        CreatePlayerSelectionUI()
+    end
+end
+
+-- 自然灾害预测功能
+local function PredictDisaster()
+    if not NaturalDisasterPredictionEnabled then return end
+    
+    local localPlayer = game.Players.LocalPlayer
+    if not localPlayer.Character then return end
+    
+    local survivalTag = localPlayer.Character:FindFirstChild("SurvivalTag")
+    if survivalTag then
+        local disasterName = survivalTag.Value
+        
+        -- 只要有灾害就发送通知（无论是否变化）
+        local disasterText = ""
+        
+        if disasterName == "Blizzard" then
+            disasterText = "下一个灾难是：暴风雪"
+        elseif disasterName == "Sandstorm" then
+            disasterText = "下一个灾难是：沙尘暴"
+        elseif disasterName == "Tornado" then
+            disasterText = "下一个灾难是：龙卷风"
+        elseif disasterName == "Volcanic Eruption" then
+            disasterText = "下一个灾难是：火山"
+        elseif disasterName == "Flash Flood" then
+            disasterText = "下一个灾难是：洪水"
+        elseif disasterName == "Deadly Virus" then
+            disasterText = "下一个灾难是：病毒"
+        elseif disasterName == "Tsunami" then
+            disasterText = "下一个灾难是：海啸"
+        elseif disasterName == "Acid Rain" then
+            disasterText = "下一个灾难是：酸雨"
+        elseif disasterName == "Fire" then
+            disasterText = "下一个灾难是：火焰"
+        elseif disasterName == "Meteor Shower" then
+            disasterText = "下一个灾难是：流星雨"
+        elseif disasterName == "Earthquake" then
+            disasterText = "下一个灾难是：地震"
+        elseif disasterName == "Thunder Storm" then
+            disasterText = "下一个灾难是：暴风雨"
+        else
+            disasterText = "下一个灾难是：" .. disasterName
+        end
+        
+        -- 发送通知
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "灾害预测",
+            Text = disasterText,
+            Icon = "rbxassetid://18941716391",
+            Duration = 5,
+        })
+    end
+end
+
+local function StartPrediction()
+    NaturalDisasterPredictionEnabled = true
+    PredictionCoroutine = coroutine.create(function()
+        while NaturalDisasterPredictionEnabled do
+            PredictDisaster()
+            wait(predictionInterval)
+        end
+    end)
+    coroutine.resume(PredictionCoroutine)
+    
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "灾害预测",
+        Text = "灾害预测已启用",
+        Icon = "rbxassetid://18941716391",
+        Duration = 3,
+    })
+end
+
+local function StopPrediction()
+    NaturalDisasterPredictionEnabled = false
+    if PredictionCoroutine then
+        coroutine.close(PredictionCoroutine)
+        PredictionCoroutine = nil
+    end
+    
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "灾害预测",
+        Text = "灾害预测已关闭",
+        Icon = "rbxassetid://18941716391",
+        Duration = 3,
+    })
+end
+
+local function ToggleDisasterPrediction()
+    if NaturalDisasterPredictionEnabled then
+        StopPrediction()
+    else
+        StartPrediction()
+    end
+end
+
+-- 初始化玩家列表
+UpdatePlayerList()
+Players.PlayerAdded:Connect(OnPlayerAdded)
+Players.PlayerRemoving:Connect(OnPlayerRemoving)
+
+-- 创建玩家选择UI（修复版）
+local function CreatePlayerSelectionUI()
+    -- 如果UI已经存在，先销毁它
+    if PlayerSelectionUI and PlayerSelectionUI.Parent then
+        PlayerSelectionUI:Destroy()
+    end
+    
+    -- 创建选择GUI - 使用高ZIndex覆盖在Luna UI上
+    PlayerSelectionUI = Instance.new("ScreenGui")
+    PlayerSelectionUI.Name = "PlayerSelectionUI"
+    PlayerSelectionUI.Parent = game:GetService("CoreGui")
+    PlayerSelectionUI.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    PlayerSelectionUI.ResetOnSpawn = false
+    PlayerSelectionUI.DisplayOrder = 1000  -- 高显示顺序确保覆盖Luna UI
+
+    -- 更新玩家列表
+    UpdatePlayerList()
+
+    -- 主框架 - 高度保持180
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Parent = PlayerSelectionUI
+    MainFrame.Size = UDim2.new(0, 320, 0, 180)
+    MainFrame.Position = UDim2.new(0.5, -160, 0.5, -90)
+    MainFrame.BackgroundColor3 = Color3.fromHex("#1e1e1e")
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.ZIndex = 1001  -- 高于Luna UI
+
+    -- 圆角
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 8)
+    Corner.Parent = MainFrame
+
+    -- 边框
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromHex("#444444")
+    Stroke.Thickness = 2
+    Stroke.Parent = MainFrame
+
+    -- 标题栏
+    local Header = Instance.new("Frame")
+    Header.Parent = MainFrame
+    Header.Size = UDim2.new(1, 0, 0, 30)
+    Header.Position = UDim2.new(0, 0, 0, 0)
+    Header.BackgroundColor3 = Color3.fromHex("#2c2c2c")
+    Header.BorderSizePixel = 0
+    Header.ZIndex = 1002
+
+    local HeaderCorner = Instance.new("UICorner")
+    HeaderCorner.CornerRadius = UDim.new(0, 8)
+    HeaderCorner.Parent = Header
+
+    -- 动态标题文本
+    local titleText = "选择玩家"
+    if SelectedPlayer then
+        titleText = "选择玩家 [当前: " .. SelectedPlayer .. "]"
+    end
+    
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Parent = Header
+    TitleLabel.Size = UDim2.new(1, -70, 1, 0) -- 给关闭按钮和传送按钮留空间
+    TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Text = titleText
+    TitleLabel.TextColor3 = Color3.fromHex("#ffffff")
+    TitleLabel.TextSize = 13 -- 减小字体大小
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLabel.TextTruncate = Enum.TextTruncate.AtEnd -- 文本过长时截断
+    TitleLabel.ZIndex = 1003
+
+    -- 传送按钮（在标题栏）
+    local TeleportButton = Instance.new("TextButton")
+    TeleportButton.Parent = Header
+    TeleportButton.Size = UDim2.new(0, 60, 0, 20)
+    TeleportButton.Position = UDim2.new(1, -100, 0.5, -10)
+    TeleportButton.BackgroundColor3 = Color3.fromHex("#444444")
+    TeleportButton.Text = "传送"
+    TeleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TeleportButton.TextSize = 12
+    TeleportButton.Font = Enum.Font.GothamBold
+    TeleportButton.BorderSizePixel = 0
+    TeleportButton.ZIndex = 1003
+
+    local TeleportCorner = Instance.new("UICorner")
+    TeleportCorner.CornerRadius = UDim.new(0, 4)
+    TeleportCorner.Parent = TeleportButton
+
+    -- 关闭按钮
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Parent = Header
+    CloseButton.Size = UDim2.new(0, 25, 0, 25)
+    CloseButton.Position = UDim2.new(1, -30, 0.5, -12.5)
+    CloseButton.BackgroundColor3 = Color3.fromHex("#444444")
+    CloseButton.Text = "×"
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseButton.TextSize = 16
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.BorderSizePixel = 0
+    CloseButton.ZIndex = 1003
+
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 4)
+    CloseCorner.Parent = CloseButton
+
+    -- 滚动框架 - 固定高度120像素（为按钮留出更多空间）
+    local ScrollFrame = Instance.new("ScrollingFrame")
+    ScrollFrame.Parent = MainFrame
+    ScrollFrame.Size = UDim2.new(1, -20, 0, 120)  -- 增加高度
+    ScrollFrame.Position = UDim2.new(0, 10, 0, 35) -- 稍微下移
+    ScrollFrame.BackgroundTransparency = 1
+    ScrollFrame.ScrollBarThickness = 4
+    ScrollFrame.ScrollBarImageColor3 = Color3.fromHex("#666666")
+    ScrollFrame.BorderSizePixel = 0
+    ScrollFrame.ZIndex = 1002
+    ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y  -- 自动调整画布大小
+
+    -- 用于自动排列按钮的UIListLayout
+    local ListLayout = Instance.new("UIListLayout")
+    ListLayout.Parent = ScrollFrame
+    ListLayout.Padding = UDim.new(0, 5)  -- 按钮之间的间隔
+    ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    -- 创建玩家按钮
+    local function CreatePlayerButtons()
+        -- 清空现有按钮
+        for _, child in ipairs(ScrollFrame:GetChildren()) do
+            if child:IsA("TextButton") then
+                child:Destroy()
+            end
+        end
+        
+        -- 创建新按钮
+        for i, playerName in ipairs(PlayerList) do
+            local PlayerButton = Instance.new("TextButton")
+            PlayerButton.Size = UDim2.new(1, 0, 0, 35)
+            PlayerButton.LayoutOrder = i
+            PlayerButton.BackgroundColor3 = Color3.fromHex("#2c2c2c")
+            PlayerButton.Text = ""
+            PlayerButton.BorderSizePixel = 0
+            PlayerButton.Parent = ScrollFrame
+            PlayerButton.ZIndex = 1003
+
+            local ButtonCorner = Instance.new("UICorner")
+            ButtonCorner.CornerRadius = UDim.new(0, 6)
+            ButtonCorner.Parent = PlayerButton
+
+            local ButtonStroke = Instance.new("UIStroke")
+            ButtonStroke.Color = Color3.fromHex("#444444")
+            ButtonStroke.Thickness = 1
+            ButtonStroke.Parent = PlayerButton
+
+            -- 玩家名称
+            local NameLabel = Instance.new("TextLabel")
+            NameLabel.Parent = PlayerButton
+            NameLabel.Size = UDim2.new(1, -10, 1, 0)
+            NameLabel.Position = UDim2.new(0, 10, 0, 0)
+            NameLabel.BackgroundTransparency = 1
+            NameLabel.Text = playerName
+            NameLabel.TextColor3 = Color3.fromHex("#ffffff")
+            NameLabel.TextSize = 12  -- 减小字体大小
+            NameLabel.Font = Enum.Font.GothamBold
+            NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+            NameLabel.TextTruncate = Enum.TextTruncate.AtEnd  -- 文本过长时截断
+            NameLabel.ZIndex = 1004
+
+            -- 悬停效果
+            PlayerButton.MouseEnter:Connect(function()
+                TweenService:Create(PlayerButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#3c3c3c")}):Play()
+            end)
+
+            PlayerButton.MouseLeave:Connect(function()
+                TweenService:Create(PlayerButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#2c2c2c")}):Play()
+            end)
+
+            PlayerButton.MouseButton1Click:Connect(function()
+                SelectedPlayer = playerName
+                TitleLabel.Text = "选择玩家 [当前: " .. playerName .. "]"
+                Notify("玩家选择", "已选择玩家: " .. playerName, 2)
+            end)
+        end
+    end
+    
+    -- 初始创建玩家按钮
+    CreatePlayerButtons()
+
+    -- 底部按钮区域
+    local BottomFrame = Instance.new("Frame")
+    BottomFrame.Parent = MainFrame
+    BottomFrame.Size = UDim2.new(1, -20, 0, 20)
+    BottomFrame.Position = UDim2.new(0, 10, 1, -25)
+    BottomFrame.BackgroundTransparency = 1
+    BottomFrame.ZIndex = 1002
+
+    -- 刷新按钮
+    local RefreshButton = Instance.new("TextButton")
+    RefreshButton.Parent = BottomFrame
+    RefreshButton.Size = UDim2.new(0.5, -5, 1, 0)
+    RefreshButton.Position = UDim2.new(0, 0, 0, 0)
+    RefreshButton.BackgroundColor3 = Color3.fromHex("#444444")
+    RefreshButton.Text = "刷新列表"
+    RefreshButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    RefreshButton.TextSize = 12
+    RefreshButton.Font = Enum.Font.GothamBold
+    RefreshButton.BorderSizePixel = 0
+    RefreshButton.ZIndex = 1003
+
+    local RefreshCorner = Instance.new("UICorner")
+    RefreshCorner.CornerRadius = UDim.new(0, 4)
+    RefreshCorner.Parent = RefreshButton
+
+    -- 玩家数量标签
+    local PlayerCountLabel = Instance.new("TextLabel")
+    PlayerCountLabel.Parent = BottomFrame
+    PlayerCountLabel.Size = UDim2.new(0.5, -5, 1, 0)
+    PlayerCountLabel.Position = UDim2.new(0.5, 5, 0, 0)
+    PlayerCountLabel.BackgroundTransparency = 1
+    PlayerCountLabel.Text = "玩家: " .. #PlayerList
+    PlayerCountLabel.TextColor3 = Color3.fromHex("#aaaaaa")
+    PlayerCountLabel.TextSize = 11
+    PlayerCountLabel.Font = Enum.Font.Gotham
+    PlayerCountLabel.TextXAlignment = Enum.TextXAlignment.Right
+    PlayerCountLabel.ZIndex = 1003
+
+    -- 悬停效果
+    TeleportButton.MouseEnter:Connect(function()
+        TweenService:Create(TeleportButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#555555")}):Play()
+    end)
+    
+    TeleportButton.MouseLeave:Connect(function()
+        TweenService:Create(TeleportButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#444444")}):Play()
+    end)
+    
+    CloseButton.MouseEnter:Connect(function()
+        TweenService:Create(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#555555")}):Play()
+    end)
+    
+    CloseButton.MouseLeave:Connect(function()
+        TweenService:Create(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#444444")}):Play()
+    end)
+    
+    RefreshButton.MouseEnter:Connect(function()
+        TweenService:Create(RefreshButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#555555")}):Play()
+    end)
+    
+    RefreshButton.MouseLeave:Connect(function()
+        TweenService:Create(RefreshButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromHex("#444444")}):Play()
+    end)
+
+    -- 传送按钮事件
+    TeleportButton.MouseButton1Click:Connect(function()
+        if not SelectedPlayer or SelectedPlayer == "" then
+            Notify("传送到玩家", "请先选择一个玩家", 2)
+            return
+        end
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Name == SelectedPlayer then
+                local localChar = LocalPlayer.Character
+                local targetChar = player.Character
+                if not localChar or not targetChar then
+                    Notify("传送到玩家", "角色未找到", 2)
+                    return
+                end
+
+                local localRoot = localChar:FindFirstChild("HumanoidRootPart")
+                local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+                if localRoot and targetRoot then
+                    local targetPos = Vector3.new(targetRoot.Position.X, targetRoot.Position.Y + 5, targetRoot.Position.Z)
+                    localRoot.CFrame = CFrame.new(targetPos)
+                    Notify("传送到玩家", "已传送到 " .. player.Name .. " 的头上", 2)
+                else
+                    Notify("传送到玩家", "未找到HumanoidRootPart", 2)
+                end
+                break
+            end
+        end
+    end)
+
+    -- 刷新按钮事件
+    RefreshButton.MouseButton1Click:Connect(function()
+        UpdatePlayerList()
+        CreatePlayerButtons()
+        PlayerCountLabel.Text = "玩家: " .. #PlayerList
+        Notify("玩家列表", "玩家列表已刷新", 1)
+    end)
+
+    -- 关闭按钮事件
+    CloseButton.MouseButton1Click:Connect(function()
+        PlayerSelectionUI:Destroy()
+    end)
+
+    -- ESC键关闭
+    local InputConnection
+    InputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if input.KeyCode == Enum.KeyCode.Escape then
+            PlayerSelectionUI:Destroy()
+            InputConnection:Disconnect()
+        end
+    end)
+
+    PlayerSelectionUI.Destroying:Connect(function()
+        if InputConnection then
+            InputConnection:Disconnect()
+        end
+    end)
+end
+
+-- ================== 正确使用Luna UI API ==================
+
+-- 主要功能标签页内容
+-- 飞行功能
+TabMain:CreateButton({
+    Name = "普通飞行",
+    Description = "加载普通飞行功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/666-/main/%E5%8F%AA%E8%83%BD%E8%87%AA%E5%B7%B1%E6%90%9E%E4%B8%80%E4%B8%AA%E4%BA%86"))()
+        end)
+        if success then
+            Notify("飞行功能", "飞行功能已加载")
+        else
+            Notify("飞行功能", "飞行功能加载失败")
+        end
+    end
+})
+
+TabMain:CreateButton({
+    Name = "无敌少侠飞行",
+    Description = "加载无敌少侠飞行",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://pastebin.com/raw/19aJhM6B"))()
+        end)
+        if success then
+            Notify("无敌少侠飞行", "无敌少侠飞行已加载")
+        else
+            Notify("无敌少侠飞行", "无敌少侠飞行加载失败")
+        end
+    end
+})
+
+TabMain:CreateDivider()
+
+-- 移动设置
+TabMain:CreateSlider({
+    Name = "移动速度",
+    Description = "设置角色移动速度",
+    Range = {0, 200},
+    Increment = 5,
+    CurrentValue = 16,
+    Flag = "WalkSpeed",
+    Callback = function(value)
+        SetWalkSpeed(value)
+    end
+})
+
+TabMain:CreateSlider({
+    Name = "跳跃高度",
+    Description = "设置角色跳跃高度",
+    Range = {0, 200},
+    Increment = 5,
+    CurrentValue = 50,
+    Flag = "JumpPower",
+    Callback = function(value)
+        SetJumpPower(value)
+    end
+})
+
+TabMain:CreateSlider({
+    Name = "重力设置",
+    Description = "设置游戏重力",
+    Range = {0, 200},
+    Increment = 5,
+    CurrentValue = 196,
+    Flag = "Gravity",
+    Callback = function(value)
+        SetGravity(value)
+    end
+})
+
+TabMain:CreateDivider()
+
+-- 传送工具
+TabMain:CreateButton({
+    Name = "传送工具",
+    Description = "获取传送工具",
+    Callback = function()
+        local mouse = LocalPlayer:GetMouse()
+        local tool = Instance.new("Tool")
+        tool.RequiresHandle = false
+        tool.Name = "[SGLOA]传送工具"
+        tool.Activated:connect(function()
+            local target = mouse.Hit + Vector3.new(0, 2.5, 0)
+            target = CFrame.new(target.X, target.Y, target.Z)
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = target
+            end
+        end)
+        tool.Parent = LocalPlayer.Backpack
+        Notify("传送工具", "传送工具已添加到背包")
+    end
+})
+
+TabMain:CreateDivider()
+
+-- 透视功能
+TabMain:CreateToggle({
+    Name = "ESP透视",
+    Description = "显示其他玩家位置",
+    CurrentValue = false,
+    Flag = "ESP",
+    Callback = function(state)
+        if state then
+            EnableESP()
+        else
+            DisableESP()
+        end
+    end
+})
+
+TabMain:CreateToggle({
+    Name = "NPC透视",
+    Description = "显示NPC位置",
+    CurrentValue = false,
+    Flag = "NPCESP",
+    Callback = function(state)
+        if state then
+            EnableNPCESP()
+        else
+            DisableNPCESP()
+        end
+    end
+})
+
+TabMain:CreateToggle({
+    Name = "夜视",
+    Description = "增强夜间视觉效果",
+    CurrentValue = false,
+    Flag = "NightVision",
+    Callback = function(state)
+        ToggleNightVision(state)
+    end
+})
+
+TabMain:CreateDivider()
+
+-- 移动增强功能
+TabMain:CreateToggle({
+    Name = "无限跳",
+    Description = "允许无限跳跃",
+    CurrentValue = false,
+    Flag = "InfiniteJump",
+    Callback = function(state)
+        ToggleInfiniteJump(state)
+    end
+})
+
+TabMain:CreateToggle({
+    Name = "穿墙模式",
+    Description = "允许穿过墙壁",
+    CurrentValue = false,
+    Flag = "Noclip",
+    Callback = function(state)
+        ToggleNoclip(state)
+    end
+})
+
+TabMain:CreateButton({
+    Name = "爬墙功能",
+    Description = "加载爬墙功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://pastebin.com/raw/zXk4Rq2r"))()
+        end)
+        if success then
+            Notify("爬墙功能", "爬墙功能已加载")
+        else
+            Notify("爬墙功能", "爬墙功能加载失败")
+        end
+    end
+})
+
+TabMain:CreateButton({
+    Name = "踏空行走",
+    Description = "加载踏空行走功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostPlayer352/Test4/main/Float'))()
+        end)
+        if success then
+            Notify("踏空行走", "踏空行走已加载")
+        else
+            Notify("踏空行走", "踏空行走加载失败")
+        end
+    end
+})
+
+TabMain:CreateDivider()
+
+-- 玩家功能
+TabMain:CreateButton({
+    Name = "选择玩家功能",
+    Description = "打开玩家选择界面",
+    Callback = function()
+        CreatePlayerSelectionUI()
+    end
+})
+
+TabMain:CreateButton({
+    Name = "走路创人",
+    Description = "加载走路创人功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Throw/main/Throw"))()
+        end)
+        if success then
+            Notify("走路创人", "走路创人功能已加载")
+        else
+            Notify("走路创人", "走路创人功能加载失败")
+        end
+    end
+})
+
+TabMain:CreateButton({
+    Name = "甩飞功能",
+    Description = "加载甩飞功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/hknvh/main/%E7%94%A9%E9%A3%9E.txt"))()
+        end)
+        if success then
+            Notify("甩飞功能", "甩飞功能已加载")
+        else
+            Notify("甩飞功能", "甩飞功能加载失败")
+        end
+    end
+})
+
+TabMain:CreateButton({
+    Name = "防甩飞",
+    Description = "加载防甩飞功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Throw/main/Anti-throw"))()
+        end)
+        if success then
+            Notify("防甩飞", "防甩飞功能已加载")
+        else
+            Notify("防甩飞", "防甩飞功能加载失败")
+        end
+    end
+})
+
+TabMain:CreateDivider()
+
+-- 坐标管理
+TabMain:CreateButton({
+    Name = "保存当前坐标",
+    Description = "保存当前位置到坐标列表",
+    Callback = SaveCurrentCoordinate
+})
+
+TabMain:CreateButton({
+    Name = "传送保存坐标",
+    Description = "传送到已保存的坐标",
+    Callback = TeleportToCoordinate
+})
+
+TabMain:CreateButton({
+    Name = "删除保存坐标",
+    Description = "删除已保存的坐标",
+    Callback = DeleteCoordinate
+})
+
+TabMain:CreateDivider()
+
+-- 其他工具
+TabMain:CreateButton({
+    Name = "拿起未固定物体",
+    Description = "加载拿起未固定物体功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/fly-boat"))()
+        end)
+        if success then
+            Notify("拿起未固定物体", "拿起未固定物体功能已加载")
+        else
+            Notify("拿起未固定物体", "拿起未固定物体功能加载失败")
+        end
+    end
+})
+
+TabMain:CreateButton({
+    Name = "全局物体漂浮",
+    Description = "加载全局物体漂浮功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/%E5%85%A8%E5%B1%80%E7%89%A9%E4%BD%93%E6%BC%82%E6%B5%AE%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%89%88"))()
+        end)
+        if success then
+            Notify("全局物体漂浮", "全局物体漂浮已开启")
+        else
+            Notify("全局物体漂浮", "全局物体漂浮加载失败")
+        end
+    end
+})
+
+TabMain:CreateButton({
+    Name = "单一物体飞行",
+    Description = "加载单一物体飞行功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/6669178/main/单一物体飞行载自己最终优化版"))()
+        end)
+        if success then
+            Notify("单一物体飞行", "单一物体飞行已加载")
+        else
+            Notify("单一物体飞行", "单一物体飞行加载失败")
+        end
+    end
+})
+
+TabMain:CreateButton({
+    Name = "零件破坏者",
+    Description = "加载零件破坏者功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/-/main/零件破坏者v2"))()
+        end)
+        if success then
+            Notify("零件破坏者", "零件破坏者已加载")
+        else
+            Notify("零件破坏者", "零件破坏者加载失败")
+        end
+    end
+})
+
+TabMain:CreateButton({
+    Name = "隐身功能",
+    Description = "加载隐身功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet('https://pastebin.com/raw/3Rnd9rHf'))()
+        end)
+        if success then
+            Notify("隐身功能", "隐身功能已开启")
+        else
+            Notify("隐身功能", "隐身功能加载失败")
+        end
+    end
+})
+
+TabMain:CreateButton({
+    Name = "Egor功能",
+    Description = "加载Egor功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fake-Lag-Runner-read-description-44701"))()
+        end)
+        if success then
+            Notify("Egor功能", "Egor功能已开启")
+        else
+            Notify("Egor功能", "Egor功能加载失败")
+        end
+    end
+})
+
+TabMain:CreateButton({
+    Name = "时间回溯",
+    Description = "加载时间回溯功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/0Ben1/fe./main/L"))()
+        end)
+        if success then
+            Notify("时间回溯", "时间回溯功能已开启")
+        else
+            Notify("时间回溯", "时间回溯功能加载失败")
+        end
+    end
+})
+
+-- 神秘功能标签页内容
+TabMystery:CreateButton({
+    Name = "抓远程",
+    Description = "加载抓远程功能",
+    Callback = function()
+        getgenv().Spy = "汉化Spy"
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/xiaopi77/xiaopi77/refs/heads/main/spy%E6%B1%89%E5%8C%96%20(1).txt"))()
+        end)
+        if success then
+            Notify("抓远程", "抓远程功能已加载")
+        else
+            Notify("抓远程", "抓远程功能加载失败")
+        end
+    end
+})
+
+TabMystery:CreateButton({
+    Name = "抓链接",
+    Description = "加载抓链接功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/BS58dL/BS/refs/heads/main/请多多支持BS脚本系列.Lua"))()
+        end)
+        if success then
+            Notify("抓链接", "抓链接功能已加载")
+        else
+            Notify("抓链接", "抓链接功能加载失败")
+        end
+    end
+})
+
+-- 其他脚本标签页内容
+local externalScripts = {
+    { name = "殺脚本", url = "https://raw.githubusercontent.com/FengYu-3/FengYu/refs/heads/Feng/QQ1926190957" },
+    { name = "DOLL脚本", url = "https://raw.githubusercontent.com/lool8/-/refs/heads/main/DOLL.lua" },
+    { name = "皮脚本", url = "https://raw.githubusercontent.com/xiaopi77/xiaopi77/main/QQ1002100032-Roblox-Pi-script.lua" },
+    { name = "叶脚本", url = "https://raw.githubusercontent.com/roblox-ye/QQ515966991/refs/heads/main/ROBLOX-CNVIP-XIAOYE.lua" },
+    { name = "驰脚本", url = "https://raw.githubusercontent.com/qwrt5589/eododo/main/%E9%A9%B0%E8%84%9A%E6%9C%AC.txt" },
+    { name = "BS黑洞中心脚本", url = "https://api.junkie-development.de/api/v1/luascripts/public/d6dffe74a774f7983c29a61dbfaef705a7c1bbd193c1bb68d778cb4bb4c302ae/download" },
+    { name = "混脚本", url = "https://raw.githubusercontent.com/Twbtx/tiamxiabuwu/main/txbw666" },
+    { name = "XA脚本", url = "https://raw.gitcode.com/Xingtaiduan/Scripts/raw/main/Loader.lua" },
+    { name = "天空脚本", url = "https://raw.githubusercontent.com/hdjsjjdgrhj/script-hub/refs/heads/main/skyhub" },
+    { name = "X_SCRIPT脚本", url = "https://raw.githubusercontent.com/XSCRIPT-NB/XSCRIPT/refs/heads/main/X-SCRIPT" },
+    { name = "FIN脚本", url = "https://raw.githubusercontent.com/finendss/FIN/refs/heads/main/FIN-Loading" },
+    { name = "安脚本", url = "https://raw.githubusercontent.com/wucan114514/gegeyxjb/refs/heads/main/%E5%AE%89%E8%84%9A%E6%9C%AC.lua" },
+    { name = "逆光脚本", url = "https://raw.githubusercontent.com/lool8/-/refs/heads/main/%E9%80%86%E5%85%89.lua" },
+    { name = "DE HUB脚本", url = "https://raw.githubusercontent.com/gycgchgyfytdttr/DE/refs/heads/main/DE%20HUB.lua" },
+    { name = "KG脚本", url = "https://github.com/ZS-NB/KG/raw/main/Zhang-Shuo.lua" },
+    { name = "本熊脚本", url = "https://pastefy.app/s9PijnvT/raw" },
+    { name = "APEX HUB脚本", url = "https://api.luarmor.net/files/v3/loaders/b2004278b4735e1ca615931116373d48.lua" },
+    { name = "走马观花脚本", url = "https://pastebin.com/raw/XPTiVKWx" },
+    { name = "导管脚本中心", url = "loadstring(game:HttpGet('https://raw.githubusercontent.com/useranewrff/roblox-/main/%E6%9D%A1%E4%BE%8B%E5%90%8D%E7%A7%B0%E5%8F%AF%E8%83%BD%E4%B8%8D%E5%90%8C'))()" },
+    { name = "黄脚本", url = "https://raw.githubusercontent.com/CNHM/Chinese/refs/heads/main/%E7%A7%BB%E5%8A%A8%E8%87%AA%E5%8A%A8%E6%8D%A2%E8%9B%AE" },
+    { name = "大司马脚本", url = "https://raw.githubusercontent.com/whenheer/dasimav6/refs/heads/main/dasimaV6.txt" },
+    { name = "南宁脚本", url = "loadstring(game:HttpGet('https://pastebin.com/raw/6XCWRWnL'))()" },
+    { name = "禁漫中心脚本", url = "https://raw.githubusercontent.com/dingding123hhh/ng/main/jmlllllllIIIIlllllII.lua" },
+    { name = "Rb脚本", url = "https://raw.githubusercontent.com/Yungengxin/roblox/refs/heads/main/Rb-Hub" },
+    { name = "沙脚本", url = "https://raw.githubusercontent.com/JsYb666/TX-Free-YYDS/refs/heads/main/ShaHUB" },
+    { name = "TX脚本", url = "https://raw.githubusercontent.com/JsYb666/TX-Free-YYDS/refs/heads/main/FREE-TX-TEAM" },
+    { name = "FXM脚本", url = "https://raw.githubusercontent.com/HB-ksdb/-HB-FXM/main/HB%20FXM%20%E5%8A%A0%E8%BD%BD%E5%99%A8.lua" },
+    { name = "Frost脚本", url = "https://api.luarmor.net/files/v3/loaders/1139e311eaabc1aced70509c7caf1982.lua" },
+    { name = "挽脚本", url = "https://raw.githubusercontent.com/XxwanhexxX/UN/refs/heads/main/lua" },
+    { name = "W超级脚本", url = "https://raw.githubusercontent.com/Wbw1470619303-ctrl/w-/refs/heads/main/udjejdj" },
+    { name = "UnicoX脚本", url = "https://raw.githubusercontent.com/XiaoXuCynic/UnicoX-Script/refs/heads/main/UnicoXV1-%E6%B7%B7%E6%B7%86.lua" },
+    { name = "无脚本", url = "https://raw.githubusercontent.com/XiaoXuCynic/Free-Script/refs/heads/main/%E6%97%A0%E8%84%9A%E6%9C%ACV1%E6%B7%B7%E6%B7%86.lua.txt" },
+    { name = "空云脚本", url = "https://raw.githubusercontent.com/xiaoSB33/M416/refs/heads/main/Wind%2Fsb%2F%E7%A9%BA%E4%BA%91%E8%84%9A%E6%9C%ACV2.LUA" },
+    { name = "X脚本", url = "https://raw.githubusercontent.com/maowang1/xx/refs/heads/main/Protected_8858329470146381.txt" },
+    { name = "名脚本", url = "https://raw.githubusercontent.com/wuming124578/wuming/refs/heads/main/%E5%90%8D%E8%84%9A%E6%9C%AC%E6%BA%90%F0%9F%92%A9%E7%A0%81.lua" },
+    { name = "WU SCRIPT", url = "https://raw.githubusercontent.com/WUSCRIPT/WU-Script/main/WUSCRIPT.lua" },
+    { name = "ZAY脚本", url = "https://raw.githubusercontent.com/ZAYHUB-DEV/ZAYHUB/refs/heads/main/ZAYHUB" },
+    { name = "Yezx脚本", url = "https://raw.github.com/wszzx2013/yezx/refs/heads/main/Main%20script/Loader" },
+    { name = "WX HUB脚本", url = "https://pastefy.app/o6W0mEy9/raw" },
+    { name = "Love-Lingdu脚本", url = "https://raw.githubusercontent.com/114514lxhlzh-lgtm/Love-Lingdu/refs/heads/main/Love%20Lingdu%20hunxiao" },
+    { name = "雄脚本", url = "https://raw.githubusercontent.com/smalldesikon/wocaonima/main/qq984820669.txt" },
+    { name = "SX HUB脚本", url = "https://api.luarmor.net/files/v3/loaders/87a8a4f4c2d2ef535ccd1bdb949218fe.lua" },
+    { name = "T脚本", url = "https://gist.githubusercontent.com/qwrt5589/d370955bedc8d3822f8bd1203443f045/raw" },
+    { name = "XC脚本", url = "https://pastebin.com/raw/gemxHwA1" },
+    { name = "光脚本", url = "https://raw.githubusercontent.com/qwrt5589/eododo/9f45c52b3506e14329c44584d118a546835482a0/%E5%85%89%E8%84%9A%E6%9C%AC.txt" },
+    { name = "BP脚本", url = "https://raw.githubusercontent.com/oisaaa6/BLUE/refs/heads/main/PAINT" },
+    { name = "黑白脚本", url = "https://raw.githubusercontent.com/tfcygvunbind/Apple/main/%E9%BB%91%E7%99%BD%E8%84%9A%E6%9C%AC%E5%8A%A0%E8%BD%BD%E5%99%A8" },
+    { name = "德与中山免费版", url = "https://raw.githubusercontent.com/dream77239/Deyu-Zhongshan/refs/heads/main/%E5%BE%B7%E4%B8%8E%E4%B8%AD%E5%B1%B1.txt" },
+    { name = "spain脚本", url = "https://raw.githubusercontent.com/5twh2hsf9j-byte/spain/refs/heads/main/spain" },
+    { name = "旧冬脚本", url = "https://raw.githubusercontent.com/QiuShan-UX/UnicoX/refs/heads/main/%E6%97%A7%E5%86%ACScript--Forsaken.lua.txt" },
+    { name = "ZARA脚本", url = "https://pastefy.app/zCQhGR8d/raw" },
+    { name = "XK脚本", url = "https://github.com/devslopo/DVES/raw/main/XK%20Hub" },
+    { name = "寒脚本", url = "https://github.com/135246508623/Han-NB/raw/refs/heads/main/1.lua.txt" },
+    { name = "神秘脚本", url = "https://pastebin.com/raw/Up3P2KBp" },
+    { name = "芋风脚本", url = "https://raw.githubusercontent.com/0lihaorui0/dvdvhd/refs/heads/main/%E8%8A%8B%E9%A3%8E%E8%84%9A%E6%9C%AC%20%E6%B5%8B%E8%AF%95%E7%89%88(1).lua" },
+    { name = "挽脚本", url = "https://raw.githubusercontent.com/XxwanhexxX/UN/refs/heads/main/lua" }
+}
+
+for _, scriptInfo in ipairs(externalScripts) do
+    TabOtherScripts:CreateButton({
+        Name = scriptInfo.name,
+        Description = "加载" .. scriptInfo.name,
+        Callback = function()
+            local success = pcall(function()
+                loadstring(game:HttpGet(scriptInfo.url))()
+            end)
+            if success then
+                Notify(scriptInfo.name, scriptInfo.name .. "加载成功")
+            else
+                Notify(scriptInfo.name, scriptInfo.name .. "加载失败")
+            end
+        end
+    })
+end
+
+-- 添加特殊脚本（需要额外处理）
+TabOtherScripts:CreateButton({
+    Name = "NOL免费版脚本",
+    Description = "加载NOL免费版",
+    Callback = function()
+        local success = pcall(function()
+            getgenv().ADittoKey = "NOL_中文FREEKEY"
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Potato5466794/Loader/refs/heads/main/ChineseFreeLoader.luau", true))()
+        end)
+        if success then
+            Notify("NOL免费版脚本", "NOL免费版脚本加载成功")
+        else
+            Notify("NOL免费版脚本", "NOL免费版脚本加载失败")
+        end
+    end
+})
+
+TabOtherScripts:CreateButton({
+    Name = "WTB脚本",
+    Description = "加载WTB脚本",
+    Callback = function()
+        local success = pcall(function()
+            getgenv().ADittoKey = "WTB_FREEKEY"
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Potato5466794/GC-WTB/refs/heads/main/Loader/Loader.luau", true))()
+        end)
+        if success then
+            Notify("WTB脚本", "WTB脚本加载成功")
+        else
+            Notify("WTB脚本", "WTB脚本加载失败")
+        end
+    end
+})
+
+TabOtherScripts:CreateButton({
+    Name = "xipro破解版",
+    Description = "加载xipro破解版",
+    Callback = function()
+        local success = pcall(function()
+            getfenv().ADittoKey = "傻逼神仇脚本，这就是你的50元脚本🤡"
+loadstring(request({Url = "https://raw.githubusercontent.com/Zer0neK/SB-Xi-pro/refs/heads/main/SBXiPro.lua"}).Body)()
+        end)
+        if success then
+            Notify("xipro破解版", "xipro破解版加载成功")
+        else
+            Notify("xipro破解版", "xipro破解版加载失败")
+        end
+    end
+})
+
+-- 自然灾害标签页内容
+TabNaturalDisaster:CreateButton({
+    Name = "防止摔落伤害",
+    Description = "加载防止摔落伤害功能",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/cytj777i/Fall-injury/main/防止摔落伤害"))()
+        end)
+        if success then
+            Notify("防止摔落伤害", "防止摔落伤害已开启")
+        else
+            Notify("防止摔落伤害", "防止摔落伤害加载失败")
+        end
+    end
+})
+
+TabNaturalDisaster:CreateButton({
+    Name = "预测灾害",
+    Description = "开启/关闭灾害预测",
+    Callback = ToggleDisasterPrediction
+})
+
+TabNaturalDisaster:CreateDivider()
+
+-- 黑洞功能
+local blackHoleScripts = {
+    { name = "黑洞1", url = "https://raw.githubusercontent.com/cytj777i/Soul-Ring/main/零件环绕倾斜" },
+    { name = "黑洞2", url = "https://rawscripts.net/raw/Universal-Script-Projeto-LKB-I-Super-Ring-V3-I-Cracked-23346" },
+    { name = "黑洞3", url = "https://rawscripts.net/raw/Natural-Disaster-Survival-Super-ring-V4-24296" },
+    { name = "黑洞4", url = "https://pastebin.com/raw/DN0upqNm" },
+    { name = "黑洞5", url = "https://raw.githubusercontent.com/chesslovers69/Super-ring-parts-v6/refs/heads/main/Bylukaslol" },
+    { name = "黑洞6", url = "https://pastebin.com/raw/QYUALL7N" },
+    { name = "黑洞7", url = "https://raw.githubusercontent.com/cytj777i/Soul-Ring/main/%E5%8F%AC%E5%94%A4%E9%AD%82%E7%8E%AF" }
+}
+
+for _, holeInfo in ipairs(blackHoleScripts) do
+    TabNaturalDisaster:CreateButton({
+        Name = holeInfo.name,
+        Description = "加载" .. holeInfo.name,
+        Callback = function()
+            local success = pcall(function()
+                loadstring(game:HttpGet(holeInfo.url))()
+            end)
+            if success then
+                Notify(holeInfo.name, holeInfo.name .. "已加载")
+            else
+                Notify(holeInfo.name, holeInfo.name .. "加载失败")
+            end
+        end
+    })
+end
+
+TabNaturalDisaster:CreateButton({
+    Name = "AXiosHub黑洞",
+    Description = "加载AXiosHub黑洞",
+    Callback = function()
+        local success = pcall(function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/axioshubxmirror/ScriptLoaderV2/refs/heads/main/Mirror',true))()
+        end)
+        if success then
+            Notify("AXiosHub黑洞", "AXiosHub黑洞已加载")
+        else
+            Notify("AXiosHub黑洞", "AXiosHub黑洞加载失败")
+        end
+    end
+})
+
+-- 主题设置标签页
+TabTheme:BuildThemeSection()
+
+-- 配置标签页
+TabConfig:BuildConfigSection()
+
+-- 翻译功能
+local Translations = {
+    ["Toggle"] = "切换",
+    ["Lock"] = "锁定",
+    ["AxiosHub"] = "Axios中心",
+    ["Main"] = "主界面",
+    ["Player Target"] = "玩家目标",
+    ["UI Settings"] = "界面设置",
+    ["Search"] = "搜索",
+    ["Shape Controls"] = "形状控制",
+    ["Enable Shape"] = "启用形状",
+    ["Shape Type"] = "形状类型",
+    ["Fibonacci Sphere"] = "斐波那契球面",
+    ["Size"] = "尺寸",
+    ["Rotation Speed"] = "旋转速度",
+    ["Distance from Player"] = "与玩家的距离",
+    ["No Clip Parts"] = "无碰撞部件",
+    ["Other Scripts"] = "其他脚本",
+    ["Infinite Yield"] = "无限等待",
+    ["version"] = "版本",
+    ["Target Player"] = "目标玩家",
+    ["Follow Target"] = "跟随目标",
+    ["Select Player"] = "选择玩家",
+    ["Teleport to Target"] = "传送到目标",
+    ["Menu"] = "菜单",
+    ["Custom Cursor"] = "自定义光标",
+    ["Menu Keybind"] = "菜单快捷键",
+    ["RightShift"] = "右Shift",
+    ["Unload"] = "卸载",
+    ["Themes"] = "主题",
+    ["Background color"] = "背景颜色",
+    ["Main color"] = "主色调",
+    ["Accent color"] = "强调色",
+    ["Outline color"] = "轮廓颜色",
+    ["Configuration"] = "配置",
+    ["Config name"] = "配置名称",
+    ["Create config"] = "创建配置",
+    ["Config list"] = "配置列表",
+    ["Load config"] = "加载配置",
+    ["Overwrite config"] = "覆盖配置",
+    ["Delete config"] = "删除配置",
+    ["Refresh list"] = "刷新列表",
+    ["Font color"] = "字体颜色",
+    ["Font Face"] = "字体样式",
+    ["RobotoMono"] = "RobotoMono字体",
+    ["Theme list"] = "主题列表",
+    ["Mint"] = "薄荷绿",
+    ["Set as default"] = "设为默认",
+    ["Custom theme name"] = "自定义主题名称",
+    ["Create theme"] = "创建主题",
+    ["Custom themes"] = "自定义主题",
+    ["Load theme"] = "加载主题",
+    ["Overwrite theme"] = "覆盖主题",
+    ["Delete theme"] = "删除主题",
+    ["Set as autoload"] = "设为自动加载",
+    ["Reset autoload"] = "重置自动加载",
+    ["Current autoload config: none"] = "当前自动加载配置：无",
+    ["Reset default"] = "重置默认"
+}
+
+local function translateText(text)
+    if not text or type(text) ~= "string" then return text end
+    
+    if Translations[text] then
+        return Translations[text]
+    end
+    
+    for en, cn in pairs(Translations) do
+        if text:find(en) then
+            return text:gsub(en, cn)
+        end
+    end
+    
+    return text
+end
+
+local function setupTranslationEngine()
+    local success, err = pcall(function()
+        local oldIndex = getrawmetatable(game).__newindex
+        setreadonly(getrawmetatable(game), false)
+        
+        getrawmetatable(game).__newindex = newcclosure(function(t, k, v)
+            if (t:IsA("TextLabel") or t:IsA("TextButton") or t:IsA("TextBox")) and k == "Text" then
+                v = translateText(tostring(v))
+            end
+            return oldIndex(t, k, v)
+        end)
+        
+        setreadonly(getrawmetatable(game), true)
+    end)
+    
+    if not success then
+        warn("元表劫持失败:", err)
+       
+        local translated = {}
+        local function scanAndTranslate()
+            for _, gui in ipairs(game:GetService("CoreGui"):GetDescendants()) do
+                if (gui:IsA("TextLabel") or gui:IsA("TextButton") or gui:IsA("TextBox")) and not translated[gui] then
+                    pcall(function()
+                        local text = gui.Text
+                        if text and text ~= "" then
+                            local translatedText = translateText(text)
+                            if translatedText ~= text then
+                                gui.Text = translatedText
+                                translated[gui] = true
+                            end
+                        end
+                    end)
+                end
+            end
+            
+            local player = game:GetService("Players").LocalPlayer
+            if player and player:FindFirstChild("PlayerGui") then
+                for _, gui in ipairs(player.PlayerGui:GetDescendants()) do
+                    if (gui:IsA("TextLabel") or gui:IsA("TextButton") or gui:IsA("TextBox")) and not translated[gui] then
+                        pcall(function()
+                            local text = gui.Text
+                            if text and text ~= "" then
+                                local translatedText = translateText(text)
+                                if translatedText ~= text then
+                                    gui.Text = translatedText
+                                    translated[gui] = true
+                                end
+                            end
+                        end)
+                    end
+                end
+            end
+        end
+        
+        local function setupDescendantListener(parent)
+            parent.DescendantAdded:Connect(function(descendant)
+                if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
+                    task.wait(0.1)
+                    pcall(function()
+                        local text = descendant.Text
+                        if text and text ~= "" then
+                            local translatedText = translateText(text)
+                            if translatedText ~= text then
+                                descendant.Text = translatedText
+                            end
+                        end
+                    end)
+                end
+            end)
+        end
+        
+        pcall(setupDescendantListener, game:GetService("CoreGui"))
+        local player = game:GetService("Players").LocalPlayer
+        if player and player:FindFirstChild("PlayerGui") then
+            pcall(setupDescendantListener, player.PlayerGui)
+        end
+        
+        while true do
+            scanAndTranslate()
+            task.wait(3)
+        end
+    end
+end
+
+-- 初始化翻译引擎
+task.spawn(function()
+    task.wait(2)
+    setupTranslationEngine()
+end)
+
+-- 初始化
+LoadCoordinates()
+EnableAntiAFK()
+
+if LocalPlayer.Character then
+    wait(1)
+    SetWalkSpeed(WalkSpeed)
+    SetJumpPower(JumpPower)
+end
+
+-- 添加玩家和NPC的监听器，确保功能持续运行
+local function SetupPersistentFeatures()
+    -- 玩家加入时自动添加ESP（如果ESP已启用）
+    Players.PlayerAdded:Connect(function(player)
+        if ESPEnabled then
+            wait(1) -- 等待玩家角色加载
+            CreateESP(player)
+        end
+    end)
+    
+    -- NPC监听器（如果NPC透视已启用）
+    if NPCESPEnabled then
+        Workspace.DescendantAdded:Connect(function(descendant)
+            if descendant:IsA("Model") and descendant ~= LocalPlayer.Character then
+                local humanoid = descendant:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    local isPlayer = false
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player.Character == descendant then
+                            isPlayer = true
+                            break
+                        end
+                    end
+                    if not isPlayer then
+                        CreateNPCESP(descendant)
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- 初始化持久功能
+SetupPersistentFeatures()
