@@ -79,7 +79,7 @@ buttonContainer.Parent = mainFrame
 buttonContainer.ZIndex = 2
 
 -- Buttons Configuration
-local buttonTitles = {"检测", "天空", "所有物体贴图", "跳脸1", "跳脸2"}
+local buttonTitles = {"检测", "天空", "所有物体贴图", "跳脸1", "跳脸2", "粒子"}
 local buttons = {}
 local buttonSettings = {
     widthRatio = 0.25,
@@ -159,6 +159,35 @@ newButton2.Parent = buttonContainer
 newButton2.ZIndex = 3
 buttons[5] = newButton2
 newButtons[2] = newButton2
+
+-- 在所有物体贴图下方20像素处添加粒子按钮
+local particleButton = Instance.new("TextButton")
+particleButton.Name = "Button6"
+particleButton.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
+-- 计算位置：所有物体贴图按钮下方20像素，跳脸2按钮的右边
+local secondRowPixelOffset = 20 -- 像素偏移量
+local secondRowOffsetRatio = secondRowPixelOffset / containerHeight
+
+-- 所有物体贴图按钮的Y位置
+local decalButtonY = buttonSettings.yPosition
+-- 粒子按钮的Y位置（所有物体贴图按钮下方20像素）
+local particleButtonY = decalButtonY + buttonSettings.heightRatio + secondRowOffsetRatio
+
+-- 计算X位置：在跳脸2按钮的右边
+local jumpScare2X = calculatedStartX + (buttonSettings.widthRatio + buttonSettings.spacing) -- 跳脸2按钮的X位置
+-- 粒子按钮的X位置（跳脸2按钮右边，使用相同的间距）
+local particleButtonX = jumpScare2X + (buttonSettings.widthRatio + buttonSettings.spacing)
+
+particleButton.Position = UDim2.new(particleButtonX, 0, particleButtonY, 0)
+particleButton.BackgroundColor3 = Color3.new(0, 0, 0)
+particleButton.BorderColor3 = Color3.new(1, 1, 1)
+particleButton.BorderSizePixel = 2
+particleButton.Text = "粒子"
+particleButton.TextColor3 = Color3.new(1, 1, 1)
+particleButton.TextScaled = true
+particleButton.Parent = buttonContainer
+particleButton.ZIndex = 3
+buttons[6] = particleButton
 
 -- Backdoor Detection System
 local dateTimeNow = DateTime.now
@@ -427,6 +456,112 @@ local function executeJumpScare(imageId)
     notify(string.format("✅ 跳脸已执行 (图片ID: %s)", imageId))
 end
 
+-- 为所有玩家添加粒子特效的函数
+local function executeParticleScript()
+    if not attached or not backdoor then
+        notify("❌ 请先检测后门！")
+        return
+    end
+    
+    local particleScript = [[
+        local Players = game:GetService("Players")
+        local particleTexture = "http://www.roblox.com/asset/?id=97925433444604"
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            local character = player.Character
+            if character then
+                -- 清除现有的粒子效果
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("ParticleEmitter") then
+                        part:Destroy()
+                    end
+                end
+                
+                -- 为角色所有部位添加新的粒子效果
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        local particleEmitter = Instance.new("ParticleEmitter")
+                        particleEmitter.Texture = particleTexture
+                        particleEmitter.Rate = 10
+                        particleEmitter.Lifetime = NumberRange.new(1, 2)
+                        particleEmitter.Speed = NumberRange.new(2, 5)
+                        particleEmitter.RotSpeed = NumberRange.new(-180, 180)
+                        particleEmitter.Rotation = NumberRange.new(0, 360)
+                        particleEmitter.VelocitySpread = 360
+                        particleEmitter.Parent = part
+                    end
+                end
+            end
+        end
+        
+        -- 监听新玩家加入
+        Players.PlayerAdded:Connect(function(player)
+            player.CharacterAdded:Connect(function(character)
+                wait(1) -- 等待角色完全加载
+                
+                -- 清除现有的粒子效果
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("ParticleEmitter") then
+                        part:Destroy()
+                    end
+                end
+                
+                -- 为新角色添加粒子效果
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        local particleEmitter = Instance.new("ParticleEmitter")
+                        particleEmitter.Texture = particleTexture
+                        particleEmitter.Rate = 10
+                        particleEmitter.Lifetime = NumberRange.new(1, 2)
+                        particleEmitter.Speed = NumberRange.new(2, 5)
+                        particleEmitter.RotSpeed = NumberRange.new(-180, 180)
+                        particleEmitter.Rotation = NumberRange.new(0, 360)
+                        particleEmitter.VelocitySpread = 360
+                        particleEmitter.Parent = part
+                    end
+                end
+            end)
+        end)
+        
+        -- 为现有玩家的角色添加监听
+        for _, player in ipairs(Players:GetPlayers()) do
+            player.CharacterAdded:Connect(function(character)
+                wait(1) -- 等待角色完全加载
+                
+                -- 清除现有的粒子效果
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("ParticleEmitter") then
+                        part:Destroy()
+                    end
+                end
+                
+                -- 为新角色添加粒子效果
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        local particleEmitter = Instance.new("ParticleEmitter")
+                        particleEmitter.Texture = particleTexture
+                        particleEmitter.Rate = 10
+                        particleEmitter.Lifetime = NumberRange.new(1, 2)
+                        particleEmitter.Speed = NumberRange.new(2, 5)
+                        particleEmitter.RotSpeed = NumberRange.new(-180, 180)
+                        particleEmitter.Rotation = NumberRange.new(0, 360)
+                        particleEmitter.VelocitySpread = 360
+                        particleEmitter.Parent = part
+                    end
+                end
+            end)
+        end
+    ]]
+    
+    if backdoor.ClassName == "RemoteEvent" then
+        backdoor:FireServer(particleScript)
+    elseif backdoor.ClassName == "RemoteFunction" then
+        backdoor:InvokeServer(particleScript)
+    end
+    
+    notify("✅ 粒子特效已应用！所有玩家角色现在都有粒子效果！")
+end
+
 -- 自动检测并执行天空盒修改函数
 local function autoDetectAndExecuteSkybox()
     if not attached or not backdoor then
@@ -469,6 +604,20 @@ local function autoDetectAndExecuteJumpScare(imageId)
     end
 end
 
+-- 自动检测并执行粒子特效函数
+local function autoDetectAndExecuteParticles()
+    if not attached or not backdoor then
+        if scanGame() then
+            task.wait(0.5)
+            executeParticleScript()
+        else
+            notify("❌ 未找到后门，无法应用粒子特效！")
+        end
+    else
+        executeParticleScript()
+    end
+end
+
 -- Button 1: Backdoor Detection
 buttons[1].MouseButton1Click:Connect(function()
     attached = false
@@ -489,11 +638,17 @@ buttons[3].MouseButton1Click:Connect(function()
     autoDetectAndExecuteDecals()
 end)
 
--- 新按钮的事件处理
-newButtons[1].MouseButton1Click:Connect(function()
+-- Button 4: 跳脸1
+buttons[4].MouseButton1Click:Connect(function()
     autoDetectAndExecuteJumpScare(JUMPSCARE_IMAGE_IDS[1])
 end)
 
-newButtons[2].MouseButton1Click:Connect(function()
+-- Button 5: 跳脸2
+buttons[5].MouseButton1Click:Connect(function()
     autoDetectAndExecuteJumpScare(JUMPSCARE_IMAGE_IDS[2])
+end)
+
+-- Button 6: 粒子
+buttons[6].MouseButton1Click:Connect(function()
+    autoDetectAndExecuteParticles()
 end)
