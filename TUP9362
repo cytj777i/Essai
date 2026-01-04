@@ -131,7 +131,7 @@ for i = 4, 6 do
     button.BackgroundColor3 = Color3.new(0, 0, 0)
     button.BorderColor3 = Color3.new(1, 1, 1)
     button.BorderSizePixel = 2
-    button.Text = buttonTitles[i-1]  -- 索引调整
+    button.Text = buttonTitles[i]  -- 修正：使用正确的索引
     button.TextColor3 = Color3.new(1, 1, 1)
     button.TextScaled = true
     button.Parent = buttonContainer
@@ -879,7 +879,7 @@ buttons[5].MouseButton1Click:Connect(function()
     autoDetectAndExecuteJumpScare(JUMPSCARE_IMAGE_IDS[2])
 end)
 
--- Button 6: 粒子
+-- Button 6: 粒子（修复：按钮文本正确显示为"粒子"）
 buttons[6].MouseButton1Click:Connect(function()
     autoDetectAndExecuteParticles()
 end)
