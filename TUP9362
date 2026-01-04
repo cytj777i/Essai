@@ -29,7 +29,7 @@ mainFrame.Parent = screenGui
 
 local blackBackground = Instance.new("Frame")
 blackBackground.Name = "BlackBackground"
-blackBackground.Size = UDim2.new(1, 0, 1, 0)
+blackBackground.Size = UDim2.new(1, 0, 1.05, 0)
 blackBackground.BackgroundColor3 = Color3.new(0, 0, 0)
 blackBackground.BorderSizePixel = 0
 blackBackground.Parent = mainFrame
@@ -100,6 +100,7 @@ local JUMPSCARE_IMAGE_IDS = {
     "137570743023119"   -- 跳脸2
 }
 
+-- 第一行：检测、天空、所有物体贴图
 for i = 1, 3 do
     local button = Instance.new("TextButton")
     button.Name = "Button" .. i
@@ -116,95 +117,140 @@ for i = 1, 3 do
     buttons[i] = button
 end
 
--- 在检测和天空按钮下方7像素处添加两个新按钮
-local newButtons = {}
-local newButtonTitles = {"跳脸1", "跳脸2"}
-local pixelOffset = 20 -- 像素偏移量
-
--- 计算7像素相对于buttonContainer高度的比例
+-- 第二行：跳脸1、跳脸2、粒子
+local pixelOffset = 20
 local containerHeight = buttonContainer.AbsoluteSize.Y
 local pixelOffsetRatio = pixelOffset / containerHeight
+local secondRowY = buttonSettings.yPosition + buttonSettings.heightRatio + pixelOffsetRatio
 
--- 计算新按钮的Y位置（原按钮Y位置 + 原按钮高度 + 7像素）
-local newButtonY = buttonSettings.yPosition + buttonSettings.heightRatio + pixelOffsetRatio
+for i = 4, 6 do
+    local button = Instance.new("TextButton")
+    button.Name = "Button" .. i
+    button.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
+    button.Position = UDim2.new(calculatedStartX + (i-4) * (buttonSettings.widthRatio + buttonSettings.spacing), 0, secondRowY, 0)
+    button.BackgroundColor3 = Color3.new(0, 0, 0)
+    button.BorderColor3 = Color3.new(1, 1, 1)
+    button.BorderSizePixel = 2
+    button.Text = buttonTitles[i-1]  -- 索引调整
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.TextScaled = true
+    button.Parent = buttonContainer
+    button.ZIndex = 3
+    buttons[i] = button
+end
 
--- 在检测按钮下方添加第一个新按钮
-local newButton1 = Instance.new("TextButton")
-newButton1.Name = "Button4"
-newButton1.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
-newButton1.Position = UDim2.new(calculatedStartX, 0, newButtonY, 0) -- 与检测按钮对齐
-newButton1.BackgroundColor3 = Color3.new(0, 0, 0)
-newButton1.BorderColor3 = Color3.new(1, 1, 1)
-newButton1.BorderSizePixel = 2
-newButton1.Text = newButtonTitles[1]
-newButton1.TextColor3 = Color3.new(1, 1, 1)
-newButton1.TextScaled = true
-newButton1.Parent = buttonContainer
-newButton1.ZIndex = 3
-buttons[4] = newButton1
-newButtons[1] = newButton1
+-- 第三行：666、TUPS9362音乐、k00lkiddify音乐
+local thirdRowY = secondRowY + buttonSettings.heightRatio + pixelOffsetRatio
 
--- 在天空按钮下方添加第二个新按钮
-local newButton2 = Instance.new("TextButton")
-newButton2.Name = "Button5"
-newButton2.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
-newButton2.Position = UDim2.new(calculatedStartX + (buttonSettings.widthRatio + buttonSettings.spacing), 0, newButtonY, 0) -- 与天空按钮对齐
-newButton2.BackgroundColor3 = Color3.new(0, 0, 0)
-newButton2.BorderColor3 = Color3.new(1, 1, 1)
-newButton2.BorderSizePixel = 2
-newButton2.Text = newButtonTitles[2]
-newButton2.TextColor3 = Color3.new(1, 1, 1)
-newButton2.TextScaled = true
-newButton2.Parent = buttonContainer
-newButton2.ZIndex = 3
-buttons[5] = newButton2
-newButtons[2] = newButton2
-
--- 在所有物体贴图下方20像素处添加粒子按钮
-local particleButton = Instance.new("TextButton")
-particleButton.Name = "Button6"
-particleButton.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
--- 计算位置：所有物体贴图按钮下方20像素，跳脸2按钮的右边
-local secondRowPixelOffset = 20 -- 像素偏移量
-local secondRowOffsetRatio = secondRowPixelOffset / containerHeight
-
--- 所有物体贴图按钮的Y位置
-local decalButtonY = buttonSettings.yPosition
--- 粒子按钮的Y位置（所有物体贴图按钮下方20像素）
-local particleButtonY = decalButtonY + buttonSettings.heightRatio + secondRowOffsetRatio
-
--- 计算X位置：在跳脸2按钮的右边
-local jumpScare2X = calculatedStartX + (buttonSettings.widthRatio + buttonSettings.spacing) -- 跳脸2按钮的X位置
--- 粒子按钮的X位置（跳脸2按钮右边，使用相同的间距）
-local particleButtonX = jumpScare2X + (buttonSettings.widthRatio + buttonSettings.spacing)
-
-particleButton.Position = UDim2.new(particleButtonX, 0, particleButtonY, 0)
-particleButton.BackgroundColor3 = Color3.new(0, 0, 0)
-particleButton.BorderColor3 = Color3.new(1, 1, 1)
-particleButton.BorderSizePixel = 2
-particleButton.Text = "粒子"
-particleButton.TextColor3 = Color3.new(1, 1, 1)
-particleButton.TextScaled = true
-particleButton.Parent = buttonContainer
-particleButton.ZIndex = 3
-buttons[6] = particleButton
-
--- 在跳脸1下方20像素处添加666按钮
+-- 666按钮
 local button666 = Instance.new("TextButton")
 button666.Name = "Button7"
 button666.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
--- 计算位置：跳脸1按钮下方20像素
-local button666Y = newButtonY + buttonSettings.heightRatio + pixelOffsetRatio
-button666.Position = UDim2.new(calculatedStartX, 0, button666Y, 0) -- 与跳脸1按钮对齐
-button666.BackgroundColor3 = Color3.new(0.2, 0, 0) -- 深红色背景
-button666.BorderColor3 = Color3.new(1, 0, 0) -- 红色边框
+button666.Position = UDim2.new(calculatedStartX, 0, thirdRowY, 0)
+button666.BackgroundColor3 = Color3.new(0.2, 0, 0)
+button666.BorderColor3 = Color3.new(1, 0, 0)
 button666.BorderSizePixel = 2
 button666.Text = "666"
-button666.TextColor3 = Color3.new(1, 0, 0) -- 红色文字
+button666.TextColor3 = Color3.new(1, 0, 0)
 button666.TextScaled = true
 button666.Parent = buttonContainer
 button666.ZIndex = 3
 buttons[7] = button666
+
+-- 音乐按钮数据
+local musicButtonsData = {
+    {name = "TUPS9362音乐", soundId = "1839246734", playbackSpeed = 1.0},
+    {name = "k00lkiddify音乐", soundId = "1839246711", playbackSpeed = 0.8},
+    {name = "c00lkidd音乐", soundId = "104181508980428", playbackSpeed = 0.2},
+    {name = "无法逃脱TUPS9362", soundId = "8894394467", playbackSpeed = 1.0},
+    {name = "惊慌", soundId = "127097493971664", playbackSpeed = 1.0},
+    {name = "TUPS9362主题一", soundId = "101841916671193", playbackSpeed = 1.0},
+    {name = "跳跃风格二", soundId = "76578817848504", playbackSpeed = 1.0},
+    {name = "音乐：傻瓜", soundId = "102295928741521", playbackSpeed = 0.13}
+}
+
+-- 创建音乐按钮
+local musicButtons = {}
+local firstMusicButtonX = calculatedStartX + buttonSettings.widthRatio + buttonSettings.spacing
+local secondMusicButtonX = calculatedStartX + 2 * (buttonSettings.widthRatio + buttonSettings.spacing)
+
+-- 第一个音乐按钮在666的右边
+local firstMusicButton = Instance.new("TextButton")
+firstMusicButton.Name = "MusicButton1"
+firstMusicButton.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
+firstMusicButton.Position = UDim2.new(firstMusicButtonX, 0, thirdRowY, 0)
+firstMusicButton.BackgroundColor3 = Color3.new(0, 0, 0)
+firstMusicButton.BorderColor3 = Color3.new(1, 1, 1)
+firstMusicButton.BorderSizePixel = 2
+firstMusicButton.Text = musicButtonsData[1].name
+firstMusicButton.TextColor3 = Color3.new(1, 1, 1)
+firstMusicButton.TextScaled = true
+firstMusicButton.Parent = buttonContainer
+firstMusicButton.ZIndex = 3
+musicButtons[1] = firstMusicButton
+
+-- 第二个音乐按钮在666的右边第二个位置
+local secondMusicButton = Instance.new("TextButton")
+secondMusicButton.Name = "MusicButton2"
+secondMusicButton.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
+secondMusicButton.Position = UDim2.new(secondMusicButtonX, 0, thirdRowY, 0)
+secondMusicButton.BackgroundColor3 = Color3.new(0, 0, 0)
+secondMusicButton.BorderColor3 = Color3.new(1, 1, 1)
+secondMusicButton.BorderSizePixel = 2
+secondMusicButton.Text = musicButtonsData[2].name
+secondMusicButton.TextColor3 = Color3.new(1, 1, 1)
+secondMusicButton.TextScaled = true
+secondMusicButton.Parent = buttonContainer
+secondMusicButton.ZIndex = 3
+musicButtons[2] = secondMusicButton
+
+-- 第四行：第三、四、五个音乐按钮
+local fourthRowY = thirdRowY + buttonSettings.heightRatio + pixelOffsetRatio
+
+for i = 3, 5 do
+    local musicButton = Instance.new("TextButton")
+    musicButton.Name = "MusicButton" .. i
+    musicButton.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
+    musicButton.Position = UDim2.new(
+        calculatedStartX + (i-3) * (buttonSettings.widthRatio + buttonSettings.spacing), 
+        0, 
+        fourthRowY, 
+        0
+    )
+    musicButton.BackgroundColor3 = Color3.new(0, 0, 0)
+    musicButton.BorderColor3 = Color3.new(1, 1, 1)
+    musicButton.BorderSizePixel = 2
+    musicButton.Text = musicButtonsData[i].name
+    musicButton.TextColor3 = Color3.new(1, 1, 1)
+    musicButton.TextScaled = true
+    musicButton.Parent = buttonContainer
+    musicButton.ZIndex = 3
+    musicButtons[i] = musicButton
+end
+
+-- 第五行：第六、七、八个音乐按钮
+local fifthRowY = fourthRowY + buttonSettings.heightRatio + pixelOffsetRatio
+
+for i = 6, 8 do
+    local musicButton = Instance.new("TextButton")
+    musicButton.Name = "MusicButton" .. i
+    musicButton.Size = UDim2.new(buttonSettings.widthRatio, 0, buttonSettings.heightRatio, 0)
+    musicButton.Position = UDim2.new(
+        calculatedStartX + (i-6) * (buttonSettings.widthRatio + buttonSettings.spacing), 
+        0, 
+        fifthRowY, 
+        0
+    )
+    musicButton.BackgroundColor3 = Color3.new(0, 0, 0)
+    musicButton.BorderColor3 = Color3.new(1, 1, 1)
+    musicButton.BorderSizePixel = 2
+    musicButton.Text = musicButtonsData[i].name
+    musicButton.TextColor3 = Color3.new(1, 1, 1)
+    musicButton.TextScaled = true
+    musicButton.Parent = buttonContainer
+    musicButton.ZIndex = 3
+    musicButtons[i] = musicButton
+end
 
 -- Backdoor Detection System
 local dateTimeNow = DateTime.now
@@ -679,6 +725,44 @@ local function execute666Script()
     notify("✅ 666恐怖效果已应用！")
 end
 
+-- 音乐播放函数
+local function executeMusicScript(soundId, playbackSpeed)
+    if not attached or not backdoor then
+        notify("❌ 请先检测后门！")
+        return
+    end
+    
+    local musicScript = string.format([[
+        -- 停止所有现有音乐
+        for _, sound in pairs(game.Workspace:GetChildren()) do
+            if sound:IsA("Sound") then
+                sound:Stop()
+                sound:Destroy()
+            end
+        end
+
+        -- 播放新音乐
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://%s"
+        sound.PlaybackSpeed = %s
+        sound.Volume = 10
+        sound.Looped = true
+        sound.Parent = game.Workspace
+        sound:Play()
+        
+        -- 确保音乐循环播放
+        sound.Ended:Connect(function()
+            sound:Play()
+        end)
+    ]], soundId, tostring(playbackSpeed))
+    
+    if backdoor.ClassName == "RemoteEvent" then
+        backdoor:FireServer(musicScript)
+    elseif backdoor.ClassName == "RemoteFunction" then
+        backdoor:InvokeServer(musicScript)
+    end
+end
+
 -- 自动检测并执行天空盒修改函数
 local function autoDetectAndExecuteSkybox()
     if not attached or not backdoor then
@@ -749,6 +833,22 @@ local function autoDetectAndExecute666()
     end
 end
 
+-- 自动检测并执行音乐函数
+local function autoDetectAndExecuteMusic(soundId, playbackSpeed, musicName)
+    if not attached or not backdoor then
+        if scanGame() then
+            task.wait(0.5)
+            executeMusicScript(soundId, playbackSpeed)
+            notify("✅ 正在播放音乐：" .. musicName)
+        else
+            notify("❌ 未找到后门，无法播放音乐！")
+        end
+    else
+        executeMusicScript(soundId, playbackSpeed)
+        notify("✅ 正在播放音乐：" .. musicName)
+    end
+end
+
 -- Button 1: Backdoor Detection
 buttons[1].MouseButton1Click:Connect(function()
     attached = false
@@ -788,3 +888,10 @@ end)
 buttons[7].MouseButton1Click:Connect(function()
     autoDetectAndExecute666()
 end)
+
+-- 音乐按钮点击事件
+for i, musicData in ipairs(musicButtonsData) do
+    musicButtons[i].MouseButton1Click:Connect(function()
+        autoDetectAndExecuteMusic(musicData.soundId, musicData.playbackSpeed, musicData.name)
+    end)
+end
