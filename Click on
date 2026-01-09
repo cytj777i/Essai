@@ -1,0 +1,294 @@
+-- ClickEffectModule.lua
+-- 通用点击特效UI模块
+-- 支持Roblox UI元素的点击波纹特效
+
+local ClickEffectModule = {}
+ClickEffectModule.__index = ClickEffectModule
+
+-- 默认配置
+ClickEffectModule.DEFAULT_CONFIG = {
+    size = 26,                      -- 特效最大尺寸
+    duration = 0.8,                 -- 特效持续时间
+    color = Color3.fromRGB(255, 215, 0), -- 金色
+    strokeThickness = 1,            -- 边框厚度
+    opacity = 0.7,                  -- 初始不透明度
+    enabled = true,                 -- 是否启用特效
+}
+
+-- 创建新的特效实例
+function ClickEffectModule.new(customConfig)
+    local self = setmetatable({}, ClickEffectModule)
+    
+    -- 合并自定义配置
+    self.config = {}
+    for k, v in pairs(ClickEffectModule.DEFAULT_CONFIG) do
+        self.config[k] = v
+    end
+    if customConfig then
+        for k, v in pairs(customConfig) do
+            self.config[k] = v
+        end
+    end
+    
+    -- 获取TweenService
+    self.tweenService = game:GetService("TweenService")
+    
+    return self
+end
+
+-- 更新配置
+function ClickEffectModule:setConfig(key, value)
+    self.config[key] = value
+end
+
+-- 创建点击特效
+function ClickEffectModule:createEffect(parentFrame, mousePosition)
+    if not self.config.enabled then
+        return false
+    end
+    
+    local framePos = parentFrame.AbsolutePosition
+    local frameSize = parentFrame.AbsoluteSize
+    
+    -- 检查点击是否在框架内
+    if mousePosition.X < framePos.X or mousePosition.X > framePos.X + frameSize.X or
+       mousePosition.Y < framePos.Y or mousePosition.Y > framePos.Y + frameSize.Y then
+        return false
+    end
+    
+    local relativeX = (mousePosition.X - framePos.X) / frameSize.X
+    local relativeY = (mousePosition.Y - framePos.Y) / frameSize.Y
+    
+    -- 创建特效容器
+    local clickEffect = Instance.new("Frame")
+    clickEffect.Name = "ClickEffect"
+    clickEffect.BackgroundTransparency = 1
+    clickEffect.BorderSizePixel = 0
+    clickEffect.Size = UDim2.new(0, 0, 0, 0)
+    clickEffect.AnchorPoint = Vector2.new(0.5, 0.5)
+    clickEffect.Position = UDim2.new(relativeX, 0, relativeY, 0)
+    clickEffect.ZIndex = parentFrame.ZIndex + 1
+    clickEffect.Parent = parentFrame
+    
+    -- 创建环
+    local ring = Instance.new("Frame")
+    ring.Name = "Ring"
+    ring.BackgroundTransparency = 1
+    ring.Size = UDim2.new(1, 0, 1, 0)
+    ring.Parent = clickEffect
+    
+    local ringCorner = Instance.new("UICorner")
+    ringCorner.CornerRadius = UDim.new(1, 0)
+    ringCorner.Parent = ring
+    
+    local ringStroke = Instance.new("UIStroke")
+    ringStroke.Color = self.config.color
+    ringStroke.Thickness = self.config.strokeThickness
+    ringStroke.Transparency = 1 - self.config.opacity
+    ringStroke.Parent = ring
+    
+    -- 动画
+    local tweenInfo = TweenInfo.new(
+        self.config.duration,
+        Enum.EasingStyle.Quad,
+        Enum.EasingDirection.Out
+    )
+    
+    local sizeTween = self.tweenService:Create(
+        clickEffect,
+        tweenInfo,
+        {Size = UDim2.new(0, self.config.size, 0, self.config.size)}
+    )
+    
+    local opacityTween = self.tweenService:Create(
+        ringStroke,
+        tweenInfo,
+        {Transparency = 1}
+    )
+    
+    sizeTween:Play()
+    opacityTween:Play()
+    
+    sizeTween.Completed:Connect(function()
+        clickEffect:Destroy()
+    end)
+    
+    return true
+end
+
+-- 创建点击处理器
+function ClickEffectModule:createClickHandler(element)
+    return function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            return self:createEffect(element, input.Position)
+        end
+        return false
+    end
+end
+
+-- 为UI元素启用点击特效
+function ClickEffectModule:enableForElement(element)
+    if not element or not element:IsA("GuiObject") then
+        warn("ClickEffectModule: 无效的元素，必须是GuiObject类型")
+        return
+    end
+    
+    local handler = self:createClickHandler(element)
+    element.InputBegan:Connect(handler)
+    
+    return handler
+end
+
+-- 批量为多个元素启用特效
+function ClickEffectModule:enableForElements(elements)
+    local handlers = {}
+    for _, element in ipairs(elements) do
+        if element and element:IsA("GuiObject") then
+            local handler = self:enableForElement(element)
+            table.insert(handlers, {element = element, handler = handler})
+        end
+    end
+    return handlers
+end
+
+-- 为整个容器启用特效（排除特定元素）
+function ClickEffectModule:enableForContainer(container, excludeElements)
+    if not container or not container:IsA("GuiObject") then
+        warn("ClickEffectModule: 无效的容器")
+        return
+    end
+    
+    excludeElements = excludeElements or {}
+    local excludeMap = {}
+    for _, elem in ipairs(excludeElements) do
+        excludeMap[elem] = true
+    end
+    
+    -- 获取所有子元素
+    local function getAllChildren(parent)
+        local children = {}
+        for _, child in ipairs(parent:GetChildren()) do
+            if child:IsA("GuiObject") then
+                table.insert(children, child)
+                local subChildren = getAllChildren(child)
+                for _, sub in ipairs(subChildren) do
+                    table.insert(children, sub)
+                end
+            end
+        end
+        return children
+    end
+    
+    local allElements = getAllChildren(container)
+    local elementsToEnable = {}
+    
+    for _, element in ipairs(allElements) do
+        if not excludeMap[element] then
+            table.insert(elementsToEnable, element)
+        end
+    end
+    
+    return self:enableForElements(elementsToEnable)
+end
+
+-- 快捷方法：为界面所有元素启用特效
+function ClickEffectModule:enableForAll(mainFrame)
+    local excludeElements = {}
+    
+    return {
+        -- 为所有通用元素启用
+        enableCommon = function(self, elements)
+            if elements.imageDisplay then
+                self:enableForElement(elements.imageDisplay)
+            end
+            if elements.searchButton then
+                self:enableForElement(elements.searchButton)
+            end
+            if elements.announcementButton then
+                self:enableForElement(elements.announcementButton)
+            end
+            if elements.generalButton then
+                self:enableForElement(elements.generalButton)
+            end
+            if elements.inputBackground then
+                self:enableForElement(elements.inputBackground)
+            end
+            if elements.copyButton then
+                self:enableForElement(elements.copyButton)
+            end
+            if elements.searchBar then
+                self:enableForElement(elements.searchBar)
+            end
+            if elements.topLeftText then
+                self:enableForElement(elements.topLeftText)
+            end
+            if elements.tabBarContainer then
+                self:enableForElement(elements.tabBarContainer)
+            end
+            if elements.noResultContainer then
+                self:enableForElement(elements.noResultContainer)
+            end
+            if elements.topBorder then
+                self:enableForElement(elements.topBorder)
+            end
+            if elements.bottomBorder then
+                self:enableForElement(elements.bottomBorder)
+            end
+            if elements.leftBorder then
+                self:enableForElement(elements.leftBorder)
+            end
+            if elements.rightBorder then
+                self:enableForElement(elements.rightBorder)
+            end
+            if elements.resultButton then
+                self:enableForElement(elements.resultButton)
+            end
+            
+            return self
+        end,
+        
+        -- 为容器启用（排除特定区域）
+        enableContainer = function(self, container, excludeYStart)
+            if container then
+                local function handler(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+                       input.UserInputType == Enum.UserInputType.Touch then
+                        local pos = input.Position
+                        local containerPos = container.AbsolutePosition
+                        local containerSize = container.AbsoluteSize
+                        
+                        -- 检查是否在排除区域外
+                        if excludeYStart then
+                            if pos.Y >= containerPos.Y + excludeYStart and
+                               pos.Y <= containerPos.Y + containerSize.Y then
+                                return self:createEffect(container, input.Position)
+                            end
+                        else
+                            return self:createEffect(container, input.Position)
+                        end
+                    end
+                    return false
+                end
+                
+                container.InputBegan:Connect(handler)
+            end
+            return self
+        end,
+        
+        -- 为主框架启用
+        enableMainFrame = function(self)
+            if mainFrame then
+                mainFrame.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+                       input.UserInputType == Enum.UserInputType.Touch then
+                        return self:createEffect(mainFrame, input.Position)
+                    end
+                end)
+            end
+            return self
+        end
+    }
+end
+
+return ClickEffectModule
