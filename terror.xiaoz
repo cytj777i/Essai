@@ -1,0 +1,556 @@
+-- 本地客户端脚本 - 追逐NPC（640x640方形比例修复版）永久死亡特效版（全屏拉伸版）
+-- 放置在 StarterPlayer > StarterCharacterScripts 或 StarterPlayer > StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+-- 配置
+local NPC_IMAGE_ID = "88026982178532"  -- 图片资源ID（确保是640x640图片）
+local SPAWN_DISTANCE = 50  -- 生成距离
+local CHASE_SPEED = 16  -- 追逐速度
+local COUNTDOWN_TIME = 10  -- 倒计时秒数
+local NPC_SIZE = Vector3.new(6, 6, 0.2)  -- 修改为6x6方形，保持640x640比例
+local STOP_DISTANCE = 0  --触碰玩家
+
+-- 变量
+local npc = nil
+local npcRootPart = nil
+local isChasing = false
+local countdownGui = nil
+local chaseConnection = nil
+local facingConnection = nil
+local deathScreenGui = nil  -- 存储死亡界面
+
+-- 创建永久死亡特效界面（全屏拉伸版）
+local function createDeathScreen()
+    -- 如果已存在则先销毁
+    if deathScreenGui then
+        deathScreenGui:Destroy()
+    end
+    
+    -- 创建全屏GUI
+    deathScreenGui = Instance.new("ScreenGui")
+    deathScreenGui.Name = "DeathScreen"
+    deathScreenGui.ResetOnSpawn = false
+    deathScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    deathScreenGui.IgnoreGuiInset = true  -- 忽略顶部和底部安全区域，真正全屏
+    deathScreenGui.Parent = player:WaitForChild("PlayerGui")
+    
+    -- 创建全屏黑色背景
+    local blackBackground = Instance.new("Frame")
+    blackBackground.Name = "BlackBackground"
+    blackBackground.Size = UDim2.new(1, 0, 1, 0)
+    blackBackground.BackgroundColor3 = Color3.new(0, 0, 0)
+    blackBackground.BackgroundTransparency = 0  -- 完全不透明
+    blackBackground.BorderSizePixel = 0
+    blackBackground.ZIndex = 1
+    blackBackground.Parent = deathScreenGui
+    
+    -- 创建全屏拉伸贴脸图片（确保占满整个手机屏幕）
+    local faceImage = Instance.new("ImageLabel")
+    faceImage.Name = "DeathFace"
+    faceImage.Size = UDim2.new(1, 0, 1, 0)  -- 占满整个屏幕
+    faceImage.Position = UDim2.new(0, 0, 0, 0)
+    faceImage.AnchorPoint = Vector2.new(0.5, 0.5)
+    faceImage.Position = UDim2.new(0.5, 0, 0.5, 0)
+    faceImage.BackgroundTransparency = 1
+    faceImage.Image = "rbxassetid://" .. NPC_IMAGE_ID
+    faceImage.ImageTransparency = 0  -- 完全不透明
+    faceImage.ScaleType = Enum.ScaleType.Fit  -- 使用Fit确保图片完全显示
+    faceImage.ZIndex = 2
+    faceImage.Parent = deathScreenGui
+    
+    -- 创建一个覆盖层，确保图片拉伸填充屏幕
+    local stretchOverlay = Instance.new("ImageLabel")
+    stretchOverlay.Name = "StretchOverlay"
+    stretchOverlay.Size = UDim2.new(1, 0, 1, 0)
+    stretchOverlay.Position = UDim2.new(0, 0, 0, 0)
+    stretchOverlay.BackgroundTransparency = 1
+    stretchOverlay.Image = "rbxassetid://" .. NPC_IMAGE_ID
+    stretchOverlay.ImageTransparency = 0
+    stretchOverlay.ScaleType = Enum.ScaleType.Stretch  -- 使用拉伸模式确保占满屏幕
+    stretchOverlay.ZIndex = 3
+    stretchOverlay.Parent = deathScreenGui
+    
+    -- 创建血红色文字（调整位置到屏幕中央）
+    local bloodText = Instance.new("TextLabel")
+    bloodText.Name = "BloodText"
+    bloodText.Size = UDim2.new(0.9, 0, 0, 120)  -- 宽度占屏幕90%，适应不同屏幕
+    bloodText.Position = UDim2.new(0.05, 0, 0.7, 0)  -- 放在屏幕底部70%位置
+    bloodText.AnchorPoint = Vector2.new(0, 0.5)
+    bloodText.BackgroundTransparency = 1
+    bloodText.Text = "你永远逃离不了xiaoz"
+    bloodText.Font = Enum.Font.GothamBold
+    bloodText.TextSize = 56  -- 稍微调小以适应手机屏幕
+    bloodText.TextColor3 = Color3.fromRGB(255, 0, 0)
+    bloodText.TextTransparency = 0  -- 完全不透明
+    bloodText.TextStrokeTransparency = 0.5
+    bloodText.TextStrokeColor3 = Color3.new(0, 0, 0)
+    bloodText.TextWrapped = true
+    bloodText.ZIndex = 4
+    bloodText.Parent = deathScreenGui
+    
+    -- 添加抖动效果动画（循环）
+    coroutine.wrap(function()
+        local originalPosition = bloodText.Position
+        while deathScreenGui and deathScreenGui.Parent do
+            -- 轻微抖动效果
+            local shakeTween = TweenService:Create(
+                bloodText,
+                TweenInfo.new(0.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                {Position = UDim2.new(0.05, math.random(-5, 5), 0.7, math.random(-5, 5))}
+            )
+            shakeTween:Play()
+            wait(0.1)
+            
+            local returnTween = TweenService:Create(
+                bloodText,
+                TweenInfo.new(0.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                {Position = originalPosition}
+            )
+            returnTween:Play()
+            wait(1)  -- 每隔1秒抖动一次
+        end
+    end)()
+    
+    return deathScreenGui
+end
+
+-- 显示永久死亡特效
+local function showPermanentDeathEffect()
+    -- 创建永久死亡界面
+    deathScreenGui = createDeathScreen()
+    
+    -- 添加进入动画
+    local blackBackground = deathScreenGui:FindFirstChild("BlackBackground")
+    local faceImage = deathScreenGui:FindFirstChild("DeathFace")
+    local stretchOverlay = deathScreenGui:FindFirstChild("StretchOverlay")
+    local bloodText = deathScreenGui:FindFirstChild("BloodText")
+    
+    if blackBackground then
+        blackBackground.BackgroundTransparency = 1
+        TweenService:Create(
+            blackBackground,
+            TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 0}
+        ):Play()
+    end
+    
+    if faceImage then
+        faceImage.ImageTransparency = 1
+        TweenService:Create(
+            faceImage,
+            TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {ImageTransparency = 0}
+        ):Play()
+    end
+    
+    if stretchOverlay then
+        stretchOverlay.ImageTransparency = 1
+        TweenService:Create(
+            stretchOverlay,
+            TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {ImageTransparency = 0}
+        ):Play()
+    end
+    
+    if bloodText then
+        bloodText.TextTransparency = 1
+        wait(0.5)
+        TweenService:Create(
+            bloodText,
+            TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {TextTransparency = 0}
+        ):Play()
+    end
+    
+    -- 播放音效（如果需要可以取消注释）
+    -- local sound = Instance.new("Sound")
+    -- sound.SoundId = "rbxassetid://YOUR_SOUND_ID"
+    -- sound.Volume = 1
+    -- sound.Parent = Workspace
+    -- sound:Play()
+end
+
+-- 移除死亡特效
+local function removeDeathEffect()
+    if deathScreenGui then
+        deathScreenGui:Destroy()
+        deathScreenGui = nil
+    end
+end
+
+-- 创建NPC（640x640方形比例）
+local function createNPC()
+    -- 如果已存在则先销毁
+    if npc then
+        npc:Destroy()
+    end
+    
+    -- 计算生成位置（玩家前方）
+    local spawnPosition = rootPart.Position + rootPart.CFrame.LookVector * SPAWN_DISTANCE
+    
+    -- 地面检测
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+    rayParams.FilterDescendantsInstances = {character}
+    
+    local groundRay = Workspace:Raycast(
+        spawnPosition + Vector3.new(0, 100, 0), 
+        Vector3.new(0, -200, 0), 
+        rayParams
+    )
+    
+    if groundRay then
+        spawnPosition = groundRay.Position + Vector3.new(0, NPC_SIZE.Y / 2, 0)
+    else
+        spawnPosition = spawnPosition + Vector3.new(0, NPC_SIZE.Y / 2 + 5, 0)
+    end
+    
+    -- 创建NPC模型
+    npc = Instance.new("Model")
+    npc.Name = "ChasingNPC"
+    
+    -- 创建根部件
+    npcRootPart = Instance.new("Part")
+    npcRootPart.Name = "HumanoidRootPart"
+    npcRootPart.Size = Vector3.new(2, 2, 2)
+    npcRootPart.CFrame = CFrame.new(spawnPosition)
+    npcRootPart.Anchored = false
+    npcRootPart.CanCollide = false
+    npcRootPart.Transparency = 1
+    npcRootPart.Parent = npc
+    
+    -- 创建视觉部件（显示图片）- 6x6方形
+    local visualPart = Instance.new("Part")
+    visualPart.Name = "Visual"
+    visualPart.Size = NPC_SIZE  -- 使用6x6方形
+    visualPart.CFrame = CFrame.new(spawnPosition)
+    visualPart.Anchored = false
+    visualPart.CanCollide = false
+    visualPart.Transparency = 0
+    visualPart.Parent = npc
+    
+    -- 创建SurfaceGui（用于显示640x640方形图片）
+    local surfaceGui = Instance.new("SurfaceGui")
+    surfaceGui.Name = "ImageSurfaceGui"
+    surfaceGui.Face = Enum.NormalId.Front
+    surfaceGui.LightInfluence = 0
+    surfaceGui.Brightness = 1
+    surfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize  -- 固定尺寸模式
+    surfaceGui.PixelsPerStud = 100  -- 每Stud像素数，调整这个值可以改变图片清晰度
+    
+    -- 计算合适的尺寸以保持640x640比例
+    local guiSize = Vector2.new(600, 600)  -- 对应6x6 Studs，每Stud 100像素
+    surfaceGui.CanvasSize = guiSize
+    
+    -- 创建ImageLabel（填充整个SurfaceGui）
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.Name = "NPCImage"
+    imageLabel.Size = UDim2.new(1, 0, 1, 0)
+    imageLabel.BackgroundTransparency = 1
+    imageLabel.Image = "rbxassetid://" .. NPC_IMAGE_ID
+    imageLabel.ScaleType = Enum.ScaleType.Crop  -- 使用Crop保持原始比例
+    imageLabel.Parent = surfaceGui
+    
+    surfaceGui.Parent = visualPart
+    
+    -- 创建背面的图片（可选）
+    local backSurfaceGui = Instance.new("SurfaceGui")
+    backSurfaceGui.Name = "BackSurfaceGui"
+    backSurfaceGui.Face = Enum.NormalId.Back
+    backSurfaceGui.LightInfluence = 0
+    backSurfaceGui.Brightness = 1
+    backSurfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+    backSurfaceGui.PixelsPerStud = 100
+    backSurfaceGui.CanvasSize = guiSize
+    
+    local backImageLabel = Instance.new("ImageLabel")
+    backImageLabel.Name = "BackNPCImage"
+    backImageLabel.Size = UDim2.new(1, 0, 1, 0)
+    backImageLabel.BackgroundTransparency = 1
+    backImageLabel.Image = "rbxassetid://" .. NPC_IMAGE_ID
+    backImageLabel.ScaleType = Enum.ScaleType.Crop  -- 使用Crop保持原始比例
+    backImageLabel.Parent = backSurfaceGui
+    
+    backSurfaceGui.Parent = visualPart
+    
+    -- 创建焊接到根部件
+    local weld = Instance.new("WeldConstraint")
+    weld.Name = "VisualWeld"
+    weld.Part0 = npcRootPart
+    weld.Part1 = visualPart
+    weld.Parent = npcRootPart
+    
+    -- 创建移动体速度
+    local linearVelocity = Instance.new("LinearVelocity")
+    linearVelocity.Name = "NPCVelocity"
+    linearVelocity.MaxForce = math.huge
+    linearVelocity.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+    linearVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+    linearVelocity.Parent = npcRootPart
+    
+    local attachment = Instance.new("Attachment")
+    attachment.Name = "RootAttachment"
+    attachment.Parent = npcRootPart
+    linearVelocity.Attachment0 = attachment
+    
+    -- 创建AlignOrientation保持NPC垂直
+    local alignOrientation = Instance.new("AlignOrientation")
+    alignOrientation.Name = "NPCOrientation"
+    alignOrientation.MaxTorque = math.huge
+    alignOrientation.Responsiveness = 200
+    alignOrientation.Parent = npcRootPart
+    
+    local orientationAttachment = Instance.new("Attachment")
+    orientationAttachment.Name = "OrientationAttachment"
+    orientationAttachment.Parent = npcRootPart
+    alignOrientation.Attachment0 = orientationAttachment
+    
+    npc.Parent = Workspace
+    
+    -- 碰撞检测
+    visualPart.Touched:Connect(function(hit)
+        if isChasing and hit.Parent == character then
+            local hitHumanoid = hit.Parent:FindFirstChild("Humanoid")
+            if hitHumanoid and hitHumanoid.Health > 0 then
+                hitHumanoid.Health = 0  -- 击杀玩家
+                
+                -- 玩家死亡时显示永久特效
+                wait(0.1)  -- 稍微延迟以确保死亡状态已更新
+                if hitHumanoid.Health <= 0 then
+                    showPermanentDeathEffect()
+                end
+            end
+        end
+    end)
+    
+    return npc, npcRootPart, linearVelocity
+end
+
+-- 创建倒计时GUI
+local function createCountdownGui()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "NPCCountdownGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = player:WaitForChild("PlayerGui")
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "CountdownText"
+    textLabel.Size = UDim2.new(1, 0, 0, 50)
+    textLabel.Position = UDim2.new(0, 0, 0, 10)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = tostring(COUNTDOWN_TIME)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextSize = 48
+    textLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.Parent = screenGui
+    
+    countdownGui = textLabel
+    return countdownGui
+end
+
+-- 地面检测函数
+local function getGroundHeight(position)
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+    rayParams.FilterDescendantsInstances = {npc, character}
+    
+    local groundRay = Workspace:Raycast(
+        position + Vector3.new(0, 50, 0), 
+        Vector3.new(0, -100, 0), 
+        rayParams
+    )
+    
+    if groundRay then
+        return groundRay.Position.Y + NPC_SIZE.Y / 2
+    end
+    
+    return position.Y
+end
+
+-- 追逐玩家
+local function startChasing()
+    if not npc or not npcRootPart or not rootPart then return end
+    
+    isChasing = true
+    
+    local linearVelocity = npcRootPart:FindFirstChild("NPCVelocity")
+    if not linearVelocity then return end
+    
+    -- 停止朝向更新（追逐时自然朝向移动方向）
+    if facingConnection then
+        facingConnection:Disconnect()
+        facingConnection = nil
+    end
+    
+    -- 追逐循环
+    chaseConnection = RunService.Heartbeat:Connect(function(dt)
+        if not npc or not npcRootPart or not rootPart or not isChasing or not npcRootPart.Parent then
+            return
+        end
+        
+        -- 计算到玩家的方向和距离
+        local toPlayer = rootPart.Position - npcRootPart.Position
+        local distance = toPlayer.Magnitude
+        
+        -- 地面检测
+        local groundY = getGroundHeight(npcRootPart.Position)
+        
+        -- 保持在地面上
+        if math.abs(npcRootPart.Position.Y - groundY) > 0.5 then
+            npcRootPart.CFrame = CFrame.new(
+                npcRootPart.Position.X,
+                groundY,
+                npcRootPart.Position.Z
+            )
+        end
+        
+        if distance > STOP_DISTANCE then
+            -- 计算方向（只考虑X和Z轴，忽略Y轴高度差）
+            local direction = Vector3.new(toPlayer.X, 0, toPlayer.Z).Unit
+            
+            -- 设置移动速度
+            local targetVelocity = direction * CHASE_SPEED
+            linearVelocity.VectorVelocity = targetVelocity
+            
+            -- 更新朝向（平滑转向）
+            local currentCFrame = npcRootPart.CFrame
+            local targetCFrame = CFrame.new(npcRootPart.Position, npcRootPart.Position + direction)
+            local newCFrame = currentCFrame:Lerp(targetCFrame, math.min(dt * 10, 1))
+            npcRootPart.CFrame = CFrame.new(npcRootPart.Position) * newCFrame.Rotation
+        else
+            -- 接近玩家时停止移动
+            linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
+            
+            -- 停止后仍然保持朝向玩家
+            local direction = Vector3.new(toPlayer.X, 0, toPlayer.Z).Unit
+            if direction.Magnitude > 0 then
+                npcRootPart.CFrame = CFrame.new(npcRootPart.Position, npcRootPart.Position + direction)
+            end
+        end
+    end)
+end
+
+-- 停止追逐
+local function stopChasing()
+    isChasing = false
+    
+    if chaseConnection then
+        chaseConnection:Disconnect()
+        chaseConnection = nil
+    end
+    
+    if facingConnection then
+        facingConnection:Disconnect()
+        facingConnection = nil
+    end
+    
+    if countdownGui then
+        countdownGui.Parent.Visible = false
+    end
+    
+    if npc then
+        npc:Destroy()
+        npc = nil
+    end
+end
+
+-- 倒计时开始
+local function startCountdown()
+    if not countdownGui then
+        countdownGui = createCountdownGui()
+    end
+    
+    countdownGui.Visible = true
+    countdownGui.TextTransparency = 0
+    
+    for i = COUNTDOWN_TIME, 0, -1 do
+        countdownGui.Text = tostring(i)
+        
+        -- 闪烁效果（最后3秒）
+        if i <= 3 then
+            local tween = TweenService:Create(
+                countdownGui,
+                TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true),
+                {TextTransparency = 0.5}
+            )
+            tween:Play()
+            
+            if i == 0 then
+                tween:Cancel()
+                countdownGui.TextTransparency = 0
+            end
+        end
+        
+        wait(1)
+    end
+    
+    countdownGui.Visible = false
+end
+
+-- 玩家死亡事件
+local function onPlayerDied()
+    stopChasing()
+    
+    -- 等待玩家重生
+    local newCharacter = player.CharacterAdded:Wait()
+    
+    -- 重生时移除死亡特效
+    wait(0.1)  -- 稍微延迟确保重生完成
+    removeDeathEffect()
+    
+    -- 重新获取角色部件
+    character = newCharacter
+    humanoid = character:WaitForChild("Humanoid")
+    rootPart = character:WaitForChild("HumanoidRootPart")
+    
+    -- 重新连接死亡事件
+    humanoid.Died:Connect(onPlayerDied)
+    
+    -- 延迟后重新启动
+    wait(2)
+    main()
+end
+
+-- 主函数
+local function main()
+    -- 确保没有死亡特效残留
+    removeDeathEffect()
+    
+    -- 创建NPC
+    local linearVelocity
+    npc, npcRootPart, linearVelocity = createNPC()
+    
+    -- 开始朝向更新（倒计时期间）
+    facingConnection = RunService.Heartbeat:Connect(function()
+        if npcRootPart and rootPart then
+            local direction = (rootPart.Position - npcRootPart.Position).Unit
+            if direction.Magnitude > 0 then
+                local lookCFrame = CFrame.lookAt(npcRootPart.Position, npcRootPart.Position + direction)
+                npcRootPart.CFrame = CFrame.new(npcRootPart.Position) * lookCFrame.Rotation
+            end
+        end
+    end)
+    
+    -- 开始倒计时
+    startCountdown()
+    
+    -- 倒计时结束后开始追逐
+    startChasing()
+end
+
+-- 初始化
+humanoid.Died:Connect(onPlayerDied)
+main()
