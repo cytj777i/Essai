@@ -1,9 +1,9 @@
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/dream77239/china-ui/refs/heads/main/main%20(6).lua"))()
 local Window = WindUI:CreateWindow({
-    Title = "终极战场",
+    Title = "南极帝企鹅终极战场",
     Icon = "dick",
     IconThemed = true,
-    Author = "南极帝企鹅终极战场",
+    Author = "1",
     Folder = "CloudHub",
     Size = UDim2.fromOffset(500, 400),
     Transparent = true,
@@ -733,6 +733,12 @@ Tab:Button({
     end
 })
 
+-- 全图秒杀功能整合
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
 local _F = {}
 
 _F.P = game:GetService("Players")
@@ -971,7 +977,6 @@ _F.L.CharacterAdded:Connect(function()
         _F.Cfg.Enabled = false
     end
 end)
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -1072,153 +1077,6 @@ local function fireDash()
         end)
     end
 end
-
-local function toggleWallCombo(state)
-    wallComboEnabled = state
-    if wallComboConn then wallComboConn:Disconnect(); wallComboConn = nil end
-    if dashConn then dashConn:Disconnect(); dashConn = nil end
-    if wallComboEnabled then
-        wallComboConn = RunService.Heartbeat:Connect(function()
-            executeWallCombo()
-        end)
-        dashConn = RunService.Heartbeat:Connect(function()
-            fireDash()
-        end)
-    end
-end
-
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == wallComboKey then
-        executeWallCombo()
-    end
-end)
-
-local Configs = {
-    IgnoreFriends = false,
-    MaxDistance = 100,
-    Damage = 9999,
-    HealthLimit = 0,
-    DashInterval = 0.25,
-    AttackInterval = 0.001
-}
-
-local running = false
-local conn
-local PlayersList = {}
-local index = 1
-local lastDash = 0
-
-local function C()
-    return LocalPlayer.Character
-end
-
-local function HRP()
-    if C() and C():FindFirstChild("Humanoid") then
-        return C().Humanoid.RootPart
-    end
-end
-
-local function checkFriend(p)
-    return LocalPlayer:IsFriendsWith(p.UserId)
-end
-
-local function triggerAuraDash()
-    local now = tick()
-    if now - lastDash < Configs.DashInterval then return end
-    lastDash = now
-    local hrp = HRP()
-    if not hrp then return end
-    local dashRemote = ReplicatedStorage.Remotes.Character:FindFirstChild("Dash")
-    if dashRemote then
-        pcall(function()
-            dashRemote:FireServer(
-                hrp.CFrame,
-                "L",
-                hrp.CFrame.LookVector,
-                nil,
-                now
-            )
-        end)
-    end
-end
-
-local function getAuraTargets()
-    local targets = {}
-    local hrp = HRP()
-    if not hrp then return targets end
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character then
-            if Configs.IgnoreFriends and checkFriend(p) then continue end
-            local hum = p.Character:FindFirstChild("Humanoid")
-            local root = p.Character:FindFirstChild("HumanoidRootPart")
-            if hum and root and hum.Health > Configs.HealthLimit then
-                if (root.Position - hrp.Position).Magnitude <= Configs.MaxDistance then
-                    if not p.Character:GetAttribute("Invincible") then
-                        table.insert(targets, p.Character)
-                    end
-                end
-            end
-        end
-    end
-    return targets
-end
-
-local function ExecuteKillAura(count)
-    triggerAuraDash()
-    local targets = getAuraTargets()
-    for _, char in ipairs(targets) do
-        for i = 1, count do
-            PlayersList[index] = char
-            index = index + 1
-        end
-    end
-    if index > 1 then
-        local combo = ReplicatedStorage.Characters[LocalPlayer.Data.Character.Value].WallCombo
-        ReplicatedStorage.Remotes.Abilities.Ability:FireServer(combo, 69)
-        ReplicatedStorage.Remotes.Combat.Action:FireServer(
-            combo,
-            "",
-            4,
-            69,
-            {
-                BestHitCharacter = nil,
-                HitCharacters = PlayersList,
-                Ignore = {},
-                Actions = {}
-            }
-        )
-        table.clear(PlayersList)
-        index = 1
-    end
-end
-
-local function startAura()
-    if conn then conn:Disconnect() conn = nil end
-    conn = RunService.Heartbeat:Connect(function()
-        if running then
-            local count = (LocalPlayer.Data.Character.Value == "Gon") and 20 or 50
-            ExecuteKillAura(count)
-        end
-    end)
-end
-
-local function stopAura()
-    if conn then conn:Disconnect() conn = nil end
-end
-
-Tab:Toggle({
-    Title = "杀戮光环",
-    Value = false,
-    Callback = function(state)
-        running = state
-        if running then
-            startAura()
-        else
-            stopAura()
-        end
-    end
-})
 
 local function toggleWallCombo(state)
     wallComboEnabled = state
