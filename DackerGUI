@@ -619,7 +619,7 @@ local function CreateNewUI()
     CodeTextBox.Position = UDim2.new(0, 5, 0, 25)
     CodeTextBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     CodeTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CodeTextBox.PlaceholderText = "输入Lua代码..."
+    CodeTextBox.PlaceholderText = "输入代码..."
     CodeTextBox.PlaceholderColor3 = Color3.fromRGB(160, 160, 160)
     CodeTextBox.Text = ""
     CodeTextBox.TextSize = 13
