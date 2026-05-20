@@ -1,0 +1,659 @@
+--刘夫妻小子😜正在和刘琦先生闹矛盾😭刘夫妻小子最近在播报播课上说了这个🧐你和其他的67孩子有矛盾吗😱是的🙄你是吗🤣你认为谁才是67跟的真正代表🤫mr67还是6 7kid🤯
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- ==================== 配置 ====================
+local CONFIG = {
+    UI_SIZE = UDim2.new(0, 260, 0, 340),
+    UI_POSITION = UDim2.new(0.5, -130, 0.5, -170),
+    MIN_SIZE = Vector2.new(180, 220),
+    MAX_SIZE = Vector2.new(400, 550),
+    TITLE_HEIGHT = 32,
+    REFRESH_INTERVAL = 2,
+    ANIMATION_SPEED = 0.2,
+}
+
+-- 原始尺寸（用于等比例缩放基准）
+local ORIGINAL_SIZE = Vector2.new(260, 340)
+
+-- ==================== 状态管理 ====================
+local State = {
+    selectedPlayers = {},
+    transparencyEnabled = false,
+    isDragging = false,
+    isResizing = false,
+    dragStart = nil,
+    resizeStart = nil,
+    uiStartPos = nil,
+    startScale = nil,
+    activeConnections = {},
+}
+
+-- ==================== 创建 UI ====================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PlayerTransparencyUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- 主容器（用于边框效果）—— 放在 ScreenGui 下避免被 ClipsDescendants 裁剪
+local BorderContainer = Instance.new("Frame")
+BorderContainer.Name = "BorderContainer"
+BorderContainer.BackgroundTransparency = 1
+BorderContainer.BorderSizePixel = 0
+BorderContainer.ZIndex = 0
+BorderContainer.Parent = ScreenGui
+
+-- 渐变边框层1
+local Border1 = Instance.new("Frame")
+Border1.Name = "Border1"
+Border1.Size = UDim2.new(1, 0, 1, 0)
+Border1.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Border1.BorderSizePixel = 0
+Border1.Parent = BorderContainer
+
+local BorderGradient1 = Instance.new("UIGradient")
+BorderGradient1.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+    ColorSequenceKeypoint.new(0.25, Color3.fromRGB(80, 80, 80)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(0.75, Color3.fromRGB(80, 80, 80)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0)),
+})
+BorderGradient1.Rotation = 0
+BorderGradient1.Parent = Border1
+
+-- 渐变边框层2（叠加增强流动感）
+local Border2 = Instance.new("Frame")
+Border2.Name = "Border2"
+Border2.Size = UDim2.new(1, 0, 1, 0)
+Border2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Border2.BorderSizePixel = 0
+Border2.BackgroundTransparency = 0.5
+Border2.Parent = BorderContainer
+
+local BorderGradient2 = Instance.new("UIGradient")
+BorderGradient2.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(0.3, Color3.fromRGB(0, 0, 0)),
+    ColorSequenceKeypoint.new(0.7, Color3.fromRGB(80, 80, 80)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)),
+})
+BorderGradient2.Rotation = 90
+BorderGradient2.Parent = Border2
+
+-- 主框架
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = CONFIG.UI_SIZE
+MainFrame.Position = CONFIG.UI_POSITION
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.ZIndex = 1
+MainFrame.Parent = ScreenGui
+
+-- 【新增】UIScale：实现整体等比例缩放，保持初始布局不变
+local UIScale = Instance.new("UIScale")
+UIScale.Scale = 1
+UIScale.Parent = MainFrame
+
+-- 阴影
+local Shadow = Instance.new("ImageLabel")
+Shadow.Name = "Shadow"
+Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+Shadow.Position = UDim2.new(0.5, 0, 0.5, 4)
+Shadow.Size = UDim2.new(1, 20, 1, 20)
+Shadow.BackgroundTransparency = 1
+Shadow.Image = "rbxassetid://131604521937076"
+Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+Shadow.ImageTransparency = 0.5
+Shadow.ScaleType = Enum.ScaleType.Slice
+Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+Shadow.ZIndex = -1
+Shadow.Parent = MainFrame
+
+-- 标题栏
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, CONFIG.TITLE_HEIGHT)
+TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+TitleBar.BorderSizePixel = 0
+TitleBar.ZIndex = 2
+TitleBar.Parent = MainFrame
+
+-- 标题文字
+local TitleText = Instance.new("TextLabel")
+TitleText.Name = "Title"
+TitleText.Size = UDim2.new(1, -50, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "客户端透明其他玩家脚本"
+TitleText.TextColor3 = Color3.fromRGB(220, 220, 220)
+TitleText.TextSize = 14
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.ZIndex = 3
+TitleText.Parent = TitleBar
+
+-- 关闭按钮（透明背景，只有叉号）
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0, 36, 0, 32)
+CloseButton.Position = UDim2.new(1, -38, 0, 0)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "×"
+CloseButton.TextColor3 = Color3.fromRGB(180, 180, 180)
+CloseButton.TextSize = 22
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.ZIndex = 3
+CloseButton.Parent = TitleBar
+
+-- 关闭按钮悬停效果
+CloseButton.MouseEnter:Connect(function()
+    TweenService:Create(CloseButton, TweenInfo.new(0.15), {
+        TextColor3 = Color3.fromRGB(255, 255, 255)
+    }):Play()
+end)
+CloseButton.MouseLeave:Connect(function()
+    TweenService:Create(CloseButton, TweenInfo.new(0.15), {
+        TextColor3 = Color3.fromRGB(180, 180, 180)
+    }):Play()
+end)
+
+-- 内容区域
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "Content"
+ContentFrame.Size = UDim2.new(1, -12, 1, -CONFIG.TITLE_HEIGHT - 6)
+ContentFrame.Position = UDim2.new(0, 6, 0, CONFIG.TITLE_HEIGHT + 3)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.ZIndex = 2
+ContentFrame.Parent = MainFrame
+
+-- 当前选择显示
+local SelectedLabel = Instance.new("TextLabel")
+SelectedLabel.Name = "SelectedLabel"
+SelectedLabel.Size = UDim2.new(1, 0, 0, 26)
+SelectedLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+SelectedLabel.Text = "  未选择玩家"
+SelectedLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+SelectedLabel.TextSize = 12
+SelectedLabel.Font = Enum.Font.Gotham
+SelectedLabel.TextXAlignment = Enum.TextXAlignment.Left
+SelectedLabel.ZIndex = 3
+SelectedLabel.Parent = ContentFrame
+
+-- 开关按钮
+local ToggleFrame = Instance.new("Frame")
+ToggleFrame.Name = "ToggleFrame"
+ToggleFrame.Size = UDim2.new(1, 0, 0, 36)
+ToggleFrame.Position = UDim2.new(0, 0, 0, 30)
+ToggleFrame.BackgroundTransparency = 1
+ToggleFrame.ZIndex = 3
+ToggleFrame.Parent = ContentFrame
+
+local ToggleLabel = Instance.new("TextLabel")
+ToggleLabel.Size = UDim2.new(0.55, 0, 1, 0)
+ToggleLabel.BackgroundTransparency = 1
+ToggleLabel.Text = "透明效果"
+ToggleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+ToggleLabel.TextSize = 13
+ToggleLabel.Font = Enum.Font.GothamBold
+ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+ToggleLabel.ZIndex = 4
+ToggleLabel.Parent = ToggleFrame
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(0, 52, 0, 24)
+ToggleButton.Position = UDim2.new(1, -52, 0.5, -12)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ToggleButton.Text = "OFF"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 11
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.ZIndex = 4
+ToggleButton.Parent = ToggleFrame
+
+-- 玩家列表
+local ListLabel = Instance.new("TextLabel")
+ListLabel.Size = UDim2.new(1, 0, 0, 20)
+ListLabel.Position = UDim2.new(0, 0, 0, 70)
+ListLabel.BackgroundTransparency = 1
+ListLabel.Text = "服务器玩家列表 (点击多选)"
+ListLabel.TextColor3 = Color3.fromRGB(140, 140, 140)
+ListLabel.TextSize = 11
+ListLabel.Font = Enum.Font.Gotham
+ListLabel.TextXAlignment = Enum.TextXAlignment.Left
+ListLabel.ZIndex = 3
+ListLabel.Parent = ContentFrame
+
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Name = "PlayerList"
+ScrollingFrame.Size = UDim2.new(1, 0, 1, -94)
+ScrollingFrame.Position = UDim2.new(0, 0, 0, 92)
+ScrollingFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ScrollingFrame.BorderSizePixel = 0
+ScrollingFrame.ScrollBarThickness = 3
+ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ScrollingFrame.ZIndex = 3
+ScrollingFrame.Parent = ContentFrame
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.Padding = UDim.new(0, 3)
+ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ListLayout.Parent = ScrollingFrame
+
+local ListPadding = Instance.new("UIPadding")
+ListPadding.PaddingLeft = UDim.new(0, 5)
+ListPadding.PaddingRight = UDim.new(0, 5)
+ListPadding.PaddingTop = UDim.new(0, 5)
+ListPadding.PaddingBottom = UDim.new(0, 5)
+ListPadding.Parent = ScrollingFrame
+
+-- 缩放手柄（加大到 24x24，确保缩小后依然好点击）
+local ResizeHandle = Instance.new("TextButton")
+ResizeHandle.Name = "ResizeHandle"
+ResizeHandle.Size = UDim2.new(0, 24, 0, 24)
+ResizeHandle.Position = UDim2.new(1, -24, 1, -24)
+ResizeHandle.BackgroundTransparency = 1
+ResizeHandle.Text = "↘"
+ResizeHandle.TextColor3 = Color3.fromRGB(100, 100, 100)
+ResizeHandle.TextSize = 12
+ResizeHandle.Font = Enum.Font.GothamBold
+ResizeHandle.ZIndex = 10
+ResizeHandle.Parent = MainFrame
+
+-- ==================== 功能函数（核心修复区域） ====================
+
+-- 检查玩家是否被选中
+local function isPlayerSelected(player)
+    for _, p in ipairs(State.selectedPlayers) do
+        if p == player then return true end
+    end
+    return false
+end
+
+-- 从选中列表移除玩家
+local function removeSelectedPlayer(player)
+    for i, p in ipairs(State.selectedPlayers) do
+        if p == player then
+            table.remove(State.selectedPlayers, i)
+            return
+        end
+    end
+end
+
+-- 【核心修复】改回 SetAttribute 存储原始透明度，绑定在实例上永不丢失
+local function applyPartTransparency(part, transparent)
+    if part:IsA("BasePart") or part:IsA("Decal") or part:IsA("Texture") then
+        if transparent then
+            -- 只记录一次，避免重复覆盖
+            if part:GetAttribute("OriginalTransparency") == nil then
+                part:SetAttribute("OriginalTransparency", part.Transparency)
+            end
+            part.Transparency = 1
+        else
+            local original = part:GetAttribute("OriginalTransparency")
+            if original ~= nil then
+                part.Transparency = original
+                part:SetAttribute("OriginalTransparency", nil)
+            else
+                -- 【修复中心方块】没有记录时的安全默认值
+                if part:IsA("BasePart") and part.Name == "HumanoidRootPart" then
+                    part.Transparency = 1
+                elseif part.Transparency == 1 then
+                    part.Transparency = 0
+                end
+                -- 如果当前不是1（自定义半透部件），保持原样不动
+            end
+        end
+    elseif part:IsA("ParticleEmitter") or part:IsA("Trail") or part:IsA("Beam") then
+        part.Enabled = not transparent
+    end
+end
+
+-- 应用透明度到整个角色
+local function setPlayerTransparency(player, transparent)
+    if not player or not player.Character then return end
+    
+    local character = player.Character
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    
+    for _, part in ipairs(character:GetDescendants()) do
+        applyPartTransparency(part, transparent)
+    end
+    
+    if humanoid then
+        humanoid.DisplayDistanceType = transparent 
+            and Enum.HumanoidDisplayDistanceType.None 
+            or Enum.HumanoidDisplayDistanceType.Viewer
+    end
+    
+    local head = character:FindFirstChild("Head")
+    if head then
+        for _, child in ipairs(head:GetChildren()) do
+            if child:IsA("BillboardGui") and child.Name ~= "SelectionBox" then
+                child.Enabled = not transparent
+            end
+        end
+    end
+end
+
+-- 启动透明控制：事件驱动 + 循环后备
+local function startTransparency(player)
+    if not player then return end
+    
+    -- 清理旧连接（避免重复）
+    if State.activeConnections[player] then
+        for _, conn in ipairs(State.activeConnections[player]) do
+            if typeof(conn) == "RBXScriptConnection" then
+                conn:Disconnect()
+            end
+        end
+        State.activeConnections[player] = nil
+    end
+    
+    -- 立即应用透明（无延迟）
+    setPlayerTransparency(player, true)
+    
+    local connections = {}
+    
+    -- 角色重生时自动应用
+    local charConn = player.CharacterAdded:Connect(function(char)
+        RunService.Heartbeat:Wait()
+        if State.transparencyEnabled and isPlayerSelected(player) then
+            setPlayerTransparency(player, true)
+            
+            -- 监听新部件（如Accessory、工具等动态添加）
+            local descConn = char.DescendantAdded:Connect(function(descendant)
+                if State.transparencyEnabled and isPlayerSelected(player) then
+                    applyPartTransparency(descendant, true)
+                end
+            end)
+            table.insert(connections, descConn)
+        end
+    end)
+    table.insert(connections, charConn)
+    
+    -- 对当前已存在的角色，监听动态添加的部件
+    if player.Character then
+        local descConn = player.Character.DescendantAdded:Connect(function(descendant)
+            if State.transparencyEnabled and isPlayerSelected(player) then
+                applyPartTransparency(descendant, true)
+            end
+        end)
+        table.insert(connections, descConn)
+    end
+    
+    -- 【关键】循环后备：每0.2秒强制刷新，防止其他脚本/网络重置透明度
+    local lastUpdate = 0
+    local heartbeatConn = RunService.Heartbeat:Connect(function(dt)
+        lastUpdate = lastUpdate + dt
+        if lastUpdate < 0.2 then return end
+        lastUpdate = 0
+        
+        if not (State.transparencyEnabled and isPlayerSelected(player) and player.Parent) then
+            heartbeatConn:Disconnect()
+            return
+        end
+        setPlayerTransparency(player, true)
+    end)
+    table.insert(connections, heartbeatConn)
+    
+    State.activeConnections[player] = connections
+end
+
+-- 停止透明控制
+local function stopTransparency(player)
+    if not player then return end
+    
+    if State.activeConnections[player] then
+        for _, conn in ipairs(State.activeConnections[player]) do
+            if typeof(conn) == "RBXScriptConnection" then
+                conn:Disconnect()
+            end
+        end
+        State.activeConnections[player] = nil
+    end
+    
+    -- 立即恢复，无延迟
+    setPlayerTransparency(player, false)
+end
+
+-- 更新开关视觉
+local function updateToggleVisual()
+    if State.transparencyEnabled then
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        ToggleButton.Text = "ON"
+        ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    else
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        ToggleButton.Text = "OFF"
+        ToggleButton.TextColor3 = Color3.fromRGB(180, 180, 180)
+    end
+end
+
+-- 更新选中标签显示
+local function updateSelectedLabel()
+    if #State.selectedPlayers == 0 then
+        SelectedLabel.Text = "  未选择玩家"
+        SelectedLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+    else
+        local names = {}
+        for _, p in ipairs(State.selectedPlayers) do
+            table.insert(names, p.DisplayName)
+        end
+        local text = "  已选 " .. #State.selectedPlayers .. " 人: " .. table.concat(names, ", ")
+        if #text > 35 then
+            text = string.sub(text, 1, 32) .. "..."
+        end
+        SelectedLabel.Text = text
+        SelectedLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    end
+end
+
+-- 刷新玩家列表
+local function refreshPlayerList()
+    for _, child in ipairs(ScrollingFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        
+        local selected = isPlayerSelected(player)
+        
+        local btn = Instance.new("TextButton")
+        btn.Name = player.Name
+        btn.Size = UDim2.new(1, 0, 0, 28)
+        btn.BackgroundColor3 = selected 
+            and Color3.fromRGB(55, 55, 55) 
+            or Color3.fromRGB(30, 30, 30)
+        btn.Text = player.DisplayName .. " (@" .. player.Name .. ")"
+        btn.TextColor3 = selected
+            and Color3.fromRGB(255, 255, 255)
+            or Color3.fromRGB(170, 170, 170)
+        btn.TextSize = 12
+        btn.Font = Enum.Font.Gotham
+        btn.ZIndex = 4
+        btn.Parent = ScrollingFrame
+        
+        -- 选中指示器（左侧竖线）
+        if selected then
+            local indicator = Instance.new("Frame")
+            indicator.Name = "Indicator"
+            indicator.Size = UDim2.new(0, 3, 1, -6)
+            indicator.Position = UDim2.new(0, 0, 0, 3)
+            indicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            indicator.BorderSizePixel = 0
+            indicator.ZIndex = 5
+            indicator.Parent = btn
+        end
+        
+        -- 点击切换选择
+        btn.MouseButton1Click:Connect(function()
+            if selected then
+                removeSelectedPlayer(player)
+                stopTransparency(player)
+            else
+                table.insert(State.selectedPlayers, player)
+                if State.transparencyEnabled then
+                    startTransparency(player)
+                end
+            end
+            
+            refreshPlayerList()
+            updateSelectedLabel()
+        end)
+    end
+end
+
+-- ==================== 拖动功能 ====================
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+       input.UserInputType == Enum.UserInputType.Touch then
+        State.isDragging = true
+        State.dragStart = input.Position
+        State.uiStartPos = MainFrame.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if State.isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or 
+       input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - State.dragStart
+        MainFrame.Position = UDim2.new(
+            State.uiStartPos.X.Scale, 
+            State.uiStartPos.X.Offset + delta.X,
+            State.uiStartPos.Y.Scale, 
+            State.uiStartPos.Y.Offset + delta.Y
+        )
+    elseif State.isResizing and (input.UserInputType == Enum.UserInputType.MouseMovement or 
+           input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - State.resizeStart
+        
+        -- 【核心修改】等比例缩放：基于原始尺寸和鼠标移动计算统一缩放比例
+        local scaleX = (ORIGINAL_SIZE.X * State.startScale + delta.X) / ORIGINAL_SIZE.X
+        local scaleY = (ORIGINAL_SIZE.Y * State.startScale + delta.Y) / ORIGINAL_SIZE.Y
+        local newScale = math.clamp((scaleX + scaleY) / 2, 0.5, 2.0)
+        
+        UIScale.Scale = newScale
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+       input.UserInputType == Enum.UserInputType.Touch then
+        State.isDragging = false
+        State.isResizing = false
+    end
+end)
+
+-- ==================== 缩放功能 ====================
+ResizeHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+       input.UserInputType == Enum.UserInputType.Touch then
+        State.isResizing = true
+        State.resizeStart = input.Position
+        State.startScale = UIScale.Scale
+    end
+end)
+
+-- ==================== 按钮事件 ====================
+-- 关闭按钮
+CloseButton.MouseButton1Click:Connect(function()
+    if State.transparencyEnabled then
+        State.transparencyEnabled = false
+        for _, player in ipairs(State.selectedPlayers) do
+            stopTransparency(player)
+        end
+    end
+    ScreenGui:Destroy()
+end)
+
+-- 开关按钮
+ToggleButton.MouseButton1Click:Connect(function()
+    State.transparencyEnabled = not State.transparencyEnabled
+    updateToggleVisual()
+    
+    if #State.selectedPlayers > 0 then
+        for _, player in ipairs(State.selectedPlayers) do
+            if State.transparencyEnabled then
+                startTransparency(player)
+            else
+                stopTransparency(player)
+            end
+        end
+    else
+        if State.transparencyEnabled then
+            SelectedLabel.Text = "  请先选择玩家！"
+            task.delay(1.5, function()
+                if #State.selectedPlayers == 0 then
+                    SelectedLabel.Text = "  未选择玩家"
+                end
+            end)
+            State.transparencyEnabled = false
+            updateToggleVisual()
+        end
+    end
+end)
+
+-- ==================== 初始化 ====================
+-- 定期刷新玩家列表
+task.spawn(function()
+    while ScreenGui.Parent do
+        refreshPlayerList()
+        task.wait(CONFIG.REFRESH_INTERVAL)
+    end
+end)
+
+-- 监听玩家加入/离开
+Players.PlayerAdded:Connect(refreshPlayerList)
+Players.PlayerRemoving:Connect(function(player)
+    if isPlayerSelected(player) then
+        removeSelectedPlayer(player)
+        stopTransparency(player)
+        if #State.selectedPlayers == 0 then
+            State.transparencyEnabled = false
+            updateToggleVisual()
+        end
+        updateSelectedLabel()
+    end
+    refreshPlayerList()
+end)
+
+-- 初始刷新
+refreshPlayerList()
+
+-- 入场动画
+MainFrame.Size = UDim2.new(0, 0, 0, 0)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+
+TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = CONFIG.UI_SIZE,
+    Position = CONFIG.UI_POSITION
+}):Play()
+
+-- ==================== 边框跟随修复 ====================
+local borderRotation = 0
+RunService.RenderStepped:Connect(function()
+    -- 【修复】使用 AbsoluteSize / AbsolutePosition 确保边框始终准确包裹缩放后的 UI
+    local absSize = MainFrame.AbsoluteSize
+    local absPos = MainFrame.AbsolutePosition
+    BorderContainer.Size = UDim2.new(0, absSize.X + 6, 0, absSize.Y + 6)
+    BorderContainer.Position = UDim2.new(0, absPos.X - 3, 0, absPos.Y - 3)
+    
+    borderRotation = borderRotation + 1.5
+    BorderGradient1.Rotation = borderRotation
+    BorderGradient2.Rotation = -borderRotation * 0.7
+end)
