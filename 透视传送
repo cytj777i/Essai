@@ -1,0 +1,1592 @@
+-- Dream还我十万美刀😡l no money😭i no money😭no kill me😭no kill me😭i will Kill you！😡🔪😭oh no皮革嘎的要追上来了😱我们快逃逸😂i am coming Dream😡👉🐴piggod come on***with me[哦]Oh my god oh no😱皮革嘎得😱你不要开挂呀😫Come here lose😳piggod!!!你完蛋了😂看我开启black客🤓piggod:wtf i:yes!
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
+
+-- ==================== 数据层 ====================
+local State = {
+    HL_Item = false, HL_NPC = false, HL_Player = false,
+    Name_Item = false, Name_NPC = false, Name_Player = false,
+
+    Color_Item = Color3.fromRGB(255,255,255),
+    Color_NPC  = Color3.fromRGB(255,0,0),
+    Color_Player = Color3.fromRGB(0,255,0),
+
+    -- 物品名字颜色改为更亮的金黄色（远离橙色）
+    Color_Name_Item   = Color3.fromRGB(255, 236, 24),
+    Color_Name_NPC    = Color3.fromRGB(0,255,255),
+    Color_Name_Player = Color3.fromRGB(138,43,226),
+
+    SingleTarget = nil, SingleCategory = nil,
+    TeleportMode = "Single",
+    LoopQueue = {},
+    LoopInterval = 3,
+    IsLooping = false,
+    LoopThread = nil,
+
+    XRayMode = false,
+    XRaySelected = { Item = {}, NPC = {}, Player = {} },
+    XRaySelectAll = { Item = false, NPC = false, Player = false },
+
+    Scale = 1,
+    ActiveColorPicker = nil,
+
+    Collapsed = false,
+    LoopSelectAll = { Item = false, NPC = false, Player = false },
+}
+
+local XRAY_ACCENT = Color3.fromRGB(0, 255, 200)
+
+local XRayHighlights = {}
+local XRayNameTags = {}
+local ListEntries = { Item = {}, NPC = {}, Player = {} }
+local ColorButtons = {}
+local SectionRefreshers = {}
+local LoopSelectAllUI = {}
+
+-- ==================== 扩充后的调色板 (180+ 色) ====================
+local Palette = {
+    -- 灰阶 / 黑白
+    Color3.fromRGB(0,0,0),       Color3.fromRGB(27,42,53),    Color3.fromRGB(50,50,50),
+    Color3.fromRGB(60,60,70),    Color3.fromRGB(80,80,90),    Color3.fromRGB(99,95,98),
+    Color3.fromRGB(100,100,100), Color3.fromRGB(120,120,130), Color3.fromRGB(140,140,150),
+    Color3.fromRGB(150,150,150), Color3.fromRGB(161,165,162), Color3.fromRGB(163,162,165),
+    Color3.fromRGB(180,180,190), Color3.fromRGB(200,200,200), Color3.fromRGB(220,220,230),
+    Color3.fromRGB(242,243,243), Color3.fromRGB(255,255,255),
+
+    -- 红色系
+    Color3.fromRGB(80,0,0),      Color3.fromRGB(117,0,0),     Color3.fromRGB(128,0,0),
+    Color3.fromRGB(139,0,0),     Color3.fromRGB(151,0,0),     Color3.fromRGB(165,42,42),
+    Color3.fromRGB(178,34,34),   Color3.fromRGB(190,0,0),     Color3.fromRGB(199,21,133),
+    Color3.fromRGB(205,92,92),   Color3.fromRGB(220,20,60),   Color3.fromRGB(255,0,0),
+    Color3.fromRGB(255,20,147),  Color3.fromRGB(255,36,0),    Color3.fromRGB(255,69,0),
+    Color3.fromRGB(255,99,71),   Color3.fromRGB(255,102,0),   Color3.fromRGB(255,102,204),
+    Color3.fromRGB(255,105,180), Color3.fromRGB(255,110,180), Color3.fromRGB(255,117,24),
+    Color3.fromRGB(255,140,0),   Color3.fromRGB(255,160,122), Color3.fromRGB(255,165,0),
+
+    -- 橙 / 黄色系
+    Color3.fromRGB(170,85,0),    Color3.fromRGB(184,134,11),  Color3.fromRGB(189,183,107),
+    Color3.fromRGB(193,190,66),  Color3.fromRGB(203,132,66),  Color3.fromRGB(204,142,105),
+    Color3.fromRGB(210,105,30),  Color3.fromRGB(215,197,154), Color3.fromRGB(218,165,32),
+    Color3.fromRGB(233,150,122), Color3.fromRGB(234,88,12),   Color3.fromRGB(238,130,238),
+    Color3.fromRGB(240,128,128), Color3.fromRGB(240,201,185), Color3.fromRGB(245,222,179),
+    Color3.fromRGB(249,233,153), Color3.fromRGB(250,128,114), Color3.fromRGB(250,250,210),
+    Color3.fromRGB(255,176,0),   Color3.fromRGB(255,201,92),  Color3.fromRGB(255,215,0),
+    Color3.fromRGB(255,218,185), Color3.fromRGB(255,223,0),   Color3.fromRGB(255,228,181),
+    Color3.fromRGB(255,228,196), Color3.fromRGB(255,235,205), Color3.fromRGB(255,239,213),
+    Color3.fromRGB(255,240,245), Color3.fromRGB(255,250,205), Color3.fromRGB(255,250,240),
+    Color3.fromRGB(255,255,0),   Color3.fromRGB(255,255,204), Color3.fromRGB(255,255,240),
+
+    -- 绿色系
+    Color3.fromRGB(0,100,0),   Color3.fromRGB(34,139,34),   Color3.fromRGB(46,139,87),
+    Color3.fromRGB(50,205,50),  Color3.fromRGB(60,179,113),  Color3.fromRGB(76,153,76),
+    Color3.fromRGB(85,107,47),  Color3.fromRGB(107,142,35),  Color3.fromRGB(111,153,64),
+    Color3.fromRGB(124,252,0),  Color3.fromRGB(127,255,0),   Color3.fromRGB(128,128,0),
+    Color3.fromRGB(143,188,143), Color3.fromRGB(144,238,144), Color3.fromRGB(152,251,152),
+    Color3.fromRGB(154,205,50),  Color3.fromRGB(173,255,47),  Color3.fromRGB(194,218,184),
+    Color3.fromRGB(0,128,0),    Color3.fromRGB(0,255,0),     Color3.fromRGB(0,255,127),
+    Color3.fromRGB(0,250,154),  Color3.fromRGB(32,178,170),  Color3.fromRGB(245,255,250),
+    Color3.fromRGB(240,255,240),
+
+    -- 青 / 蓝色系
+    Color3.fromRGB(0,0,128),    Color3.fromRGB(0,0,139),     Color3.fromRGB(0,32,96),
+    Color3.fromRGB(0,128,128),  Color3.fromRGB(25,25,112),   Color3.fromRGB(33,84,185),
+    Color3.fromRGB(47,79,79),   Color3.fromRGB(65,105,225),  Color3.fromRGB(70,130,180),
+    Color3.fromRGB(72,61,139),  Color3.fromRGB(72,209,204),  Color3.fromRGB(95,158,160),
+    Color3.fromRGB(100,149,237), Color3.fromRGB(106,90,205),  Color3.fromRGB(123,104,238),
+    Color3.fromRGB(128,187,219), Color3.fromRGB(135,206,235), Color3.fromRGB(135,206,250),
+    Color3.fromRGB(138,43,226), Color3.fromRGB(0,0,255),    Color3.fromRGB(0,139,139),
+    Color3.fromRGB(0,191,255),  Color3.fromRGB(0,206,209),   Color3.fromRGB(0,255,255),
+    Color3.fromRGB(4,175,236),   Color3.fromRGB(30,144,255),  Color3.fromRGB(64,224,208),
+    Color3.fromRGB(127,255,212), Color3.fromRGB(173,216,230), Color3.fromRGB(175,238,238),
+    Color3.fromRGB(176,196,222), Color3.fromRGB(176,224,230), Color3.fromRGB(207,226,247),
+    Color3.fromRGB(224,255,255), Color3.fromRGB(230,230,250),
+
+    -- 紫 / 粉色系
+    Color3.fromRGB(75,0,130),   Color3.fromRGB(89,34,89),    Color3.fromRGB(128,0,128),
+    Color3.fromRGB(139,0,139),  Color3.fromRGB(147,112,219), Color3.fromRGB(148,0,211),
+    Color3.fromRGB(153,50,204), Color3.fromRGB(186,85,211),  Color3.fromRGB(199,21,133),
+    Color3.fromRGB(216,191,216), Color3.fromRGB(218,112,214), Color3.fromRGB(219,112,147),
+    Color3.fromRGB(221,160,221), Color3.fromRGB(224,178,208), Color3.fromRGB(232,186,200),
+    Color3.fromRGB(238,130,238), Color3.fromRGB(255,0,255),   Color3.fromRGB(255,20,147),
+    Color3.fromRGB(255,102,204), Color3.fromRGB(255,105,180), Color3.fromRGB(255,110,180),
+    Color3.fromRGB(255,152,220), Color3.fromRGB(255,201,201), Color3.fromRGB(255,228,225),
+    Color3.fromRGB(255,240,245),
+
+    -- 棕色 / 土色 / 杂色
+    Color3.fromRGB(70,130,180),  Color3.fromRGB(100,149,237), Color3.fromRGB(128,128,0),
+    Color3.fromRGB(139,69,19),   Color3.fromRGB(160,82,45),   Color3.fromRGB(165,42,42),
+    Color3.fromRGB(180,180,210), Color3.fromRGB(188,143,143), Color3.fromRGB(205,133,63),
+    Color3.fromRGB(210,180,140), Color3.fromRGB(218,134,122), Color3.fromRGB(222,184,135),
+    Color3.fromRGB(245,245,220), Color3.fromRGB(255,140,0),   Color3.fromRGB(255,148,148),
+    Color3.fromRGB(255,165,0),   Color3.fromRGB(255,218,185), Color3.fromRGB(255,248,220),
+}
+
+-- ==================== 工厂函数 ====================
+local function AddGlassStroke(parent, color, transparency)
+    local s = Instance.new("UIStroke")
+    s.Color = color or Color3.fromRGB(90, 100, 140)
+    s.Transparency = transparency or 0.75
+    s.Thickness = 1
+    s.Parent = parent
+    return s
+end
+
+-- ==================== 核心逻辑函数 ====================
+local function GetPos(target, cat)
+    if cat == "Player" then
+        local c = target.Character
+        if c and c:FindFirstChild("HumanoidRootPart") then return c.HumanoidRootPart.Position end
+    else
+        if target:IsA("Model") then
+            if target.PrimaryPart then return target.PrimaryPart.Position end
+            local p = target:FindFirstChildWhichIsA("BasePart")
+            if p then return p.Position end
+        elseif target:IsA("BasePart") then
+            return target.Position
+        elseif target:IsA("Tool") then
+            if target.Parent then
+                if target.Parent:IsA("Model") then return GetPos(target.Parent, cat) end
+                if target.Parent:IsA("BasePart") then return target.Parent.Position end
+            end
+        end
+    end
+    return nil
+end
+
+-- 新增：获取用于 BillboardGui 绑定的最佳 Part
+local function GetAdornee(target, cat)
+    if cat == "Player" then
+        local char = target.Character
+        if char then
+            return char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChildWhichIsA("BasePart")
+        end
+    else
+        if target:IsA("Model") then
+            return target:FindFirstChild("Head") or target.PrimaryPart or target:FindFirstChildWhichIsA("BasePart")
+        elseif target:IsA("BasePart") then
+            return target
+        elseif target:IsA("Tool") then
+            if target.Parent then
+                if target.Parent:IsA("BasePart") then return target.Parent end
+                if target.Parent:IsA("Model") then
+                    return target.Parent:FindFirstChild("Head") or target.Parent.PrimaryPart or target.Parent:FindFirstChildWhichIsA("BasePart")
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function ScanWorld()
+    local items, npcs, players = {}, {}, {}
+    local pChars = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Character then pChars[p.Character] = true end
+    end
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and not pChars[obj] then
+            table.insert(npcs, obj)
+        elseif obj:IsA("Tool") then
+            table.insert(items, obj)
+        elseif obj:IsA("Model") and not obj:FindFirstChildOfClass("Humanoid") and not pChars[obj] then
+            if obj:FindFirstChildWhichIsA("BasePart") and obj.Name ~= "Camera" and obj.Name ~= "Terrain" and obj.Name ~= "Sound" then
+                table.insert(items, obj)
+            end
+        end
+    end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player and p.Character then table.insert(players, p) end
+    end
+    return items, npcs, players
+end
+
+local function ClearXRayObj(obj)
+    if XRayHighlights[obj] then XRayHighlights[obj]:Destroy() XRayHighlights[obj] = nil end
+    for i = #XRayNameTags, 1, -1 do
+        if XRayNameTags[i].Target == obj then
+            XRayNameTags[i].Billboard:Destroy()
+            table.remove(XRayNameTags, i)
+        end
+    end
+end
+
+local NameGui = Instance.new("ScreenGui")
+NameGui.Name = "NameTagsV2"
+NameGui.ResetOnSpawn = false
+NameGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+NameGui.Parent = player.PlayerGui
+local function UpdateXRay()
+    -- 清理无效对象（修复：避免 pairs 遍历中删除）
+    local deadHL = {}
+    for obj, hl in pairs(XRayHighlights) do
+        if not obj or not obj.Parent then
+            table.insert(deadHL, {obj, hl})
+        end
+    end
+    for _, pair in ipairs(deadHL) do
+        pair[2]:Destroy()
+        XRayHighlights[pair[1]] = nil
+    end
+    local valid = {}
+    for _, d in ipairs(XRayNameTags) do
+        if d.Target and d.Target.Parent then 
+            table.insert(valid, d) 
+        else 
+            d.Billboard:Destroy() 
+        end
+    end
+    XRayNameTags = valid
+
+    for cat, set in pairs(State.XRaySelected) do
+        local hlKey = "HL_" .. cat
+        local nameKey = "Name_" .. cat
+        local hlColor = State["Color_" .. cat]
+        local nameColor = State["Color_Name_" .. cat]
+        
+        for obj, _ in pairs(set) do
+            if obj and obj.Parent then
+                -- 【修复】同步更新已存在高亮的颜色
+                if State[hlKey] and XRayHighlights[obj] then
+                    XRayHighlights[obj].FillColor = hlColor
+                    XRayHighlights[obj].OutlineColor = hlColor
+                end
+                if State[hlKey] and not XRayHighlights[obj] then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "XRayHL"
+                    hl.FillColor = hlColor
+                    hl.OutlineColor = hlColor
+                    hl.FillTransparency = 0.5
+                    hl.OutlineTransparency = 0.2
+                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    hl.Adornee = obj
+                    hl.Parent = obj
+                    XRayHighlights[obj] = hl
+                end
+                if State[nameKey] then
+                    local hasName = false
+                    for _, d in ipairs(XRayNameTags) do if d.Target == obj then hasName = true break end end
+                    if not hasName then
+                        local adornee = GetAdornee(obj, cat)
+                        if adornee then
+                            local bb = Instance.new("BillboardGui")
+                            bb.Name = "XRayNameTag"
+                            bb.Size = UDim2.new(0, 120, 0, 20)
+                            bb.AlwaysOnTop = true
+                            bb.LightInfluence = 0
+                            bb.MaxDistance = 10000
+                            
+                            if adornee.Name == "Head" then
+                                bb.StudsOffsetWorldSpace = Vector3.new(0, 1, 0)
+                            else
+                                bb.StudsOffsetWorldSpace = Vector3.new(0, 3, 0)
+                            end
+                            
+                            bb.Adornee = adornee
+                            bb.Parent = NameGui
+                            
+                            local txt = Instance.new("TextLabel")
+                            txt.Size = UDim2.new(1, 0, 1, 0)
+                            txt.BackgroundTransparency = 1
+                            txt.Text = "◉ " .. obj.Name
+                            txt.TextColor3 = nameColor
+                            txt.TextSize = 9
+                            txt.Font = Enum.Font.GothamBold
+                            txt.TextStrokeTransparency = 0.3
+                            txt.TextStrokeColor3 = Color3.fromRGB(0,0,0)
+                            txt.Parent = bb
+                            
+                            table.insert(XRayNameTags, {Billboard = bb, Target = obj, Cat = cat})
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    for cat, set in pairs(State.XRaySelected) do
+        local hlKey = "HL_" .. cat
+        if not State[hlKey] then
+            for obj, _ in pairs(set) do
+                if XRayHighlights[obj] then
+                    XRayHighlights[obj]:Destroy()
+                    XRayHighlights[obj] = nil
+                end
+            end
+        end
+        local nameKey = "Name_" .. cat
+        if not State[nameKey] then
+            for i = #XRayNameTags, 1, -1 do
+                if XRayNameTags[i].Cat == cat then
+                    XRayNameTags[i].Billboard:Destroy()
+                    table.remove(XRayNameTags, i)
+                end
+            end
+        end
+    end
+end
+
+
+-- ==================== UI 根 ====================
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "ScannerV2"
+Gui.ResetOnSpawn = false
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.Parent = player:WaitForChild("PlayerGui")
+
+
+-- ==================== 玻璃质感主面板 ====================
+-- 修复：使用固定高度替代 AutomaticSize，避免与 UIScale 冲突导致的裁剪/空白问题
+local MAIN_EXPANDED_HEIGHT = 380
+local MAIN_COLLAPSED_HEIGHT = 24
+
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Size = UDim2.new(0, 420, 0, MAIN_EXPANDED_HEIGHT)
+Main.Position = UDim2.new(1, -430, 0.5, -190)
+Main.BackgroundColor3 = Color3.fromRGB(8, 8, 14)
+Main.BackgroundTransparency = 0.35
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.ClipsDescendants = false  -- 允许 Body 在缩小时超出一点，避免裁剪按钮
+Main.Parent = Gui
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(100, 120, 180)
+MainStroke.Transparency = 0.65
+MainStroke.Thickness = 1
+MainStroke.Parent = Main
+
+local Scaler = Instance.new("UIScale")
+Scaler.Scale = 1
+Scaler.Parent = Main
+
+-- 顶部霓虹线
+local TopLine = Instance.new("Frame")
+TopLine.Size = UDim2.new(1, 0, 0, 2)
+TopLine.Position = UDim2.new(0, 0, 0, 0)
+TopLine.BorderSizePixel = 0
+TopLine.ZIndex = 5
+TopLine.Parent = Main
+local TopGrad = Instance.new("UIGradient")
+TopGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 140, 240)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 100, 220)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 80, 160)),
+})
+TopGrad.Rotation = 0
+TopGrad.Parent = TopLine
+
+-- ==================== 标题栏 ====================
+local Title = Instance.new("Frame")
+Title.Size = UDim2.new(1, 0, 0, 24)
+Title.Position = UDim2.new(0, 0, 0, 2)
+Title.BackgroundColor3 = Color3.fromRGB(5, 6, 10)
+Title.BackgroundTransparency = 0.45
+Title.BorderSizePixel = 0
+Title.Active = true
+Title.Parent = Main
+
+local TitleStroke = Instance.new("UIStroke")
+TitleStroke.Color = Color3.fromRGB(80, 90, 130)
+TitleStroke.Transparency = 0.75
+TitleStroke.Thickness = 1
+TitleStroke.Parent = Title
+
+local CollapseBtn = Instance.new("TextButton")
+CollapseBtn.Size = UDim2.new(0, 24, 0, 24)
+CollapseBtn.Position = UDim2.new(0, 4, 0.5, -12)
+CollapseBtn.BackgroundTransparency = 1
+CollapseBtn.Text = "▼"
+CollapseBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+CollapseBtn.TextSize = 14
+CollapseBtn.Font = Enum.Font.GothamBold
+CollapseBtn.Parent = Title
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+TitleLabel.Position = UDim2.new(0, 32, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "ESP & Teleport"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 11
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = Title
+
+-- ==================== Body ====================
+local Body = Instance.new("Frame")
+Body.Name = "Body"
+Body.Size = UDim2.new(1, 0, 0, 354)
+Body.Position = UDim2.new(0, 0, 0, 26)
+Body.BackgroundTransparency = 1
+Body.BorderSizePixel = 0
+Body.ClipsDescendants = true
+Body.Parent = Main
+
+
+-- ==================== 控制栏 ====================
+local ControlBar = Instance.new("Frame")
+ControlBar.Size = UDim2.new(1, 0, 0, 30)
+ControlBar.Position = UDim2.new(0, 0, 0, 0)
+ControlBar.BackgroundColor3 = Color3.fromRGB(10, 11, 20)
+ControlBar.BackgroundTransparency = 0.5
+ControlBar.BorderSizePixel = 0
+ControlBar.Parent = Body
+
+local CBStroke = Instance.new("UIStroke")
+CBStroke.Color = Color3.fromRGB(70, 80, 120)
+CBStroke.Transparency = 0.75
+CBStroke.Thickness = 1
+CBStroke.Parent = ControlBar
+
+local CBLine = Instance.new("Frame")
+CBLine.Size = UDim2.new(1, 0, 0, 1)
+CBLine.Position = UDim2.new(0, 0, 1, -1)
+CBLine.BackgroundColor3 = Color3.fromRGB(80, 100, 160)
+CBLine.BackgroundTransparency = 0.7
+CBLine.BorderSizePixel = 0
+CBLine.Parent = ControlBar
+
+-- ===== 透视按钮（深色玻璃底 + 大文字） =====
+local XRayBtn = Instance.new("TextButton")
+XRayBtn.Size = UDim2.new(0, 60, 0, 22)
+XRayBtn.Position = UDim2.new(0, 8, 0.5, -11)
+XRayBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 28)
+XRayBtn.BackgroundTransparency = 0.4
+XRayBtn.BorderSizePixel = 0
+XRayBtn.Text = "透视"
+XRayBtn.TextColor3 = Color3.fromRGB(180, 180, 195)
+XRayBtn.TextSize = 11
+XRayBtn.Font = Enum.Font.GothamBold
+XRayBtn.AutoButtonColor = false
+XRayBtn.Parent = ControlBar
+
+-- ===== 模式按钮（深色玻璃底 + 大文字） =====
+local ModeBtn = Instance.new("TextButton")
+ModeBtn.Size = UDim2.new(0, 60, 0, 22)
+ModeBtn.Position = UDim2.new(0, 76, 0.5, -11)
+ModeBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 28)
+ModeBtn.BackgroundTransparency = 0.4
+ModeBtn.BorderSizePixel = 0
+ModeBtn.Text = "单传"
+ModeBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
+ModeBtn.TextSize = 11
+ModeBtn.Font = Enum.Font.GothamBold
+ModeBtn.AutoButtonColor = false
+ModeBtn.Parent = ControlBar
+
+local IntervalBox = Instance.new("TextBox")
+IntervalBox.Size = UDim2.new(0, 60, 0, 22)
+IntervalBox.Position = UDim2.new(0, 144, 0.5, -11)
+IntervalBox.BackgroundColor3 = Color3.fromRGB(15, 15, 28)
+IntervalBox.BackgroundTransparency = 0.4
+IntervalBox.BorderSizePixel = 0
+IntervalBox.Text = "3s"
+IntervalBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+IntervalBox.TextSize = 9
+IntervalBox.Font = Enum.Font.GothamBold
+IntervalBox.ClearTextOnFocus = true
+IntervalBox.Parent = ControlBar
+
+local IntervalStroke = Instance.new("UIStroke")
+IntervalStroke.Color = Color3.fromRGB(100, 110, 150)
+IntervalStroke.Transparency = 0.7
+IntervalStroke.Thickness = 1
+IntervalStroke.Parent = IntervalBox
+
+IntervalBox.Focused:Connect(function() IntervalBox.BackgroundTransparency = 0.25 end)
+IntervalBox.FocusLost:Connect(function()
+    local cleanText = IntervalBox.Text:gsub("[^%d.]", "")
+    local n = tonumber(cleanText)
+    if n then State.LoopInterval = math.clamp(n, 0.1, 999) end
+    IntervalBox.Text = State.LoopInterval .. "s"
+    IntervalBox.BackgroundTransparency = 0.4
+end)
+
+-- ==================== 颜色选择器面板 ====================
+local ColorPanel = Instance.new("Frame")
+ColorPanel.Size = UDim2.new(0, 200, 0, 160)
+ColorPanel.Position = UDim2.new(0, 130, 0, 54)
+ColorPanel.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+ColorPanel.BackgroundTransparency = 0.25
+ColorPanel.BorderSizePixel = 0
+ColorPanel.ZIndex = 30
+ColorPanel.Visible = false
+ColorPanel.Parent = Body
+
+local CPStroke = Instance.new("UIStroke")
+CPStroke.Color = Color3.fromRGB(120, 130, 180)
+CPStroke.Transparency = 0.6
+CPStroke.Thickness = 1
+CPStroke.Parent = ColorPanel
+
+local CPTitle = Instance.new("TextLabel")
+CPTitle.Size = UDim2.new(1, 0, 0, 20)
+CPTitle.BackgroundColor3 = Color3.fromRGB(20, 22, 35)
+CPTitle.BackgroundTransparency = 0.4
+CPTitle.BorderSizePixel = 0
+CPTitle.Text = "COLOR"
+CPTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+CPTitle.TextSize = 10
+CPTitle.Font = Enum.Font.GothamBold
+CPTitle.ZIndex = 31
+CPTitle.Parent = ColorPanel
+
+local CPClose = Instance.new("TextButton")
+CPClose.Size = UDim2.new(0, 20, 0, 20)
+CPClose.Position = UDim2.new(1, -20, 0, 0)
+CPClose.BackgroundTransparency = 1
+CPClose.Text = "×"
+CPClose.TextColor3 = Color3.fromRGB(255, 255, 255)
+CPClose.TextSize = 13
+CPClose.Font = Enum.Font.GothamBold
+CPClose.ZIndex = 32
+CPClose.Parent = ColorPanel
+
+local CPScroll = Instance.new("ScrollingFrame")
+CPScroll.Size = UDim2.new(1, -4, 1, -24)
+CPScroll.Position = UDim2.new(0, 2, 0, 22)
+CPScroll.BackgroundTransparency = 1
+CPScroll.BorderSizePixel = 0
+CPScroll.ScrollBarThickness = 2
+CPScroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 110)
+CPScroll.ZIndex = 31
+CPScroll.Parent = ColorPanel
+
+local CPGrid = Instance.new("UIGridLayout")
+CPGrid.CellSize = UDim2.new(0, 14, 0, 14)
+CPGrid.CellPadding = UDim2.new(0, 2, 0, 2)
+CPGrid.Parent = CPScroll
+
+for _, color in ipairs(Palette) do
+    (function(currentColor)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 14, 0, 14)
+        btn.BackgroundColor3 = currentColor
+        btn.BorderSizePixel = 0
+        btn.Text = ""
+        btn.ZIndex = 32
+        btn.Parent = CPScroll
+        btn.MouseButton1Click:Connect(function()
+            if State.ActiveColorPicker then
+                State["Color_" .. State.ActiveColorPicker] = currentColor
+                if ColorButtons[State.ActiveColorPicker] then
+                    ColorButtons[State.ActiveColorPicker].BackgroundColor3 = currentColor
+                end
+            end
+            ColorPanel.Visible = false
+            State.ActiveColorPicker = nil
+            UpdateXRay()
+        end)
+    end)(color)
+end
+
+CPGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    CPScroll.CanvasSize = UDim2.new(0, 0, 0, CPGrid.AbsoluteContentSize.Y + 4)
+end)
+
+CPClose.MouseButton1Click:Connect(function()
+    ColorPanel.Visible = false
+    State.ActiveColorPicker = nil
+end)
+
+CollapseBtn.MouseButton1Click:Connect(function()
+    State.Collapsed = not State.Collapsed
+    if State.Collapsed then
+        CollapseBtn.Text = "▶"
+        Body.Visible = false
+        ColorPanel.Visible = false
+        Main.Size = UDim2.new(0, 420, 0, MAIN_COLLAPSED_HEIGHT)
+    else
+        CollapseBtn.Text = "▼"
+        Body.Visible = true
+        Main.Size = UDim2.new(0, 420, 0, MAIN_EXPANDED_HEIGHT)
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if not ColorPanel.Visible then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+    local pos = input.Position
+    local ap, as = ColorPanel.AbsolutePosition, ColorPanel.AbsoluteSize
+    if pos.X < ap.X or pos.X > ap.X + as.X or pos.Y < ap.Y or pos.Y > ap.Y + as.Y then
+        ColorPanel.Visible = false
+        State.ActiveColorPicker = nil
+    end
+end)
+
+-- ==================== 可滚动内容区 ====================
+local Content = Instance.new("ScrollingFrame")
+Content.Size = UDim2.new(1, 0, 1, -60)
+Content.Position = UDim2.new(0, 0, 0, 30)
+Content.BackgroundTransparency = 1
+Content.BorderSizePixel = 0
+Content.ScrollBarThickness = 2
+Content.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 110)
+Content.ClipsDescendants = true
+Content.Parent = Body
+
+local ContentList = Instance.new("UIListLayout")
+ContentList.Padding = UDim.new(0, 2)
+ContentList.Parent = Content
+
+ContentList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    Content.CanvasSize = UDim2.new(0, 0, 0, ContentList.AbsoluteContentSize.Y + 4)
+end)
+
+
+local function AddToQueue(obj, cat)
+    for _, e in ipairs(State.LoopQueue) do if e.Obj == obj and e.Cat == cat then return end end
+    table.insert(State.LoopQueue, {Obj = obj, Cat = cat})
+end
+local function RemoveFromQueue(obj, cat)
+    for i = #State.LoopQueue, 1, -1 do
+        if State.LoopQueue[i].Obj == obj and State.LoopQueue[i].Cat == cat then table.remove(State.LoopQueue, i) end
+    end
+end
+local function InQueue(obj, cat)
+    for _, e in ipairs(State.LoopQueue) do if e.Obj == obj and e.Cat == cat then return true end end
+    return false
+end
+
+local function UpdateButtonVisuals(b, obj, cat)
+    local xraySet = State.XRaySelected[cat]
+    local isXRay = xraySet and xraySet[obj] == true
+    local isSingle = State.SingleTarget == obj and State.SingleCategory == cat
+    local isLoop = InQueue(obj, cat)
+
+    local ind = b:FindFirstChild("XRayInd")
+    if not ind then
+        ind = Instance.new("Frame")
+        ind.Name = "XRayInd"
+        ind.Size = UDim2.new(0, 3, 1, 0)
+        ind.Position = UDim2.new(0, 0, 0, 0)
+        ind.BackgroundColor3 = XRAY_ACCENT
+        ind.BorderSizePixel = 0
+        ind.Parent = b
+    end
+    ind.Visible = isXRay
+    ind.BackgroundColor3 = XRAY_ACCENT
+
+    if State.TeleportMode == "Single" then
+        if isSingle then
+            b.BackgroundColor3 = Color3.fromRGB(37, 99, 235)
+            b.BackgroundTransparency = 0.25
+            b.TextColor3 = Color3.fromRGB(255, 255, 255)
+        else
+            b.BackgroundColor3 = Color3.fromRGB(15, 15, 28)
+            b.BackgroundTransparency = 0.6
+            b.TextColor3 = Color3.fromRGB(180, 180, 195)
+        end
+    else
+        if isLoop then
+            b.BackgroundColor3 = Color3.fromRGB(124, 58, 237)
+            b.BackgroundTransparency = 0.25
+            b.TextColor3 = Color3.fromRGB(255, 255, 255)
+        else
+            b.BackgroundColor3 = Color3.fromRGB(15, 15, 28)
+            b.BackgroundTransparency = 0.6
+            b.TextColor3 = Color3.fromRGB(180, 180, 195)
+        end
+    end
+end
+
+local function RefreshAllListVisuals()
+    for cat, entries in pairs(ListEntries) do
+        for _, e in ipairs(entries) do
+            if e.Button and e.Object then UpdateButtonVisuals(e.Button, e.Object, cat) end
+        end
+    end
+end
+
+local function UpdateList(listData, objects, cat)
+    for _, e in ipairs(ListEntries[cat]) do if e.Button then e.Button:Destroy() end end
+    ListEntries[cat] = {}
+
+    listData.Header.Text = listData.Header.Text:gsub("%[.-%]", "[" .. #objects .. "]")
+
+    if State.LoopSelectAll[cat] then
+        for i = #State.LoopQueue, 1, -1 do
+            if State.LoopQueue[i].Cat == cat then table.remove(State.LoopQueue, i) end
+        end
+        for _, obj in ipairs(objects) do
+            AddToQueue(obj, cat)
+        end
+    end
+
+    if State.XRaySelectAll[cat] then
+        for _, obj in ipairs(objects) do
+            State.XRaySelected[cat][obj] = true
+        end
+    end
+
+    for _, obj in ipairs(objects) do
+        (function(currentObj, currentCat)
+            local b = Instance.new("TextButton")
+            b.Size = UDim2.new(1, -2, 0, 15)
+            b.BackgroundColor3 = Color3.fromRGB(15, 15, 28)
+            b.BackgroundTransparency = 0.6
+            b.BorderSizePixel = 0
+            b.Text = " " .. currentObj.Name
+            b.TextColor3 = Color3.fromRGB(180, 180, 195)
+            b.TextSize = 8
+            b.Font = Enum.Font.Gotham
+            b.TextXAlignment = Enum.TextXAlignment.Left
+            b.AutoButtonColor = false
+            b.Parent = listData.Scroll
+
+            UpdateButtonVisuals(b, currentObj, currentCat)
+
+            b.MouseEnter:Connect(function()
+                local active = false
+                if State.TeleportMode == "Single" then
+                    active = (State.SingleTarget == currentObj and State.SingleCategory == currentCat)
+                else
+                    active = InQueue(currentObj, currentCat)
+                end
+                if not active then b.BackgroundTransparency = 0.35 end
+            end)
+            b.MouseLeave:Connect(function() UpdateButtonVisuals(b, currentObj, currentCat) end)
+
+            b.MouseButton1Click:Connect(function()
+                if State.XRayMode then
+                    local sel = State.XRaySelected[currentCat][currentObj] == true
+                    if sel then
+                        State.XRaySelected[currentCat][currentObj] = nil
+                        ClearXRayObj(currentObj)
+                        if State.XRaySelectAll[currentCat] then
+                            State.XRaySelectAll[currentCat] = false
+                            local ui = LoopSelectAllUI[currentCat]
+                            if ui then ui.XRayCheckMark.Visible = false end
+                        end
+                    else
+                        State.XRaySelected[currentCat][currentObj] = true
+                    end
+                    UpdateButtonVisuals(b, currentObj, currentCat)
+                    UpdateXRay()
+                else
+                    if State.TeleportMode == "Single" then
+                        if State.SingleTarget == currentObj and State.SingleCategory == currentCat then
+                            State.SingleTarget = nil
+                            State.SingleCategory = nil
+                        else
+                            State.SingleTarget = currentObj
+                            State.SingleCategory = currentCat
+                        end
+                        RefreshAllListVisuals()
+                    else
+                        if InQueue(currentObj, currentCat) then
+                            RemoveFromQueue(currentObj, currentCat)
+                            if State.LoopSelectAll[currentCat] then
+                                State.LoopSelectAll[currentCat] = false
+                                local ui = LoopSelectAllUI[currentCat]
+                                if ui then ui.CheckMark.Visible = false end
+                            end
+                        else
+                            AddToQueue(currentObj, currentCat)
+                        end
+                        RefreshAllListVisuals()
+                    end
+                end
+            end)
+
+            table.insert(ListEntries[cat], {Button = b, Object = currentObj})
+        end)(obj, cat)
+    end
+
+    if State.SingleCategory == cat then
+        local found = false
+        for _, obj in ipairs(objects) do if obj == State.SingleTarget then found = true break end end
+        if not found then State.SingleTarget = nil State.SingleCategory = nil end
+    end
+    -- 修复：避免 pairs 遍历中删除导致跳过
+    local toClean = {}
+    for obj, _ in pairs(State.XRaySelected[cat]) do
+        if not obj or not obj.Parent then
+            table.insert(toClean, obj)
+        end
+    end
+    for _, obj in ipairs(toClean) do
+        State.XRaySelected[cat][obj] = nil
+        ClearXRayObj(obj)
+    end
+    for i = #State.LoopQueue, 1, -1 do
+        if State.LoopQueue[i].Cat == cat then
+            local found = false 
+            
+            for _, obj in ipairs(objects) do if obj == State.LoopQueue[i].Obj then found = true break end end
+            if not found then table.remove(State.LoopQueue, i) end
+        end
+    end
+end
+
+local function CreateSection(title, defaultOpen)
+    local section = Instance.new("Frame")
+    section.BackgroundTransparency = 1
+    section.BorderSizePixel = 0
+    section.Parent = Content
+
+    local header = Instance.new("TextButton")
+    header.Size = UDim2.new(1, -4, 0, 22)
+    header.Position = UDim2.new(0, 2, 0, 0)
+    header.BackgroundColor3 = Color3.fromRGB(18, 20, 35)
+    header.BackgroundTransparency = 0.5
+    header.BorderSizePixel = 0
+    header.Text = (defaultOpen and "  ▼ " or "  ▶ ") .. title
+    header.TextColor3 = Color3.fromRGB(220, 220, 230)
+    header.TextSize = 9
+    header.Font = Enum.Font.GothamBold
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.AutoButtonColor = false
+    header.Parent = section
+
+    local body = Instance.new("Frame")
+    body.Size = UDim2.new(1, 0, 0, 0)
+    body.Position = UDim2.new(0, 0, 0, 22)
+    body.BackgroundTransparency = 1
+    body.BorderSizePixel = 0
+    body.ClipsDescendants = true
+    body.Visible = defaultOpen == true
+    body.Parent = section
+
+    local bodyLayout = Instance.new("UIListLayout")
+    bodyLayout.Padding = UDim.new(0, 1)
+    bodyLayout.Parent = body
+
+    local open = defaultOpen == true
+    -- 核心修复：UIScale 会缩放 AbsoluteContentSize，但 Section.Size 是逻辑值，
+    -- 如果直接用已缩放的 AbsoluteContentSize 设置 Size，UIScale 会再次缩放导致二次放大/缩小。
+    -- 这里除以 Scaler.Scale 还原为未缩放的基础高度，让 UIScale 只渲染缩放一次。
+    local function Refresh()
+        local scale = Scaler.Scale
+        local h = bodyLayout.AbsoluteContentSize.Y / scale
+        if open then
+            section.Size = UDim2.new(1, 0, 0, 22 + h + 2)
+            body.Size = UDim2.new(1, 0, 0, h + 2)
+        else
+            section.Size = UDim2.new(1, 0, 0, 22)
+            body.Size = UDim2.new(1, 0, 0, 0)
+        end
+    end
+
+    table.insert(SectionRefreshers, Refresh)
+    bodyLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(Refresh)
+
+    header.MouseButton1Click:Connect(function()
+        open = not open
+        header.Text = (open and "  ▼ " or "  ▶ ") .. title
+        body.Visible = open
+        Refresh()
+    end)
+
+    header.MouseEnter:Connect(function() header.BackgroundTransparency = 0.35 end)
+    header.MouseLeave:Connect(function() header.BackgroundTransparency = 0.5 end)
+    header.MouseButton1Down:Connect(function() header.BackgroundTransparency = 0.25 end)
+    header.MouseButton1Up:Connect(function() header.BackgroundTransparency = 0.35 end)
+
+    task.delay(0.05, Refresh)
+    return body
+end
+
+local function CreateToggle(text, parent, key)
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1, -4, 0, 22)
+    f.BackgroundColor3 = Color3.fromRGB(12, 12, 22)
+    f.BackgroundTransparency = 0.55
+    f.BorderSizePixel = 0
+    f.Parent = parent
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.6, 0, 1, 0)
+    lbl.Position = UDim2.new(0, 8, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(240, 240, 245)
+    lbl.TextSize = 9
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = f
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 32, 0, 16)
+    btn.Position = UDim2.new(1, -36, 0.5, -8)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    btn.BackgroundTransparency = 0.3
+    btn.BorderSizePixel = 0
+    btn.Text = "关"
+    btn.TextColor3 = Color3.fromRGB(160, 160, 175)
+    btn.TextSize = 8
+    btn.Font = Enum.Font.GothamBold
+    btn.AutoButtonColor = false
+    btn.Parent = f
+
+    local function Update()
+        if State[key] then
+            btn.BackgroundColor3 = Color3.fromRGB(37, 99, 235)
+            btn.BackgroundTransparency = 0.25
+            btn.TextColor3 = Color3.fromRGB(255,255,255)
+            btn.Text = "开"
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+            btn.BackgroundTransparency = 0.3
+            btn.TextColor3 = Color3.fromRGB(160, 160, 175)
+            btn.Text = "关"
+        end
+    end
+
+    btn.MouseEnter:Connect(function() if not State[key] then btn.BackgroundTransparency = 0.15 end end)
+    btn.MouseLeave:Connect(Update)
+    btn.MouseButton1Down:Connect(function() btn.BackgroundTransparency = 0.1 end)
+    btn.MouseButton1Up:Connect(function() 
+        State[key] = not State[key] 
+        Update() 
+        UpdateXRay()
+    end)
+
+    Update()
+    return f
+end
+
+local function CreateColorRow(text, category, parent)
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1, -4, 0, 22)
+    f.BackgroundColor3 = Color3.fromRGB(12, 12, 22)
+    f.BackgroundTransparency = 0.55
+    f.BorderSizePixel = 0
+    f.Parent = parent
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.5, 0, 1, 0)
+    lbl.Position = UDim2.new(0, 8, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(240, 240, 245)
+    lbl.TextSize = 9
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = f
+
+    local cbtn = Instance.new("TextButton")
+    cbtn.Size = UDim2.new(0, 34, 0, 16)
+    cbtn.Position = UDim2.new(1, -38, 0.5, -8)
+    cbtn.BackgroundColor3 = State["Color_" .. category]
+    cbtn.BackgroundTransparency = 0.15
+    cbtn.BorderSizePixel = 0
+    cbtn.Text = ""
+    cbtn.AutoButtonColor = false
+    cbtn.Parent = f
+
+    ColorButtons[category] = cbtn
+
+    cbtn.MouseEnter:Connect(function()
+        cbtn.BackgroundTransparency = 0.05
+    end)
+    cbtn.MouseLeave:Connect(function()
+        cbtn.BackgroundTransparency = 0.15
+    end)
+    cbtn.MouseButton1Click:Connect(function()
+        State.ActiveColorPicker = category
+        ColorPanel.Visible = true
+        CPTitle.Text = "选择" .. text
+    end)
+
+    return f
+end
+
+local function CreateList(title, category, parent, customSize)
+    local f = Instance.new("Frame")
+    f.Size = customSize or UDim2.new(1, -4, 0, 54)
+    f.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+    f.BackgroundTransparency = 0.5
+    f.BorderSizePixel = 0
+    f.Parent = parent
+    AddGlassStroke(f, Color3.fromRGB(70, 80, 120), 0.8)
+
+    local hdr = Instance.new("TextLabel")
+    hdr.Size = UDim2.new(1, 0, 0, 16)
+    hdr.BackgroundColor3 = Color3.fromRGB(18, 20, 35)
+    hdr.BackgroundTransparency = 0.45
+    hdr.BorderSizePixel = 0
+    hdr.Text = title .. " [0]"
+    hdr.TextColor3 = Color3.fromRGB(200, 200, 215)
+    hdr.TextSize = 9
+    hdr.Font = Enum.Font.GothamBold
+    hdr.Parent = f
+
+    -- 轮传全选栏
+    local selectAllFrame = Instance.new("Frame")
+    selectAllFrame.Name = "SelectAllFrame"
+    selectAllFrame.Size = UDim2.new(1, 0, 0, 14)
+    selectAllFrame.Position = UDim2.new(0, 0, 0, 16)
+    selectAllFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 20)
+    selectAllFrame.BackgroundTransparency = 0.6
+    selectAllFrame.BorderSizePixel = 0
+    selectAllFrame.Visible = false
+    selectAllFrame.Parent = f
+
+    local selectAllLabel = Instance.new("TextLabel")
+    selectAllLabel.Size = UDim2.new(0.65, 0, 1, 0)
+    selectAllLabel.Position = UDim2.new(0, 4, 0, 0)
+    selectAllLabel.BackgroundTransparency = 1
+    selectAllLabel.Text = "轮传全选"
+    selectAllLabel.TextColor3 = Color3.fromRGB(180, 180, 195)
+    selectAllLabel.TextSize = 8
+    selectAllLabel.Font = Enum.Font.Gotham
+    selectAllLabel.TextXAlignment = Enum.TextXAlignment.Left
+    selectAllLabel.Parent = selectAllFrame
+
+    local checkBox = Instance.new("TextButton")
+    checkBox.Size = UDim2.new(0, 10, 0, 10)
+    checkBox.Position = UDim2.new(1, -16, 0.5, -5)
+    checkBox.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    checkBox.BackgroundTransparency = 0.3
+    checkBox.BorderSizePixel = 1
+    checkBox.BorderColor3 = Color3.fromRGB(100, 100, 120)
+    checkBox.Text = ""
+    checkBox.AutoButtonColor = false
+    checkBox.Parent = selectAllFrame
+
+    local checkMark = Instance.new("Frame")
+    checkMark.Size = UDim2.new(1, 0, 1, 0)
+    checkMark.Position = UDim2.new(0, 0, 0, 0)
+    checkMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    checkMark.BorderSizePixel = 0
+    checkMark.Visible = false
+    checkMark.Parent = checkBox
+
+    -- 透视全选栏
+    local xraySelectAllFrame = Instance.new("Frame")
+    xraySelectAllFrame.Name = "XRaySelectAllFrame"
+    xraySelectAllFrame.Size = UDim2.new(1, 0, 0, 14)
+    xraySelectAllFrame.Position = UDim2.new(0, 0, 0, 16)
+    xraySelectAllFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 20)
+    xraySelectAllFrame.BackgroundTransparency = 0.6
+    xraySelectAllFrame.BorderSizePixel = 0
+    xraySelectAllFrame.Visible = false
+    xraySelectAllFrame.Parent = f
+
+    local xraySelectAllLabel = Instance.new("TextLabel")
+    xraySelectAllLabel.Size = UDim2.new(0.65, 0, 1, 0)
+    xraySelectAllLabel.Position = UDim2.new(0, 4, 0, 0)
+    xraySelectAllLabel.BackgroundTransparency = 1
+    xraySelectAllLabel.Text = "透视全选"
+    xraySelectAllLabel.TextColor3 = Color3.fromRGB(180, 180, 195)
+    xraySelectAllLabel.TextSize = 8
+    xraySelectAllLabel.Font = Enum.Font.Gotham
+    xraySelectAllLabel.TextXAlignment = Enum.TextXAlignment.Left
+    xraySelectAllLabel.Parent = xraySelectAllFrame
+
+    local xrayCheckBox = Instance.new("TextButton")
+    xrayCheckBox.Size = UDim2.new(0, 10, 0, 10)
+    xrayCheckBox.Position = UDim2.new(1, -16, 0.5, -5)
+    xrayCheckBox.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    xrayCheckBox.BackgroundTransparency = 0.3
+    xrayCheckBox.BorderSizePixel = 1
+    xrayCheckBox.BorderColor3 = Color3.fromRGB(100, 100, 120)
+    xrayCheckBox.Text = ""
+    xrayCheckBox.AutoButtonColor = false
+    xrayCheckBox.Parent = xraySelectAllFrame
+
+    local xrayCheckMark = Instance.new("Frame")
+    xrayCheckMark.Size = UDim2.new(1, 0, 1, 0)
+    xrayCheckMark.Position = UDim2.new(0, 0, 0, 0)
+    xrayCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    xrayCheckMark.BorderSizePixel = 0
+    xrayCheckMark.Visible = false
+    xrayCheckMark.Parent = xrayCheckBox
+
+    LoopSelectAllUI[category] = {
+        Frame = selectAllFrame,
+        CheckBox = checkBox,
+        CheckMark = checkMark,
+        XRayFrame = xraySelectAllFrame,
+        XRayCheckBox = xrayCheckBox,
+        XRayCheckMark = xrayCheckMark,
+        Scroll = nil,
+    }
+
+    checkBox.MouseButton1Click:Connect(function()
+        local isSelected = State.LoopSelectAll[category]
+        if isSelected then
+            State.LoopSelectAll[category] = false
+            checkMark.Visible = false
+            for i = #State.LoopQueue, 1, -1 do
+                if State.LoopQueue[i].Cat == category then
+                    table.remove(State.LoopQueue, i)
+                end
+            end
+        else
+            State.LoopSelectAll[category] = true
+            checkMark.Visible = true
+        end
+        RefreshAllListVisuals()
+    end)
+
+    xrayCheckBox.MouseButton1Click:Connect(function()
+        local isSelected = State.XRaySelectAll[category]
+        if isSelected then
+            State.XRaySelectAll[category] = false
+            xrayCheckMark.Visible = false
+            -- 修复：先收集所有对象再清除，避免 pairs 遍历中删除导致跳过
+            local toClear = {}
+            for obj, _ in pairs(State.XRaySelected[category]) do
+                table.insert(toClear, obj)
+            end
+            for _, obj in ipairs(toClear) do
+                State.XRaySelected[category][obj] = nil
+                ClearXRayObj(obj)
+            end
+        else
+            State.XRaySelectAll[category] = true
+            xrayCheckMark.Visible = true
+        end
+        RefreshAllListVisuals()
+        UpdateXRay()
+    end)
+
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1, 0, 1, -16)
+    scroll.Position = UDim2.new(0, 0, 0, 16)
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 2
+    scroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 110)
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scroll.Parent = f
+
+    LoopSelectAllUI[category].Scroll = scroll
+
+    local lay = Instance.new("UIListLayout")
+    lay.Padding = UDim.new(0, 1)
+    lay.Parent = scroll
+
+    lay:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scroll.CanvasSize = UDim2.new(0, 0, 0, lay.AbsoluteContentSize.Y + 2)
+    end)
+
+    return { Frame = f, Header = hdr, Scroll = scroll, Category = category }
+end
+
+-- ==================== 组装UI ====================
+local secHL = CreateSection("高亮开关", false)
+CreateToggle("物品", secHL, "HL_Item")
+CreateToggle("NPC",  secHL, "HL_NPC")
+CreateToggle("玩家", secHL, "HL_Player")
+
+local secName = CreateSection("名字开关", false)
+CreateToggle("物品", secName, "Name_Item")
+CreateToggle("NPC",  secName, "Name_NPC")
+CreateToggle("玩家", secName, "Name_Player")
+
+local secColor = CreateSection("颜色设置", false)
+CreateColorRow("物品高亮颜色", "Item",   secColor)
+CreateColorRow("NPC高亮颜色",  "NPC",    secColor)
+CreateColorRow("玩家高亮颜色", "Player", secColor)
+CreateColorRow("物品名字颜色", "Name_Item",   secColor)
+CreateColorRow("NPC名字颜色",  "Name_NPC",    secColor)
+CreateColorRow("玩家名字颜色", "Name_Player", secColor)
+
+-- ==================== 目标列表 ====================
+local secList = CreateSection("目标列表", true)
+
+local ListContainer = Instance.new("Frame")
+ListContainer.Size = UDim2.new(1, -4, 0, 200)
+ListContainer.Position = UDim2.new(0, 2, 0, 0)
+ListContainer.BackgroundTransparency = 1
+ListContainer.BorderSizePixel = 0
+ListContainer.Parent = secList
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.FillDirection = Enum.FillDirection.Horizontal
+ListLayout.Padding = UDim.new(0, 4)
+ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+ListLayout.Parent = ListContainer
+
+local listItem   = CreateList("物品", "Item",   ListContainer, UDim2.new(0, 130, 0, 196))
+local listNPC    = CreateList("NPC",  "NPC",    ListContainer, UDim2.new(0, 130, 0, 196))
+local listPlayer = CreateList("玩家", "Player", ListContainer, UDim2.new(0, 130, 0, 196))
+local function ForceRefreshLayout()
+    task.wait(0.1)
+    for _, rf in ipairs(SectionRefreshers) do pcall(rf) end
+    for _, ld in ipairs({listItem, listNPC, listPlayer}) do
+        local lay = ld.Scroll:FindFirstChildOfClass("UIListLayout")
+        if lay then ld.Scroll.CanvasSize = UDim2.new(0, 0, 0, lay.AbsoluteContentSize.Y + 2) end
+    end
+    local cLay = Content:FindFirstChildOfClass("UIListLayout")
+    if cLay then Content.CanvasSize = UDim2.new(0, 0, 0, cLay.AbsoluteContentSize.Y + 4) end
+end
+
+
+-- ==================== 底部栏 ====================
+local Bottom = Instance.new("Frame")
+Bottom.Size = UDim2.new(1, 0, 0, 30)
+Bottom.Position = UDim2.new(0, 0, 1, -30)
+Bottom.BackgroundColor3 = Color3.fromRGB(10, 11, 20)
+Bottom.BackgroundTransparency = 0.5
+Bottom.BorderSizePixel = 0
+Bottom.Parent = Body
+
+local BStroke = Instance.new("UIStroke")
+BStroke.Color = Color3.fromRGB(70, 80, 120)
+BStroke.Transparency = 0.75
+BStroke.Thickness = 1
+BStroke.Parent = Bottom
+
+local BLine = Instance.new("Frame")
+BLine.Size = UDim2.new(1, 0, 0, 1)
+BLine.BackgroundColor3 = Color3.fromRGB(80, 100, 160)
+BLine.BackgroundTransparency = 0.7
+BLine.BorderSizePixel = 0
+BLine.Parent = Bottom
+
+local ZoomOut = Instance.new("TextButton")
+ZoomOut.Size = UDim2.new(0, 22, 0, 20)
+ZoomOut.Position = UDim2.new(0, 5, 0.5, -10)
+ZoomOut.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+ZoomOut.BackgroundTransparency = 0.35
+ZoomOut.BorderSizePixel = 0
+ZoomOut.Text = "-"
+ZoomOut.TextColor3 = Color3.fromRGB(255,255,255)
+ZoomOut.TextSize = 12
+ZoomOut.Font = Enum.Font.GothamBold
+ZoomOut.AutoButtonColor = false
+ZoomOut.Parent = Bottom
+
+local ZoomIn = Instance.new("TextButton")
+ZoomIn.Size = UDim2.new(0, 22, 0, 20)
+ZoomIn.Position = UDim2.new(0, 29, 0.5, -10)
+ZoomIn.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+ZoomIn.BackgroundTransparency = 0.35
+ZoomIn.BorderSizePixel = 0
+ZoomIn.Text = "+"
+ZoomIn.TextColor3 = Color3.fromRGB(255,255,255)
+ZoomIn.TextSize = 12
+ZoomIn.Font = Enum.Font.GothamBold
+ZoomIn.AutoButtonColor = false
+ZoomIn.Parent = Bottom
+
+local ZText = Instance.new("TextLabel")
+ZText.Size = UDim2.new(0, 32, 0, 16)
+ZText.Position = UDim2.new(0, 54, 0.5, -8)
+ZText.BackgroundTransparency = 1
+ZText.Text = "100%"
+ZText.TextColor3 = Color3.fromRGB(200, 200, 215)
+ZText.TextSize = 9
+ZText.Font = Enum.Font.Gotham
+ZText.Parent = Bottom
+
+local zoomButtons = {ZoomOut, ZoomIn}
+for _, btn in ipairs(zoomButtons) do
+    (function(currentBtn)
+        currentBtn.MouseEnter:Connect(function() currentBtn.BackgroundTransparency = 0.15 end)
+        currentBtn.MouseLeave:Connect(function() currentBtn.BackgroundTransparency = 0.35 end)
+        currentBtn.MouseButton1Down:Connect(function() currentBtn.BackgroundTransparency = 0.1 end)
+        currentBtn.MouseButton1Up:Connect(function() currentBtn.BackgroundTransparency = 0.15 end)
+    end)(btn)
+end
+
+ZoomIn.MouseButton1Click:Connect(function()
+    State.Scale = math.min(State.Scale + 0.1, 1.3)
+    Scaler.Scale = State.Scale
+    ZText.Text = math.floor(State.Scale * 100) .. "%"
+    task.delay(0.3, ForceRefreshLayout)
+end)
+
+ZoomOut.MouseButton1Click:Connect(function()
+    State.Scale = math.max(State.Scale - 0.1, 0.7)
+    Scaler.Scale = State.Scale
+    ZText.Text = math.floor(State.Scale * 100) .. "%"
+    task.delay(0.3, ForceRefreshLayout)
+end)
+
+-- ===== 传送按钮（深色玻璃底 + 大文字） =====
+local TeleBtn = Instance.new("TextButton")
+TeleBtn.Size = UDim2.new(0, 70, 0, 22)
+TeleBtn.Position = UDim2.new(1, -75, 0.5, -11)
+TeleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+TeleBtn.BackgroundTransparency = 0.4
+TeleBtn.BorderSizePixel = 0
+TeleBtn.Text = "传送"
+TeleBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
+TeleBtn.TextSize = 12
+TeleBtn.Font = Enum.Font.GothamBold
+TeleBtn.AutoButtonColor = false
+TeleBtn.Parent = Bottom
+
+TeleBtn.MouseEnter:Connect(function()
+    TeleBtn.BackgroundTransparency = 0.25
+end)
+TeleBtn.MouseLeave:Connect(function()
+    if not State.IsLooping then
+        TeleBtn.BackgroundTransparency = 0.4
+        TeleBtn.TextColor3 = (State.TeleportMode == "Single" and Color3.fromRGB(37,99,235) or Color3.fromRGB(124,58,237))
+    end
+end)
+TeleBtn.MouseButton1Down:Connect(function() TeleBtn.BackgroundTransparency = 0.15 end)
+TeleBtn.MouseButton1Up:Connect(function() 
+    TeleBtn.BackgroundTransparency = State.IsLooping and 0.25 or 0.4
+end)
+
+local function StartLoop()
+    if State.IsLooping then return end
+    State.IsLooping = true
+    TeleBtn.Text = "停止"
+    TeleBtn.TextColor3 = Color3.fromRGB(220, 38, 38)
+    TeleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    TeleBtn.BackgroundTransparency = 0.25
+
+    State.LoopThread = task.spawn(function()
+        while State.IsLooping and TeleBtn.Parent do
+            local targets = {}
+            for _, e in ipairs(State.LoopQueue) do
+                if e.Obj and e.Obj.Parent then table.insert(targets, e) end
+            end
+            if #targets == 0 then task.wait(0.5) continue end
+
+            for _, e in ipairs(targets) do
+                if not State.IsLooping then break end
+                local pos = GetPos(e.Obj, e.Cat)
+                if pos then
+                    local char = player.Character
+                    if char then
+                        local hrp = char:FindFirstChild("HumanoidRootPart")
+                        if hrp then hrp.CFrame = CFrame.new(pos + Vector3.new(0, 5, 0)) end
+                    end
+                end
+                task.wait(State.LoopInterval)
+            end
+        end
+        State.IsLooping = false
+        if TeleBtn.Parent then
+            TeleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            TeleBtn.BackgroundTransparency = 0.4
+            if State.TeleportMode == "Loop" then
+                TeleBtn.Text = "轮传"
+                TeleBtn.TextColor3 = Color3.fromRGB(124, 58, 237)
+            else
+                TeleBtn.Text = "传送"
+                TeleBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
+            end
+        end
+    end)
+end
+
+local function StopLoop()
+    State.IsLooping = false
+end
+
+-- ==================== 全选UI显隐控制 ====================
+local function UpdateSelectAllVisibility()
+    for cat, ui in pairs(LoopSelectAllUI) do
+        local loopVisible = (State.TeleportMode == "Loop")
+        local xrayVisible = State.XRayMode
+        
+        ui.Frame.Visible = loopVisible
+        ui.XRayFrame.Visible = xrayVisible
+        
+        if loopVisible and xrayVisible then
+            ui.Frame.Position = UDim2.new(0, 0, 0, 16)
+            ui.XRayFrame.Position = UDim2.new(0, 0, 0, 30)
+            ui.Scroll.Position = UDim2.new(0, 0, 0, 44)
+            ui.Scroll.Size = UDim2.new(1, 0, 1, -44)
+        elseif loopVisible then
+            ui.Frame.Position = UDim2.new(0, 0, 0, 16)
+            ui.XRayFrame.Position = UDim2.new(0, 0, 0, 16)
+            ui.Scroll.Position = UDim2.new(0, 0, 0, 30)
+            ui.Scroll.Size = UDim2.new(1, 0, 1, -30)
+        elseif xrayVisible then
+            ui.Frame.Position = UDim2.new(0, 0, 0, 16)
+            ui.XRayFrame.Position = UDim2.new(0, 0, 0, 16)
+            ui.Scroll.Position = UDim2.new(0, 0, 0, 30)
+            ui.Scroll.Size = UDim2.new(1, 0, 1, -30)
+        else
+            ui.Frame.Position = UDim2.new(0, 0, 0, 16)
+            ui.XRayFrame.Position = UDim2.new(0, 0, 0, 16)
+            ui.Scroll.Position = UDim2.new(0, 0, 0, 16)
+            ui.Scroll.Size = UDim2.new(1, 0, 1, -16)
+        end
+    end
+end
+
+
+-- ==================== 控制栏交互（深色玻璃质感） ====================
+XRayBtn.MouseEnter:Connect(function()
+    XRayBtn.BackgroundTransparency = 0.25
+end)
+XRayBtn.MouseLeave:Connect(function()
+    XRayBtn.BackgroundTransparency = State.XRayMode and 0.25 or 0.4
+    XRayBtn.TextColor3 = State.XRayMode and XRAY_ACCENT or Color3.fromRGB(180, 180, 195)
+end)
+XRayBtn.MouseButton1Click:Connect(function()
+    State.XRayMode = not State.XRayMode
+    XRayBtn.BackgroundTransparency = 0.25
+    XRayBtn.TextColor3 = State.XRayMode and XRAY_ACCENT or Color3.fromRGB(180, 180, 195)
+    UpdateSelectAllVisibility()
+    RefreshAllListVisuals()
+    UpdateXRay()
+end)
+
+ModeBtn.MouseEnter:Connect(function()
+    ModeBtn.BackgroundTransparency = 0.25
+end)
+ModeBtn.MouseLeave:Connect(function()
+    ModeBtn.BackgroundTransparency = 0.4
+    ModeBtn.TextColor3 = (State.TeleportMode == "Single" and Color3.fromRGB(37,99,235) or Color3.fromRGB(124,58,237))
+end)
+ModeBtn.MouseButton1Click:Connect(function()
+    if State.IsLooping then StopLoop() end
+    if State.TeleportMode == "Single" then
+        State.TeleportMode = "Loop"
+        ModeBtn.Text = "轮传"
+        ModeBtn.TextColor3 = Color3.fromRGB(124,58,237)
+        TeleBtn.Text = "轮传"
+        TeleBtn.TextColor3 = Color3.fromRGB(124,58,237)
+    else
+        State.TeleportMode = "Single"
+        ModeBtn.Text = "单传"
+        ModeBtn.TextColor3 = Color3.fromRGB(37,99,235)
+        TeleBtn.Text = "传送"
+        TeleBtn.TextColor3 = Color3.fromRGB(37,99,235)
+    end
+    UpdateSelectAllVisibility()
+    RefreshAllListVisuals()
+end)
+
+-- ==================== 拖拽 ====================
+local drag, dStart, dPos = false, nil, nil
+Title.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        drag = true
+        dStart = input.Position
+        dPos = Main.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dStart
+        Main.Position = UDim2.new(dPos.X.Scale, dPos.X.Offset + delta.X, dPos.Y.Scale, dPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then drag = false end
+end)
+
+-- ==================== 主循环 ====================
+local lastScan = 0
+RunService.Heartbeat:Connect(function(dt)
+    lastScan = lastScan + dt
+    if lastScan < 1.5 then return end
+    lastScan = 0
+
+    local items, npcs, players = ScanWorld()
+
+    UpdateXRay()
+
+    UpdateList(listItem, items, "Item")
+    UpdateList(listNPC, npcs, "NPC")
+    UpdateList(listPlayer, players, "Player")
+end)
+
+-- 使用 BillboardGui 替代手动 WorldToViewportPoint 计算，彻底解决名字漂移问题
+RunService.RenderStepped:Connect(function()
+    for i = #XRayNameTags, 1, -1 do
+        local d = XRayNameTags[i]
+        local t = d.Target
+        if not t or not t.Parent then
+            d.Billboard:Destroy()
+            table.remove(XRayNameTags, i)
+            continue
+        end
+        
+        -- 更新颜色与名字
+        local txt = d.Billboard:FindFirstChildOfClass("TextLabel")
+        if txt then
+            txt.TextColor3 = State["Color_Name_" .. d.Cat]
+            if d.Cat ~= "Player" then
+                txt.Text = "◉ " .. t.Name
+            end
+        end
+        
+        -- 如果 Adornee 失效（如角色重生导致 Head 被替换），自动重新绑定
+        if not d.Billboard.Adornee or not d.Billboard.Adornee.Parent then
+            local newAdornee = GetAdornee(t, d.Cat)
+            d.Billboard.Adornee = newAdornee
+            if newAdornee then
+                if newAdornee.Name == "Head" then
+                    d.Billboard.StudsOffsetWorldSpace = Vector3.new(0, 1, 0)
+                else
+                    d.Billboard.StudsOffsetWorldSpace = Vector3.new(0, 3, 0)
+                end
+            end
+        end
+    end
+end)
+
+-- ==================== 传送按钮点击 ====================
+TeleBtn.MouseButton1Up:Connect(function()
+    if State.TeleportMode == "Single" then
+        if not State.SingleTarget or not State.SingleCategory then
+            TeleBtn.Text = "未选"
+            TeleBtn.TextColor3 = Color3.fromRGB(255, 0, 255)
+            task.delay(0.8, function() 
+                if TeleBtn.Parent then 
+                    TeleBtn.Text = "传送" 
+                    TeleBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
+                end 
+            end)
+            return
+        end
+        local char = player.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local pos = GetPos(State.SingleTarget, State.SingleCategory)
+        if pos then
+            hrp.CFrame = CFrame.new(pos + Vector3.new(0, 5, 0))
+            TeleBtn.Text = "已传"
+            TeleBtn.TextColor3 = Color3.fromRGB(34, 197, 94)
+            task.delay(1, function() 
+                if TeleBtn.Parent then 
+                    TeleBtn.Text = "传送" 
+                    TeleBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
+                end 
+            end)
+        else
+            TeleBtn.Text = "无效"
+            TeleBtn.TextColor3 = Color3.fromRGB(220, 38, 38)
+            task.delay(0.8, function() 
+                if TeleBtn.Parent then 
+                    TeleBtn.Text = "传送" 
+                    TeleBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
+                end 
+            end)
+        end
+    else
+        if State.IsLooping then
+            StopLoop()
+        else
+            if #State.LoopQueue == 0 then
+                TeleBtn.Text = "未选"
+                TeleBtn.TextColor3 = Color3.fromRGB(255, 0, 255)
+                task.delay(0.8, function() 
+                    if TeleBtn.Parent then 
+                        TeleBtn.Text = "轮传" 
+                        TeleBtn.TextColor3 = Color3.fromRGB(124, 58, 237)
+                    end 
+                end)
+                return
+            end
+            StartLoop()
+        end
+    end
+end)
+
+-- 初始化
+UpdateSelectAllVisibility()
