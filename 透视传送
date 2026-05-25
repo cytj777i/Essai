@@ -418,6 +418,14 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Title
 
+local TitleGrad = Instance.new("UIGradient")
+TitleGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 140, 240)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 100, 220)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 80, 160)),
+})
+TitleGrad.Parent = TitleLabel
+
 -- ==================== Body ====================
 local Body = Instance.new("Frame")
 Body.Name = "Body"
@@ -452,33 +460,59 @@ CBLine.BackgroundTransparency = 0.7
 CBLine.BorderSizePixel = 0
 CBLine.Parent = ControlBar
 
--- ===== 透视按钮（深色玻璃底 + 大文字） =====
+-- ===== 透视按钮 =====
 local XRayBtn = Instance.new("TextButton")
 XRayBtn.Size = UDim2.new(0, 60, 0, 22)
 XRayBtn.Position = UDim2.new(0, 8, 0.5, -11)
 XRayBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 28)
 XRayBtn.BackgroundTransparency = 0.4
 XRayBtn.BorderSizePixel = 0
-XRayBtn.Text = "透视"
-XRayBtn.TextColor3 = Color3.fromRGB(180, 180, 195)
-XRayBtn.TextSize = 11
-XRayBtn.Font = Enum.Font.GothamBold
+XRayBtn.Text = ""
 XRayBtn.AutoButtonColor = false
 XRayBtn.Parent = ControlBar
 
--- ===== 模式按钮（深色玻璃底 + 大文字） =====
+local XRayText = Instance.new("TextLabel")
+XRayText.Size = UDim2.new(1, 0, 1, 0)
+XRayText.BackgroundTransparency = 1
+XRayText.Text = "透视"
+XRayText.TextColor3 = Color3.fromRGB(255, 255, 255)
+XRayText.TextSize = 11
+XRayText.Font = Enum.Font.GothamBold
+XRayText.Parent = XRayBtn
+
+local XRayGrad = Instance.new("UIGradient")
+XRayGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 180, 195)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)),
+})
+XRayGrad.Parent = XRayText
+
+-- ===== 模式按钮 =====
 local ModeBtn = Instance.new("TextButton")
 ModeBtn.Size = UDim2.new(0, 60, 0, 22)
 ModeBtn.Position = UDim2.new(0, 76, 0.5, -11)
 ModeBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 28)
 ModeBtn.BackgroundTransparency = 0.4
 ModeBtn.BorderSizePixel = 0
-ModeBtn.Text = "单传"
-ModeBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
-ModeBtn.TextSize = 11
-ModeBtn.Font = Enum.Font.GothamBold
+ModeBtn.Text = ""
 ModeBtn.AutoButtonColor = false
 ModeBtn.Parent = ControlBar
+
+local ModeText = Instance.new("TextLabel")
+ModeText.Size = UDim2.new(1, 0, 1, 0)
+ModeText.BackgroundTransparency = 1
+ModeText.Text = "单传"
+ModeText.TextColor3 = Color3.fromRGB(255, 255, 255)
+ModeText.TextSize = 11
+ModeText.Font = Enum.Font.GothamBold
+ModeText.Parent = ModeBtn
+
+local ModeGrad = Instance.new("UIGradient")
+ModeGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(37, 99, 235)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)),
+})
+ModeGrad.Parent = ModeText
 
 local IntervalBox = Instance.new("TextBox")
 IntervalBox.Size = UDim2.new(0, 60, 0, 22)
@@ -507,6 +541,45 @@ IntervalBox.FocusLost:Connect(function()
     IntervalBox.Text = State.LoopInterval .. "s"
     IntervalBox.BackgroundTransparency = 0.4
 end)
+
+-- ===== 刷新按钮 =====
+local ScanBg = Instance.new("Frame")
+ScanBg.Name = "ScanBg"
+ScanBg.Size = UDim2.new(0, 60, 0, 22)
+ScanBg.Position = UDim2.new(0, 212, 0.5, -11)
+ScanBg.BackgroundColor3 = Color3.fromRGB(15, 15, 28)
+ScanBg.BackgroundTransparency = 0.4
+ScanBg.BorderSizePixel = 0
+ScanBg.Parent = ControlBar
+
+local ScanBtn = Instance.new("TextButton")
+ScanBtn.Name = "ScanBtn"
+ScanBtn.Size = UDim2.new(1, 0, 1, 0)
+ScanBtn.BackgroundTransparency = 1
+ScanBtn.Text = ""
+ScanBtn.AutoButtonColor = false
+ScanBtn.Parent = ScanBg
+
+local ScanText = Instance.new("TextLabel")
+ScanText.Size = UDim2.new(1, 0, 1, 0)
+ScanText.BackgroundTransparency = 1
+ScanText.Text = "刷新"
+ScanText.TextColor3 = Color3.fromRGB(255, 255, 255)
+ScanText.TextSize = 11
+ScanText.Font = Enum.Font.GothamBold
+ScanText.Parent = ScanBtn
+
+local ScanGrad = Instance.new("UIGradient")
+ScanGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 150)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 220, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 100, 255)),
+})
+ScanGrad.Parent = ScanText
+
+ScanBtn.MouseEnter:Connect(function() ScanBg.BackgroundTransparency = 0.25 end)
+ScanBtn.MouseLeave:Connect(function() ScanBg.BackgroundTransparency = 0.4 end)
+ScanBtn.MouseButton1Down:Connect(function() ScanBg.BackgroundTransparency = 0.15 end)
 
 -- ==================== 颜色选择器面板 ====================
 local ColorPanel = Instance.new("Frame")
@@ -1111,6 +1184,7 @@ local function CreateList(title, category, parent, customSize)
         Scroll = nil,
     }
 
+    -- ==================== 【核心修复】轮传全选点击事件 ====================
     checkBox.MouseButton1Click:Connect(function()
         local isSelected = State.LoopSelectAll[category]
         if isSelected then
@@ -1124,10 +1198,17 @@ local function CreateList(title, category, parent, customSize)
         else
             State.LoopSelectAll[category] = true
             checkMark.Visible = true
+            -- 【修复】立即将当前列表中所有有效对象加入队列
+            for _, e in ipairs(ListEntries[category]) do
+                if e.Object and e.Object.Parent then
+                    AddToQueue(e.Object, category)
+                end
+            end
         end
         RefreshAllListVisuals()
     end)
 
+    -- ==================== 【核心修复】透视全选点击事件 ====================
     xrayCheckBox.MouseButton1Click:Connect(function()
         local isSelected = State.XRaySelectAll[category]
         if isSelected then
@@ -1145,6 +1226,12 @@ local function CreateList(title, category, parent, customSize)
         else
             State.XRaySelectAll[category] = true
             xrayCheckMark.Visible = true
+            -- 【修复】立即将当前列表中所有有效对象设为 XRay 选中
+            for _, e in ipairs(ListEntries[category]) do
+                if e.Object and e.Object.Parent then
+                    State.XRaySelected[category][e.Object] = true
+                end
+            end
         end
         RefreshAllListVisuals()
         UpdateXRay()
@@ -1305,19 +1392,68 @@ ZoomOut.MouseButton1Click:Connect(function()
     task.delay(0.3, ForceRefreshLayout)
 end)
 
--- ===== 传送按钮（深色玻璃底 + 大文字） =====
+-- ===== 传送按钮 =====
 local TeleBtn = Instance.new("TextButton")
 TeleBtn.Size = UDim2.new(0, 70, 0, 22)
 TeleBtn.Position = UDim2.new(1, -75, 0.5, -11)
 TeleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 TeleBtn.BackgroundTransparency = 0.4
 TeleBtn.BorderSizePixel = 0
-TeleBtn.Text = "传送"
-TeleBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
-TeleBtn.TextSize = 12
-TeleBtn.Font = Enum.Font.GothamBold
+TeleBtn.Text = ""
 TeleBtn.AutoButtonColor = false
 TeleBtn.Parent = Bottom
+
+local TeleText = Instance.new("TextLabel")
+TeleText.Size = UDim2.new(1, 0, 1, 0)
+TeleText.BackgroundTransparency = 1
+TeleText.Text = "传送"
+TeleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleText.TextSize = 12
+TeleText.Font = Enum.Font.GothamBold
+TeleText.Parent = TeleBtn
+
+local TeleGrad = Instance.new("UIGradient")
+TeleGrad.Parent = TeleText
+
+-- ==================== 渐变文字更新辅助函数 ====================
+local function UpdateXRayText()
+    local baseColor = State.XRayMode and XRAY_ACCENT or Color3.fromRGB(180, 180, 195)
+    XRayGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, baseColor),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)),
+    })
+end
+
+local function UpdateModeText()
+    local baseColor = (State.TeleportMode == "Single") and Color3.fromRGB(37, 99, 235) or Color3.fromRGB(124, 58, 237)
+    ModeGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, baseColor),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)),
+    })
+end
+
+local function UpdateTeleText()
+    local baseColor
+    if State.IsLooping then
+        baseColor = Color3.fromRGB(220, 38, 38)
+    elseif State.TeleportMode == "Single" then
+        baseColor = Color3.fromRGB(37, 99, 235)
+    else
+        baseColor = Color3.fromRGB(124, 58, 237)
+    end
+    TeleGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, baseColor),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)),
+    })
+end
+
+local function SetTeleTempText(text, color)
+    TeleText.Text = text
+    TeleGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, color),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)),
+    })
+end
 
 TeleBtn.MouseEnter:Connect(function()
     TeleBtn.BackgroundTransparency = 0.25
@@ -1325,7 +1461,7 @@ end)
 TeleBtn.MouseLeave:Connect(function()
     if not State.IsLooping then
         TeleBtn.BackgroundTransparency = 0.4
-        TeleBtn.TextColor3 = (State.TeleportMode == "Single" and Color3.fromRGB(37,99,235) or Color3.fromRGB(124,58,237))
+        UpdateTeleText()
     end
 end)
 TeleBtn.MouseButton1Down:Connect(function() TeleBtn.BackgroundTransparency = 0.15 end)
@@ -1336,15 +1472,16 @@ end)
 local function StartLoop()
     if State.IsLooping then return end
     State.IsLooping = true
-    TeleBtn.Text = "停止"
-    TeleBtn.TextColor3 = Color3.fromRGB(220, 38, 38)
+    TeleText.Text = "停止"
     TeleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     TeleBtn.BackgroundTransparency = 0.25
+    UpdateTeleText()
 
     State.LoopThread = task.spawn(function()
         while State.IsLooping and TeleBtn.Parent do
             local targets = {}
             for _, e in ipairs(State.LoopQueue) do
+               
                 if e.Obj and e.Obj.Parent then table.insert(targets, e) end
             end
             if #targets == 0 then task.wait(0.5) continue end
@@ -1366,13 +1503,8 @@ local function StartLoop()
         if TeleBtn.Parent then
             TeleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
             TeleBtn.BackgroundTransparency = 0.4
-            if State.TeleportMode == "Loop" then
-                TeleBtn.Text = "轮传"
-                TeleBtn.TextColor3 = Color3.fromRGB(124, 58, 237)
-            else
-                TeleBtn.Text = "传送"
-                TeleBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
-            end
+            TeleText.Text = "传送"
+            UpdateTeleText()
         end
     end)
 end
@@ -1415,18 +1547,18 @@ local function UpdateSelectAllVisibility()
 end
 
 
--- ==================== 控制栏交互（深色玻璃质感） ====================
+-- ==================== 控制栏交互 ====================
 XRayBtn.MouseEnter:Connect(function()
     XRayBtn.BackgroundTransparency = 0.25
 end)
 XRayBtn.MouseLeave:Connect(function()
     XRayBtn.BackgroundTransparency = State.XRayMode and 0.25 or 0.4
-    XRayBtn.TextColor3 = State.XRayMode and XRAY_ACCENT or Color3.fromRGB(180, 180, 195)
+    UpdateXRayText()
 end)
 XRayBtn.MouseButton1Click:Connect(function()
     State.XRayMode = not State.XRayMode
     XRayBtn.BackgroundTransparency = 0.25
-    XRayBtn.TextColor3 = State.XRayMode and XRAY_ACCENT or Color3.fromRGB(180, 180, 195)
+    UpdateXRayText()
     UpdateSelectAllVisibility()
     RefreshAllListVisuals()
     UpdateXRay()
@@ -1437,25 +1569,37 @@ ModeBtn.MouseEnter:Connect(function()
 end)
 ModeBtn.MouseLeave:Connect(function()
     ModeBtn.BackgroundTransparency = 0.4
-    ModeBtn.TextColor3 = (State.TeleportMode == "Single" and Color3.fromRGB(37,99,235) or Color3.fromRGB(124,58,237))
+    UpdateModeText()
 end)
 ModeBtn.MouseButton1Click:Connect(function()
     if State.IsLooping then StopLoop() end
     if State.TeleportMode == "Single" then
         State.TeleportMode = "Loop"
-        ModeBtn.Text = "轮传"
-        ModeBtn.TextColor3 = Color3.fromRGB(124,58,237)
-        TeleBtn.Text = "轮传"
-        TeleBtn.TextColor3 = Color3.fromRGB(124,58,237)
+        ModeText.Text = "轮传"
     else
         State.TeleportMode = "Single"
-        ModeBtn.Text = "单传"
-        ModeBtn.TextColor3 = Color3.fromRGB(37,99,235)
-        TeleBtn.Text = "传送"
-        TeleBtn.TextColor3 = Color3.fromRGB(37,99,235)
+        ModeText.Text = "单传"
     end
+    UpdateModeText()
+    TeleText.Text = "传送"
+    UpdateTeleText()
     UpdateSelectAllVisibility()
     RefreshAllListVisuals()
+end)
+
+-- ==================== 扫描按钮点击事件 ====================
+local function PerformScan()
+    local items, npcs, players = ScanWorld()
+    UpdateXRay()
+    UpdateList(listItem, items, "Item")
+    UpdateList(listNPC, npcs, "NPC")
+    UpdateList(listPlayer, players, "Player")
+    task.delay(0.3, ForceRefreshLayout)
+end
+
+ScanBtn.MouseButton1Up:Connect(function()
+    ScanBg.BackgroundTransparency = 0.4
+    PerformScan()
 end)
 
 -- ==================== 拖拽 ====================
@@ -1478,24 +1622,9 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then drag = false end
 end)
 
--- ==================== 主循环 ====================
-local lastScan = 0
-RunService.Heartbeat:Connect(function(dt)
-    lastScan = lastScan + dt
-    if lastScan < 1.5 then return end
-    lastScan = 0
-
-    local items, npcs, players = ScanWorld()
-
-    UpdateXRay()
-
-    UpdateList(listItem, items, "Item")
-    UpdateList(listNPC, npcs, "NPC")
-    UpdateList(listPlayer, players, "Player")
-end)
-
--- 使用 BillboardGui 替代手动 WorldToViewportPoint 计算，彻底解决名字漂移问题
+-- ==================== 轻量清理循环（仅清理已销毁对象，不扫描世界） ====================
 RunService.RenderStepped:Connect(function()
+    -- 清理失效的 NameTags
     for i = #XRayNameTags, 1, -1 do
         local d = XRayNameTags[i]
         local t = d.Target
@@ -1527,18 +1656,29 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
+    
+    -- 清理失效的 Highlights
+    local deadHL = {}
+    for obj, hl in pairs(XRayHighlights) do
+        if not obj or not obj.Parent then
+            table.insert(deadHL, {obj, hl})
+        end
+    end
+    for _, pair in ipairs(deadHL) do
+        pair[2]:Destroy()
+        XRayHighlights[pair[1]] = nil
+    end
 end)
 
 -- ==================== 传送按钮点击 ====================
 TeleBtn.MouseButton1Up:Connect(function()
     if State.TeleportMode == "Single" then
         if not State.SingleTarget or not State.SingleCategory then
-            TeleBtn.Text = "未选"
-            TeleBtn.TextColor3 = Color3.fromRGB(255, 0, 255)
+            SetTeleTempText("未选", Color3.fromRGB(255, 0, 255))
             task.delay(0.8, function() 
                 if TeleBtn.Parent then 
-                    TeleBtn.Text = "传送" 
-                    TeleBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
+                    TeleText.Text = "传送"
+                    UpdateTeleText()
                 end 
             end)
             return
@@ -1550,21 +1690,19 @@ TeleBtn.MouseButton1Up:Connect(function()
         local pos = GetPos(State.SingleTarget, State.SingleCategory)
         if pos then
             hrp.CFrame = CFrame.new(pos + Vector3.new(0, 5, 0))
-            TeleBtn.Text = "已传"
-            TeleBtn.TextColor3 = Color3.fromRGB(34, 197, 94)
+            SetTeleTempText("已传", Color3.fromRGB(34, 197, 94))
             task.delay(1, function() 
                 if TeleBtn.Parent then 
-                    TeleBtn.Text = "传送" 
-                    TeleBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
+                    TeleText.Text = "传送"
+                    UpdateTeleText()
                 end 
             end)
         else
-            TeleBtn.Text = "无效"
-            TeleBtn.TextColor3 = Color3.fromRGB(220, 38, 38)
+            SetTeleTempText("无效", Color3.fromRGB(220, 38, 38))
             task.delay(0.8, function() 
                 if TeleBtn.Parent then 
-                    TeleBtn.Text = "传送" 
-                    TeleBtn.TextColor3 = Color3.fromRGB(37, 99, 235)
+                    TeleText.Text = "传送"
+                    UpdateTeleText()
                 end 
             end)
         end
@@ -1573,12 +1711,11 @@ TeleBtn.MouseButton1Up:Connect(function()
             StopLoop()
         else
             if #State.LoopQueue == 0 then
-                TeleBtn.Text = "未选"
-                TeleBtn.TextColor3 = Color3.fromRGB(255, 0, 255)
+                SetTeleTempText("未选", Color3.fromRGB(255, 0, 255))
                 task.delay(0.8, function() 
                     if TeleBtn.Parent then 
-                        TeleBtn.Text = "轮传" 
-                        TeleBtn.TextColor3 = Color3.fromRGB(124, 58, 237)
+                        TeleText.Text = "传送"
+                        UpdateTeleText()
                     end 
                 end)
                 return
@@ -1588,5 +1725,14 @@ TeleBtn.MouseButton1Up:Connect(function()
     end
 end)
 
+-- ==================== 初始化扫描 ====================
+task.spawn(function()
+    task.wait(0.3)
+    PerformScan()
+end)
+
 -- 初始化
 UpdateSelectAllVisibility()
+UpdateXRayText()
+UpdateModeText()
+UpdateTeleText()
