@@ -1,0 +1,1825 @@
+-- 加载 WindUI
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/gycgchgyfytdttr/shenqin/refs/heads/main/ui.lua"))()
+WindUI.TransparencyValue = 0.2
+WindUI:SetTheme("Dark")
+
+-- 获取服务
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
+
+-- 安全 require
+local function safeRequire(path)
+    local success, module = pcall(require, path)
+    if success then return module end
+    return nil
+end
+
+local Remoting = safeRequire(ReplicatedStorage.Shared.Utility.Remoting)
+local SoundUtils = safeRequire(ReplicatedStorage.Shared.Utility.SoundUtils)
+local ClientDataManager = safeRequire(game.ReplicatedStorage.Client.Data.ClientDataManager)
+
+-- 安全获取远程事件（修复版）
+local function getRemoteEvent(name)
+    -- 优先直接从 ReplicatedStorage.Remotes 获取，避开 Remoting 模块潜在的无限等待/递归
+    local remotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
+    if remotesFolder then
+        local directRemote = remotesFolder:FindFirstChild(name)
+        if directRemote and directRemote:IsA("RemoteEvent") then 
+            return directRemote 
+        end
+        
+        -- 带超时的 WaitForChild，防止无限挂起
+        local success, result = pcall(function()
+            return remotesFolder:WaitForChild(name, 3)
+        end)
+        if success and result and result:IsA("RemoteEvent") then
+            return result
+        end
+    end
+    
+    -- 回退到 Remoting 模块（仅作为备选）
+    if Remoting and Remoting.RemoteEvent then
+        local success, remote = pcall(function()
+            return Remoting.RemoteEvent(name)
+        end)
+        if success and remote then return remote end
+    end
+    
+    warn("[CardHelper] 未能获取远程事件: " .. tostring(name))
+    return nil
+end
+
+local collectCardEvent = getRemoteEvent("CollectCardCash")
+local rerollEvent = getRemoteEvent("PackReroll")
+local collectPackEvent = getRemoteEvent("CollectHeldPack")
+local robuxCollectPackEvent = getRemoteEvent("RobuxCollectHeldPack")
+local packPurchaseEvent = getRemoteEvent("PackPurchase")
+
+-- 放置相关远程事件
+local equipPackToolEvent = getRemoteEvent("EquipPackTool")
+local unequipPackToolEvent = getRemoteEvent("UnequipPackTool")
+
+-- 配置文件路径
+local configFile = "CardHelper/PlacePositions.json"
+
+-- ==================== 功能变量 ====================
+local autoCollectEnabled = false
+local collectInterval = 1
+local collectLoop
+
+local autoPackCollectEnabled = false
+local packCollectInterval = 1
+local packCollectLoop
+local collectedPacks = {}
+
+local autoPlaceEnabled = false
+local placeInterval = 1
+local placeLoop
+local maxPlaceCount = 10
+local placePositions = {}
+
+local autoPurchaseEnabled = false
+local purchaseInterval = 3
+local purchaseLoop
+local blockPurchasePrompts = false
+
+local autoRerollEnabled = false
+local rerollInterval = 4
+local rerollLoop
+
+-- ==================== UI 特效变量 ====================
+local rainbowBorderAnimation
+local currentBorderColorScheme = "银蓝颜色"
+local currentFontColorScheme = "银蓝颜色"
+local borderInitialized = false
+local animationSpeed = 2
+local borderEnabled = true
+local fontColorEnabled = true
+local uiScale = 1
+local blurEnabled = false
+local soundEnabled = true
+
+local FONT_STYLES = {
+    "SourceSansBold","SourceSansItalic","SourceSansLight","SourceSans",
+    "GothamSSm","GothamSSm-Bold","GothamSSm-Medium","GothamSSm-Light",
+    "GothamSSm-Black","GothamSSm-Book","GothamSSm-XLight","GothamSSm-Thin",
+    "GothamSSm-Ultra","GothamSSm-SemiBold","GothamSSm-ExtraLight","GothamSSm-Heavy",
+    "GothamSSm-ExtraBold","GothamSSm-Regular","Gotham","GothamBold",
+    "GothamMedium","GothamBlack","GothamLight","Arial","ArialBold",
+    "Code","CodeLight","CodeBold","Highway","HighwayBold","HighwayLight",
+    "SciFi","SciFiBold","SciFiItalic","Cartoon","CartoonBold","Handwritten"
+}
+
+local FONT_DESCRIPTIONS = {
+    ["SourceSansBold"] = "标准粗体",["SourceSansItalic"] = "斜体",["SourceSansLight"] = "细体",
+    ["SourceSans"] = "标准体",["GothamSSm"] = "哥特标准",["GothamSSm-Bold"] = "哥特粗体",
+    ["GothamSSm-Medium"] = "哥特中等",["GothamSSm-Light"] = "哥特细体",["GothamSSm-Black"] = "哥特黑体",
+    ["GothamSSm-Book"] = "哥特书本体",["GothamSSm-XLight"] = "哥特超细体",["GothamSSm-Thin"] = "哥特极细体",
+    ["GothamSSm-Ultra"] = "哥特超黑体",["GothamSSm-SemiBold"] = "哥特半粗体",["GothamSSm-ExtraLight"] = "哥特特细体",
+    ["GothamSSm-Heavy"] = "哥特粗重体",["GothamSSm-ExtraBold"] = "哥特特粗体",["GothamSSm-Regular"] = "哥特常规体",
+    ["Gotham"] = "经典哥特体",["GothamBold"] = "经典哥特粗体",["GothamMedium"] = "经典哥特中等",
+    ["GothamBlack"] = "经典哥特黑体",["GothamLight"] = "经典哥特细体",["Arial"] = "标准Arial体",
+    ["ArialBold"] = "Arial粗体",["Code"] = "代码字体",["CodeLight"] = "代码细体",
+    ["CodeBold"] = "代码粗体",["Highway"] = "高速公路体",["HighwayBold"] = "高速公路粗体",
+    ["HighwayLight"] = "高速公路细体",["SciFi"] = "科幻字体",["SciFiBold"] = "科幻粗体",
+    ["SciFiItalic"] = "科幻斜体",["Cartoon"] = "卡通字体",["CartoonBold"] = "卡通粗体",
+    ["Handwritten"] = "手写体"
+}
+
+local currentFontStyle = "SourceSansBold"
+
+local COLOR_SCHEMES = {
+    ["彩虹颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF0000")),ColorSequenceKeypoint.new(0.16, Color3.fromHex("FFA500")),ColorSequenceKeypoint.new(0.33, Color3.fromHex("FFFF00")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("00FF00")),ColorSequenceKeypoint.new(0.66, Color3.fromHex("0000FF")),ColorSequenceKeypoint.new(0.83, Color3.fromHex("4B0082")),ColorSequenceKeypoint.new(1, Color3.fromHex("EE82EE"))}),"palette"},
+    ["黑红颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("000000")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FF0000")),ColorSequenceKeypoint.new(1, Color3.fromHex("000000"))}),"alert-triangle"},
+    ["蓝白颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FFFFFF")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("1E90FF")),ColorSequenceKeypoint.new(1, Color3.fromHex("FFFFFF"))}),"droplet"},
+    ["紫金颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FFD700")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("8A2BE2")),ColorSequenceKeypoint.new(1, Color3.fromHex("FFD700"))}),"crown"},
+    ["蓝黑颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("000000")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("0000FF")),ColorSequenceKeypoint.new(1, Color3.fromHex("000000"))}),"moon"},
+    ["绿紫颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("00FF00")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("800080")),ColorSequenceKeypoint.new(1, Color3.fromHex("00FF00"))}),"zap"},
+    ["粉蓝颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF69B4")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("00BFFF")),ColorSequenceKeypoint.new(1, Color3.fromHex("FF69B4"))}),"heart"},
+    ["橙青颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF4500")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("00CED1")),ColorSequenceKeypoint.new(1, Color3.fromHex("FF4500"))}),"sun"},
+    ["红金颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF0000")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FFD700")),ColorSequenceKeypoint.new(1, Color3.fromHex("FF0000"))}),"award"},
+    ["银蓝颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("C0C0C0")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("4682B4")),ColorSequenceKeypoint.new(1, Color3.fromHex("C0C0C0"))}),"star"},
+    ["霓虹颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF00FF")),ColorSequenceKeypoint.new(0.25, Color3.fromHex("00FFFF")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FFFF00")),ColorSequenceKeypoint.new(0.75, Color3.fromHex("FF00FF")),ColorSequenceKeypoint.new(1, Color3.fromHex("00FFFF"))}),"sparkles"},
+    ["森林颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("228B22")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("32CD32")),ColorSequenceKeypoint.new(1, Color3.fromHex("228B22"))}),"tree"},
+    ["火焰颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF4500")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FF0000")),ColorSequenceKeypoint.new(1, Color3.fromHex("FF8C00"))}),"flame"},
+    ["海洋颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("000080")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("1E90FF")),ColorSequenceKeypoint.new(1, Color3.fromHex("00BFFF"))}),"waves"},
+    ["日落颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF4500")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FF8C00")),ColorSequenceKeypoint.new(1, Color3.fromHex("FFD700"))}),"sunset"},
+    ["银河颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("4B0082")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("8A2BE2")),ColorSequenceKeypoint.new(1, Color3.fromHex("9370DB"))}),"galaxy"},
+    ["糖果颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF69B4")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FF1493")),ColorSequenceKeypoint.new(1, Color3.fromHex("FFB6C1"))}),"candy"},
+    ["金属颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("C0C0C0")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("A9A9A9")),ColorSequenceKeypoint.new(1, Color3.fromHex("696969"))}),"shield"}
+}
+
+local fontColorAnimations = {}
+local Window = nil
+local windowOpen = true
+
+-- ==================== 放置位置标记相关变量 ====================
+local markersVisible = false
+local placeMarkers = {}
+
+-- ==================== 特效函数 ====================
+local function applyFontColorGradient(textElement, colorScheme)
+    if not textElement or not textElement:IsA("TextLabel") and not textElement:IsA("TextButton") and not textElement:IsA("TextBox") then
+        return
+    end
+
+    local existingGradient = textElement:FindFirstChild("FontColorGradient")
+    if existingGradient then
+        existingGradient:Destroy()
+    end
+
+    if fontColorAnimations[textElement] then
+        fontColorAnimations[textElement]:Disconnect()
+        fontColorAnimations[textElement] = nil
+    end
+
+    if not fontColorEnabled then
+        textElement.TextColor3 = Color3.new(1, 1, 1)
+        return
+    end
+
+    local schemeData = COLOR_SCHEMES[colorScheme or currentFontColorScheme]
+    if not schemeData then return end
+
+    local fontGradient = Instance.new("UIGradient")
+    fontGradient.Name = "FontColorGradient"
+    fontGradient.Color = schemeData[1]
+    fontGradient.Rotation = 0
+    fontGradient.Parent = textElement
+
+    textElement.TextColor3 = Color3.new(1, 1, 1)
+
+    local animation
+    animation = game:GetService("RunService").Heartbeat:Connect(function()
+        if not textElement or textElement.Parent == nil then
+            animation:Disconnect()
+            fontColorAnimations[textElement] = nil
+            return
+        end
+
+        if not fontGradient or fontGradient.Parent == nil then
+            animation:Disconnect()
+            fontColorAnimations[textElement] = nil
+            return
+        end
+
+        local time = tick()
+        fontGradient.Rotation = (time * animationSpeed * 30) % 360
+    end)
+
+    fontColorAnimations[textElement] = animation
+end
+
+local function applyFontStyleToWindow(fontStyle)
+    if not Window or not Window.UIElements then 
+        wait(0.5)
+        if not Window or not Window.UIElements then
+            return false
+        end
+    end
+
+    local successCount = 0
+    local totalCount = 0
+
+    local function processElement(element)
+        for _, child in ipairs(element:GetDescendants()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                totalCount = totalCount + 1
+                pcall(function()
+                    child.Font = Enum.Font[fontStyle]
+                    successCount = successCount + 1
+                end)
+            end
+        end
+    end
+
+    processElement(Window.UIElements.Main)
+
+    return successCount, totalCount
+end
+
+local function applyFontColorsToWindow(colorScheme)
+    if not Window or not Window.UIElements then return end
+
+    local function processElement(element)
+        for _, child in ipairs(element:GetDescendants()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                applyFontColorGradient(child, colorScheme)
+            end
+        end
+    end
+
+    processElement(Window.UIElements.Main)
+end
+
+local function createRainbowBorder(window, colorScheme, speed)
+    if not window or not window.UIElements then
+        wait(1)
+        if not window or not window.UIElements then
+            return nil, nil
+        end
+    end
+
+    local mainFrame = window.UIElements.Main
+    if not mainFrame then
+        return nil, nil
+    end
+
+    local existingStroke = mainFrame:FindFirstChild("RainbowStroke")
+    if existingStroke then
+        local glowEffect = existingStroke:FindFirstChild("GlowEffect")
+        if glowEffect then
+            local schemeData = COLOR_SCHEMES[colorScheme or currentBorderColorScheme]
+            if schemeData then
+                glowEffect.Color = schemeData[1]
+            end
+        end
+        return existingStroke, rainbowBorderAnimation
+    end
+
+    if not mainFrame:FindFirstChildOfClass("UICorner") then
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 4)
+        corner.Parent = mainFrame
+    end
+
+    local rainbowStroke = Instance.new("UIStroke")
+    rainbowStroke.Name = "RainbowStroke"
+    rainbowStroke.Thickness = 1.5
+    rainbowStroke.Color = Color3.new(1, 1, 1)
+    rainbowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    rainbowStroke.LineJoinMode = Enum.LineJoinMode.Round
+    rainbowStroke.Enabled = borderEnabled
+    rainbowStroke.Parent = mainFrame
+
+    local glowEffect = Instance.new("UIGradient")
+    glowEffect.Name = "GlowEffect"
+
+    local schemeData = COLOR_SCHEMES[colorScheme or currentBorderColorScheme]
+    if schemeData then
+        glowEffect.Color = schemeData[1]
+    else
+        glowEffect.Color = COLOR_SCHEMES["银蓝颜色"][1]
+    end
+
+    glowEffect.Rotation = 0
+    glowEffect.Parent = rainbowStroke
+
+    return rainbowStroke, nil
+end
+
+local function startBorderAnimation(window, speed)
+    if not window or not window.UIElements then
+        return nil
+    end
+
+    local mainFrame = window.UIElements.Main
+    if not mainFrame then
+        return nil
+    end
+
+    local rainbowStroke = mainFrame:FindFirstChild("RainbowStroke")
+    if not rainbowStroke or not rainbowStroke.Enabled then
+        return nil
+    end
+
+    local glowEffect = rainbowStroke:FindFirstChild("GlowEffect")
+    if not glowEffect then
+        return nil
+    end
+
+    if rainbowBorderAnimation then
+        rainbowBorderAnimation:Disconnect()
+        rainbowBorderAnimation = nil
+    end
+
+    local animation
+    animation = game:GetService("RunService").Heartbeat:Connect(function()
+        if not rainbowStroke or rainbowStroke.Parent == nil or not rainbowStroke.Enabled then
+            animation:Disconnect()
+            return
+        end
+
+        local time = tick()
+        glowEffect.Rotation = (time * speed * 60) % 360
+    end)
+
+    rainbowBorderAnimation = animation
+    return animation
+end
+
+local function initializeRainbowBorder(scheme, speed)
+    speed = speed or animationSpeed
+
+    local rainbowStroke, _ = createRainbowBorder(Window, scheme, speed)
+    if rainbowStroke then
+        if borderEnabled then
+            startBorderAnimation(Window, speed)
+        end
+        borderInitialized = true
+        return true
+    end
+    return false
+end
+
+local function playSound()
+    if soundEnabled then
+        pcall(function()
+            local sound = Instance.new("Sound")
+            sound.SoundId = "rbxassetid://9047002353"
+            sound.Volume = 0.3
+            sound.Parent = game:GetService("SoundService")
+            sound:Play()
+            game:GetService("Debris"):AddItem(sound, 2)
+        end)
+    end
+end
+
+local function applyBlurEffect(enabled)
+    if enabled then
+        pcall(function()
+            local blur = Instance.new("BlurEffect")
+            blur.Size = 8
+            blur.Name = "CardHelperBlur"
+            blur.Parent = game:GetService("Lighting")
+        end)
+    else
+        pcall(function()
+            local existingBlur = game:GetService("Lighting"):FindFirstChild("CardHelperBlur")
+            if existingBlur then
+                existingBlur:Destroy()
+            end
+        end)
+    end
+end
+
+-- ==================== 功能函数 ====================
+local function collectAllCards()
+    local count = 0
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") and part:GetAttribute("Card") then
+            local cardId = part:GetAttribute("Card")
+            if cardId and collectCardEvent then
+                collectCardEvent:FireServer(cardId)
+                count = count + 1
+            end
+        end
+    end
+    return count
+end
+
+local function startAutoCollect()
+    if autoCollectEnabled then
+        collectLoop = task.spawn(function()
+            while autoCollectEnabled do
+                local collected = collectAllCards()
+                if collected > 0 then
+                end
+                task.wait(collectInterval)
+            end
+        end)
+    end
+end
+
+local function stopAutoCollect()
+    autoCollectEnabled = false
+    if collectLoop then
+        task.cancel(collectLoop)
+        collectLoop = nil
+    end
+end
+
+local function collectReadyPacks()
+    local collected = 0
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") and part:GetAttribute("Owner") == LocalPlayer.Name then
+            local timerLabel = part:FindFirstChild("TimerLabel", true)
+            if timerLabel and timerLabel:IsA("TextLabel") and timerLabel.Text == "Ready" and collectPackEvent then
+                if not collectedPacks[part] then
+                    collectPackEvent:FireServer(part.Name)
+                    collectedPacks[part] = true
+                    collected = collected + 1
+                end
+            end
+        end
+    end
+    return collected
+end
+
+local function cleanupCollectedPacks()
+    for part, _ in pairs(collectedPacks) do
+        if not part or not part.Parent then
+            collectedPacks[part] = nil
+        else
+            local timerLabel = part:FindFirstChild("TimerLabel", true)
+            if not timerLabel or not timerLabel:IsA("TextLabel") or timerLabel.Text ~= "Ready" then
+                collectedPacks[part] = nil
+            end
+        end
+    end
+end
+
+local function startAutoPackCollect()
+    if autoPackCollectEnabled then
+        packCollectLoop = task.spawn(function()
+            while autoPackCollectEnabled do
+                cleanupCollectedPacks()
+                local collected = collectReadyPacks()
+                if collected > 0 then
+                end
+                task.wait(packCollectInterval)
+            end
+        end)
+    end
+end
+
+local function stopAutoPackCollect()
+    autoPackCollectEnabled = false
+    if packCollectLoop then
+        task.cancel(packCollectLoop)
+        packCollectLoop = nil
+    end
+end
+
+-- 保存/加载位置
+local function savePositions()
+    local data = {}
+    for i = 1, 10 do
+        if placePositions[i] then
+            data[tostring(i)] = {
+                x = placePositions[i].X,
+                y = placePositions[i].Y,
+                z = placePositions[i].Z
+            }
+        end
+    end
+    local json = HttpService:JSONEncode(data)
+    writefile(configFile, json)
+end
+
+local function loadPositions()
+    if not isfile(configFile) then return end
+    local success, json = pcall(function()
+        return readfile(configFile)
+    end)
+    if not success then return end
+    local success2, data = pcall(function()
+        return HttpService:JSONDecode(json)
+    end)
+    if not success2 then return end
+
+    placePositions = {}
+    for i = 1, 10 do
+        local key = tostring(i)
+        if data[key] then
+            placePositions[i] = Vector3.new(data[key].x, data[key].y, data[key].z)
+        end
+    end
+end
+
+loadPositions()
+
+local function getMyPlacedPacks()
+    local packs = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:GetAttribute("Owner") == LocalPlayer.Name then
+            table.insert(packs, obj)
+        end
+    end
+    return packs
+end
+
+local function getPlacedCount()
+    return #getMyPlacedPacks()
+end
+
+local function getHeldPacksFromData()
+    if not ClientDataManager then return {} end
+    local success, data = pcall(function()
+        return ClientDataManager.GetData and ClientDataManager.GetData()
+    end)
+    if not success or not data or not data.HeldPacks then return {} end
+
+    local packs = {}
+    for packName, variants in pairs(data.HeldPacks) do
+        for variantName, mutations in pairs(variants) do
+            for mutationName, info in pairs(mutations) do
+                if type(info) == "table" and info.Amount and info.Amount > 0 then
+                    table.insert(packs, {
+                        id = packName .. "_" .. variantName .. "_" .. mutationName,
+                        packName = packName,
+                        variantName = variantName,
+                        mutationName = mutationName,
+                        amount = info.Amount
+                    })
+                end
+            end
+        end
+    end
+    return packs
+end
+
+local function selectRandomPack(heldPacks)
+    if #heldPacks == 0 then return nil end
+    return heldPacks[math.random(#heldPacks)]
+end
+
+local function teleportToPosition(targetPos)
+    local character = LocalPlayer.Character
+    if not character then return false end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    hrp.CFrame = CFrame.new(targetPos.X, targetPos.Y + 3, targetPos.Z)
+    return true
+end
+
+local function executePlaceAtPosition(posIndex)
+    if not equipPackToolEvent or not unequipPackToolEvent then
+        return false, "未找到 EquipPackTool 或 UnequipPackTool"
+    end
+
+    local placedCount = getPlacedCount()
+    if placedCount >= maxPlaceCount then
+        return false, "已达上限"
+    end
+
+    local pos = placePositions[posIndex]
+    if not pos then
+        return false, "位置 " .. posIndex .. " 未设置"
+    end
+
+    local heldPacks = getHeldPacksFromData()
+    local packToPlace = selectRandomPack(heldPacks)
+    if not packToPlace then
+        return false, "没有持有的卡包"
+    end
+
+    -- 传送前通知
+    pcall(function()
+        WindUI:Notify({
+            Title = "自动放置",
+            Content = "正在传送到位置 " .. posIndex .. "...",
+            Duration = 2,
+        })
+    end)
+
+    if not teleportToPosition(pos) then
+        return false, "传送失败"
+    end
+    task.wait(0.3)
+
+    pcall(function()
+        equipPackToolEvent:FireServer(packToPlace.packName, packToPlace.variantName, packToPlace.mutationName)
+    end)
+    task.wait(0.4)
+
+    pcall(function()
+        local character = LocalPlayer.Character
+        if not character then return end
+        local tool = nil
+        for _, obj in ipairs(character:GetChildren()) do
+            if obj:IsA("Tool") then
+                tool = obj
+                break
+            end
+        end
+        if tool then
+            tool:Activate()
+            for _, child in ipairs(tool:GetDescendants()) do
+                if child:IsA("RemoteEvent") then
+                    pcall(function()
+                        child:FireServer(pos)
+                    end)
+                end
+            end
+        end
+        task.wait(0.5)
+        unequipPackToolEvent:FireServer()
+    end)
+
+    -- 放置成功通知
+    pcall(function()
+        WindUI:Notify({
+            Title = "自动放置",
+            Content = "已在位置 " .. posIndex .. " 放置卡包",
+            Duration = 2,
+        })
+    end)
+
+    return true, "已在位置 " .. posIndex .. " 放置"
+end
+
+local function startAutoPlace()
+    if autoPlaceEnabled then
+        placeLoop = task.spawn(function()
+            while autoPlaceEnabled do
+                local placedCount = getPlacedCount()
+                if placedCount < maxPlaceCount then
+                    for i = 1, 10 do
+                        if placePositions[i] then
+                            local hasPack = false
+                            local myPacks = getMyPlacedPacks()
+                            for _, pack in ipairs(myPacks) do
+                                if pack and pack.Parent and (pack.Position - placePositions[i]).Magnitude < 5 then
+                                    hasPack = true
+                                    break
+                                end
+                            end
+                            if not hasPack then
+                                local success, msg = executePlaceAtPosition(i)
+                                if success then
+                                end
+                                break
+                            end
+                        end
+                    end
+                end
+                task.wait(placeInterval)
+            end
+        end)
+    end
+end
+
+local function stopAutoPlace()
+    autoPlaceEnabled = false
+    if placeLoop then
+        task.cancel(placeLoop)
+        placeLoop = nil
+    end
+end
+
+-- ==================== 位置标记功能（修复版）====================
+local function clearPlaceMarkers()
+    for index, model in pairs(placeMarkers) do
+        if model and model.Parent then model:Destroy() end
+        placeMarkers[index] = nil
+    end
+end
+
+local function createPlaceMarker(index, position)
+    local markerModel = Instance.new("Model")
+    markerModel.Name = "PlaceMarker_" .. index
+
+    -- 半透明球体
+    local sphere = Instance.new("Part")
+    sphere.Name = "Visual"
+    sphere.Shape = Enum.PartType.Ball
+    sphere.Size = Vector3.new(1.5, 1.5, 1.5)
+    sphere.Anchored = true
+    sphere.CanCollide = false
+    sphere.Transparency = 0.35
+    sphere.Color = Color3.fromRGB(70, 130, 180)
+    sphere.Material = Enum.Material.Neon
+    sphere.Position = position
+    sphere.Parent = markerModel
+
+    -- 光晕
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(70, 130, 180)
+    highlight.OutlineColor = Color3.new(1, 1, 1)
+    highlight.FillTransparency = 0.6
+    highlight.OutlineTransparency = 0
+    highlight.Adornee = sphere
+    highlight.Parent = sphere
+
+    -- BillboardGui 固定像素大小（关键修复：SizeOffset 阻止距离缩放，增大尺寸和字号）
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "Label"
+    billboard.Size = UDim2.new(0, 100, 0, 22)      -- 加大尺寸，确保文字完整显示
+    billboard.StudsOffsetWorldSpace = Vector3.new(0, 1.8, 0)
+    billboard.AlwaysOnTop = true
+    billboard.LightInfluence = 0
+    billboard.MaxDistance = 10000                  -- 极远距离仍可显示
+    billboard.SizeOffset = Vector2.new(0, 0)       -- 核心属性：彻底固定像素，不受距离影响
+    billboard.Adornee = sphere
+    billboard.Parent = sphere
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = "位置 " .. index
+    textLabel.TextColor3 = Color3.new(1, 1, 1)        -- 白色基底，供渐变使用
+    textLabel.TextStrokeTransparency = 0.3
+    textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextScaled = false                      -- 关闭自动缩放，保持固定像素
+    textLabel.TextSize = 16                           -- 增大字号，清晰可见
+    textLabel.Parent = billboard
+
+    -- ========== 银蓝色渐变字体 (UIGradient) ==========
+    local uiGradient = Instance.new("UIGradient")
+    uiGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.0, Color3.fromRGB(210, 220, 235)),  -- 银白
+        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(130, 160, 200)), -- 浅钢蓝
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(70, 130, 180)),   -- 钢蓝
+        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(130, 160, 200)), -- 过渡回浅色
+        ColorSequenceKeypoint.new(1.0, Color3.fromRGB(210, 220, 235))   -- 银白
+    })
+    uiGradient.Rotation = 90   -- 垂直渐变
+    uiGradient.Parent = textLabel
+
+    markerModel.Parent = workspace
+    return markerModel
+end
+
+local function showPlaceMarkers()
+    clearPlaceMarkers()
+    for i = 1, 10 do
+        local pos = placePositions[i]
+        if pos then
+            local marker = createPlaceMarker(i, pos)
+            placeMarkers[i] = marker
+        end
+    end
+end
+
+local function hidePlaceMarkers()
+    clearPlaceMarkers()
+end
+
+local function refreshMarkersIfVisible()
+    if markersVisible then showPlaceMarkers() end
+end
+
+-- ==================== 购买功能 ====================
+local function setupPurchasePromptBlocker()
+    local MarketplaceService = game:GetService("MarketplaceService")
+    local CoreGui = game:GetService("CoreGui")
+
+    local oldPromptProductPurchase
+    pcall(function()
+        oldPromptProductPurchase = hookfunction(MarketplaceService.PromptProductPurchase, function(self, player, productId, ...)
+            if blockPurchasePrompts then return nil end
+            return oldPromptProductPurchase(self, player, productId, ...)
+        end)
+    end)
+
+    local oldPromptGamePassPurchase
+    pcall(function()
+        oldPromptGamePassPurchase = hookfunction(MarketplaceService.PromptGamePassPurchase, function(self, player, gamePassId, ...)
+            if blockPurchasePrompts then return nil end
+            return oldPromptGamePassPurchase(self, player, gamePassId, ...)
+        end)
+    end)
+
+    local oldPromptPurchase
+    pcall(function()
+        oldPromptPurchase = hookfunction(MarketplaceService.PromptPurchase, function(self, player, assetId, ...)
+            if blockPurchasePrompts then return nil end
+            return oldPromptPurchase(self, player, assetId, ...)
+        end)
+    end)
+
+    local oldPromptPremiumPurchase
+    pcall(function()
+        oldPromptPremiumPurchase = hookfunction(MarketplaceService.PromptPremiumPurchase, function(self, player, ...)
+            if blockPurchasePrompts then return nil end
+            return oldPromptPremiumPurchase(self, player, ...)
+        end)
+    end)
+
+    local oldPromptRobuxPurchase
+    pcall(function()
+        oldPromptRobuxPurchase = hookfunction(MarketplaceService.PromptRobuxPurchase, function(self, assetId, ...)
+            if blockPurchasePrompts then return nil end
+            return oldPromptRobuxPurchase(self, assetId, ...)
+        end)
+    end)
+
+    local oldPromptBundlePurchase
+    pcall(function()
+        oldPromptBundlePurchase = hookfunction(MarketplaceService.PromptBundlePurchase, function(self, player, bundleId, ...)
+            if blockPurchasePrompts then return nil end
+            return oldPromptBundlePurchase(self, player, bundleId, ...)
+        end)
+    end)
+
+    local oldPromptSubscriptionPurchase
+    pcall(function()
+        oldPromptSubscriptionPurchase = hookfunction(MarketplaceService.PromptSubscriptionPurchase, function(self, player, subscriptionId, ...)
+            if blockPurchasePrompts then return nil end
+            return oldPromptSubscriptionPurchase(self, player, subscriptionId, ...)
+        end)
+    end)
+
+    local function closePurchasePrompts()
+        pcall(function()
+            for _, gui in ipairs(CoreGui:GetDescendants()) do
+                if gui:IsA("ScreenGui") then
+                    local name = gui.Name:lower()
+                    if name:find("purchase") or name:find("prompt") or name:find("buy") or name:find("shop") or name:find("robux") or name:find("premium") then
+                        gui.Enabled = false
+                        gui:Destroy()
+                    end
+                end
+            end
+        end)
+    end
+
+    local function startCleanup()
+        task.spawn(function()
+            while blockPurchasePrompts do
+                closePurchasePrompts()
+                task.wait(0.1)
+            end
+        end)
+    end
+
+    return startCleanup
+end
+
+local startPromptCleanup = setupPurchasePromptBlocker()
+
+local function purchaseAllPacks()
+    if not packPurchaseEvent then
+        pcall(function()
+            WindUI:Notify({
+                Title = "购买失败",
+                Content = "未找到 PackPurchase 远程事件",
+                Duration = 2
+            })
+        end)
+        return false
+    end
+
+    for option = 1, 3 do
+        packPurchaseEvent:FireServer(option)
+        task.wait(0.1)
+    end
+    return true
+end
+
+local function startAutoPurchase()
+    if autoPurchaseEnabled then
+        purchaseLoop = task.spawn(function()
+            while autoPurchaseEnabled do
+                blockPurchasePrompts = true
+                startPromptCleanup()
+                purchaseAllPacks()
+                task.wait(math.max(purchaseInterval, 1))
+            end
+            blockPurchasePrompts = false
+        end)
+    end
+end
+
+local function stopAutoPurchase()
+    autoPurchaseEnabled = false
+    blockPurchasePrompts = false
+    if purchaseLoop then
+        task.cancel(purchaseLoop)
+        purchaseLoop = nil
+    end
+end
+
+-- ==================== 重抽功能 ====================
+local function rerollPacks()
+    if rerollEvent then
+        rerollEvent:FireServer()
+    end
+end
+
+local function startAutoReroll()
+    if autoRerollEnabled then
+        rerollLoop = task.spawn(function()
+            while autoRerollEnabled do
+                rerollPacks()
+                task.wait(math.max(rerollInterval, 4))
+            end
+        end)
+    end
+end
+
+local function stopAutoReroll()
+    autoRerollEnabled = false
+    if rerollLoop then
+        task.cancel(rerollLoop)
+        rerollLoop = nil
+    end
+end
+
+-- ==================== 放置位置函数（带标记刷新）====================
+function setPosition(index)
+    local character = LocalPlayer.Character
+    if not character then
+        pcall(function()
+            WindUI:Notify({ Title = "错误", Content = "角色未加载", Duration = 2 })
+        end)
+        return
+    end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then
+        pcall(function()
+            WindUI:Notify({ Title = "错误", Content = "未找到 HumanoidRootPart", Duration = 2 })
+        end)
+        return
+    end
+    local pos = hrp.Position - Vector3.new(0, 3, 0)
+    placePositions[index] = pos
+    savePositions()
+    refreshMarkersIfVisible()   -- 设置后立即刷新标记
+    pcall(function()
+        WindUI:Notify({
+            Title = "位置 " .. index .. " 已设置",
+            Content = string.format("坐标: X=%.1f, Y=%.1f, Z=%.1f", pos.X, pos.Y, pos.Z),
+            Duration = 2
+        })
+    end)
+end
+
+function clearPosition(index)
+    placePositions[index] = nil
+    savePositions()
+    refreshMarkersIfVisible()   -- 删除后立即刷新标记
+    pcall(function()
+        WindUI:Notify({
+            Title = "位置 " .. index .. " 已删除",
+            Content = "该位置不再用于自动放置",
+            Duration = 2
+        })
+    end)
+end
+
+-- ==================== 主界面创建 ====================
+function createUI()
+    -- UI尺寸适配手机屏幕（最大不超过手机屏幕）
+    local screenSize = workspace.CurrentCamera.ViewportSize
+    local maxWidth = math.min(600, screenSize.X - 40)
+    local maxHeight = math.min(400, screenSize.Y - 80)
+
+    Window = WindUI:CreateWindow({
+        Title = 'Card cheat',
+        Icon = "credit-card",
+        IconThemed = true,
+        Author = "这是开源的，觉得我做的不够好拿去二改也是可以的",
+        Folder = "CardHelper",
+        Size = UDim2.fromOffset(maxWidth, maxHeight),
+        Transparent = true,
+        Theme = "Dark",
+        HideSearchBar = false,
+        ScrollBarEnabled = true,
+        Resizable = true,
+        Background = "https://raw.githubusercontent.com/122525a/OHIO/main/Image_1771401973057_62.jpg",
+        BackgroundImageTransparency = 0.45,
+        User = {
+            Enabled = true,
+            Callback = function()
+                WindUI:Notify({
+                    Title = "点击了自己",
+                    Content = "没什么", 
+                    Duration = 1,
+                })
+            end,
+            Anonymous = false
+        },
+        SideBarWidth = 200,
+        Search = {
+            Enabled = true,
+            Placeholder = "搜索...",
+            Callback = function(searchText)
+            end
+        },
+        SidePanel = {
+            Enabled = true,
+            Content = {
+                {
+                    Type = "Button", 
+                    Text = "",
+                    Style = "Subtle", 
+                    Size = UDim2.new(1, -20, 0, 30),
+                    Callback = function()
+                    end
+                }
+            }
+        }
+    })
+
+    -- 缩小后的按钮 - 卡牌图标，完全方正（圆角0）
+    Window:EditOpenButton({
+        Title = "Card cheat",
+        Icon = "credit-card",
+        CornerRadius = UDim.new(0, 0),
+        StrokeThickness = 4,
+        Color = ColorSequence.new(Color3.fromHex("4682B4")),
+        Draggable = true,
+    })
+
+    Window:Tag({
+        Title = "v1.0.0",
+        Color = Color3.fromHex("#4682B4") 
+    })
+
+    -- 银蓝色脉冲动画
+    spawn(function()
+        while true do
+            for hue = 0.55, 0.65, 0.005 do
+                local color = Color3.fromHSV(hue, 0.6, 1)
+                Window:EditOpenButton({
+                    Color = ColorSequence.new(color)
+                })
+                wait(0.08)
+            end
+            for hue = 0.65, 0.55, -0.005 do
+                local color = Color3.fromHSV(hue, 0.6, 1)
+                Window:EditOpenButton({
+                    Color = ColorSequence.new(color)
+                })
+                wait(0.08)
+            end
+        end
+    end)
+
+    -- 初始化银蓝边框 + 默认开启字体颜色
+    if not borderInitialized then
+        spawn(function()
+            wait(0.5)
+            initializeRainbowBorder("银蓝颜色", animationSpeed)
+            wait(0.5)
+            applyFontStyleToWindow(currentFontStyle)
+            wait(0.5)
+            applyFontColorsToWindow(currentFontColorScheme)
+        end)
+    end
+
+    Window:OnClose(function()
+        windowOpen = false
+        if rainbowBorderAnimation then
+            rainbowBorderAnimation:Disconnect()
+            rainbowBorderAnimation = nil
+        end
+        applyBlurEffect(false)
+        -- 不隐藏标记，保留显示状态
+    end)
+
+    local originalOpenFunction = Window.Open
+    Window.Open = function(...)
+        windowOpen = true
+        local result = originalOpenFunction(...)
+
+        if borderInitialized and borderEnabled and not rainbowBorderAnimation then
+            wait(0.1)
+            startBorderAnimation(Window, animationSpeed)
+        end
+
+        return result
+    end
+
+    -- ==================== Tab 1: 卡牌现金收集 ====================
+    local collectTab = Window:Tab({Title = "金额收集", Icon = "coins", Locked = false})
+    local collectSection = collectTab:Section({Title = "收集设置", Icon = "coins", Opened = true})
+
+    collectSection:Toggle({
+        Title = "启用自动收集",
+        Desc = "每 X 秒收集所有卡牌金额",
+        Value = false,
+        Callback = function(state)
+            autoCollectEnabled = state
+            if state then startAutoCollect() else stopAutoCollect() end
+        end
+    })
+
+    collectSection:Slider({
+        Title = "收集间隔（秒）",
+        Desc = "设置自动收集的频率",
+        Value = { Min = 1, Max = 60, Default = 1 },
+        Step = 1,
+        Callback = function(value)
+            collectInterval = value
+            if autoCollectEnabled then
+                stopAutoCollect()
+                autoCollectEnabled = true
+                startAutoCollect()
+            end
+        end
+    })
+
+    collectSection:Button({
+        Title = "立刻收集所有",
+        Icon = "zap",
+        Callback = function()
+            local collected = collectAllCards()
+            WindUI:Notify({
+                Title = "收集完成",
+                Content = "已尝试收集 " .. collected .. " 张卡牌",
+                Duration = 2
+            })
+        end
+    })
+
+    -- ==================== Tab 2: 卡包收集 ====================
+    local packTab = Window:Tab({Title = "卡包收集", Icon = "package", Locked = false})
+    local packSection = packTab:Section({Title = "卡包设置", Icon = "package", Opened = true})
+
+    packSection:Toggle({
+        Title = "启用自动收集卡包",
+        Desc = "每 X 秒收集已就绪的卡包",
+        Value = false,
+        Callback = function(state)
+            autoPackCollectEnabled = state
+            if state then startAutoPackCollect() else stopAutoPackCollect() end
+        end
+    })
+
+    packSection:Slider({
+        Title = "卡包收集间隔（秒）",
+        Desc = "设置自动收集卡包的频率",
+        Value = { Min = 1, Max = 60, Default = 1 },
+        Step = 1,
+        Callback = function(value)
+            packCollectInterval = value
+            if autoPackCollectEnabled then
+                stopAutoPackCollect()
+                autoPackCollectEnabled = true
+                startAutoPackCollect()
+            end
+        end
+    })
+
+    packSection:Button({
+        Title = "立刻收集所有就绪卡包",
+        Icon = "zap",
+        Callback = function()
+            cleanupCollectedPacks()
+            local collected = collectReadyPacks()
+            WindUI:Notify({
+                Title = "卡包收集",
+                Content = "已尝试收集 " .. collected .. " 个卡包",
+                Duration = 2
+            })
+        end
+    })
+
+    -- ==================== Tab 3: 自动放置 ====================
+    local placeTab = Window:Tab({Title = "自动放置", Icon = "map-pin", Locked = false})
+    local placeSection = placeTab:Section({Title = "放置设置", Icon = "map-pin", Opened = true})
+
+    -- 状态显示
+    local placeStatusParagraph = placeSection:Paragraph({
+        Title = "自动放置: 已关闭",
+        Desc = "已设置位置: 0 / 10"
+    })
+
+    task.spawn(function()
+        while true do
+            pcall(function()
+                local setCount = 0
+                for i = 1, 10 do
+                    if placePositions[i] then setCount = setCount + 1 end
+                end
+                local placedCount = getPlacedCount()
+                if autoPlaceEnabled then
+                    placeStatusParagraph:SetTitle("自动放置: 运行中 | 已放置: " .. placedCount .. " / " .. maxPlaceCount)
+                else
+                    placeStatusParagraph:SetTitle("自动放置: 已关闭 | 已放置: " .. placedCount .. " / " .. maxPlaceCount)
+                end
+                placeStatusParagraph:SetDesc("已设置位置: " .. setCount .. " / 10")
+            end)
+            task.wait(1)
+        end
+    end)
+
+    placeSection:Toggle({
+        Title = "启用自动放置",
+        Desc = "按设置的位置顺序自动随机放置卡包",
+        Value = false,
+        Callback = function(state)
+            if state then
+                local hasPosition = false
+                for i = 1, 10 do
+                    if placePositions[i] then hasPosition = true; break end
+                end
+                if not hasPosition then
+                    WindUI:Notify({
+                        Title = "无法启动",
+                        Content = "请先设置至少一个放置位置",
+                        Duration = 3
+                    })
+                    return
+                end
+            end
+            autoPlaceEnabled = state
+            if state then startAutoPlace() else stopAutoPlace() end
+        end
+    })
+
+    placeSection:Slider({
+        Title = "放置间隔（秒）",
+        Desc = "两次放置之间的等待时间",
+        Value = { Min = 1, Max = 10, Default = 1 },
+        Step = 1,
+        Callback = function(value)
+            placeInterval = value
+            if autoPlaceEnabled then
+                stopAutoPlace()
+                autoPlaceEnabled = true
+                startAutoPlace()
+            end
+        end
+    })
+
+    -- 显示放置位置标记开关
+    placeSection:Toggle({
+        Title = "显示放置位置标记",
+        Desc = "在已保存的放置位置显示半透明球体及编号",
+        Value = false,
+        Callback = function(state)
+            markersVisible = state
+            if state then showPlaceMarkers() else hidePlaceMarkers() end
+        end
+    })
+
+    placeSection:Divider()
+
+    -- 设置位置按钮（1-10）
+    for i = 1, 10 do
+        placeSection:Button({
+            Title = "设置位置 " .. i,
+            Icon = "map-pin",
+            Callback = function()
+                setPosition(i)
+            end
+        })
+    end
+
+    placeSection:Divider()
+
+    -- 删除位置
+    local deleteOptions = {}
+    for i = 1, 10 do
+        table.insert(deleteOptions, "位置 " .. i)
+    end
+
+    placeSection:Dropdown({
+        Title = "删除位置",
+        Values = deleteOptions,
+        Value = "",
+        Callback = function(option)
+            if not option or option == "" then return end
+            local index = tonumber(option:match("%d+"))
+            if index then clearPosition(index) end
+        end
+    })
+
+    placeSection:Button({
+        Title = "删除所有位置",
+        Icon = "trash-2",
+        Variant = "Danger",
+        Callback = function()
+            placePositions = {}
+            savePositions()
+            refreshMarkersIfVisible()
+            WindUI:Notify({
+                Title = "已清空",
+                Content = "所有放置位置已删除",
+                Duration = 2
+            })
+        end
+    })
+
+    -- ==================== Tab 4: 购买设置 ====================
+    local purchaseTab = Window:Tab({Title = "自动购买", Icon = "shopping-cart", Locked = false})
+    local purchaseSection = purchaseTab:Section({Title = "购买设置", Icon = "shopping-cart", Opened = true})
+
+    purchaseSection:Toggle({
+        Title = "启用自动购买",
+        Desc = "每隔 X 秒自动同时购买3张卡牌",
+        Value = false,
+        Callback = function(state)
+            autoPurchaseEnabled = state
+            if state then startAutoPurchase() else stopAutoPurchase() end
+        end
+    })
+
+    purchaseSection:Slider({
+        Title = "购买间隔（秒）",
+        Desc = "两次购买之间的等待时间",
+        Value = { Min = 1, Max = 120, Default = 3 },
+        Step = 1,
+        Callback = function(value)
+            purchaseInterval = value
+            if autoPurchaseEnabled then
+                stopAutoPurchase()
+                autoPurchaseEnabled = true
+                startAutoPurchase()
+            end
+        end
+    })
+
+    purchaseSection:Button({
+        Title = "立刻购买三张卡牌",
+        Icon = "shopping-cart",
+        Callback = function()
+            blockPurchasePrompts = true
+            startPromptCleanup()
+            purchaseAllPacks()
+            blockPurchasePrompts = false
+            WindUI:Notify({
+                Title = "购买请求已发送",
+                Content = "已同时购买3张卡牌",
+                Duration = 2
+            })
+        end
+    })
+
+    -- ==================== Tab 5: 重抽设置 ====================
+    local rerollTab = Window:Tab({Title = "卡包重抽", Icon = "refresh-cw", Locked = false})
+    local rerollSection = rerollTab:Section({Title = "重抽设置", Icon = "refresh-cw", Opened = true})
+
+    rerollSection:Toggle({
+        Title = "启用自动重抽",
+        Desc = "每 X 秒重抽卡包",
+        Value = false,
+        Callback = function(state)
+            autoRerollEnabled = state
+            if state then startAutoReroll() else stopAutoReroll() end
+        end
+    })
+
+    rerollSection:Slider({
+        Title = "重抽间隔（秒）",
+        Desc = "设置自动重抽的频率（最小4秒）",
+        Value = { Min = 4, Max = 60, Default = 4 },
+        Step = 1,
+        Callback = function(value)
+            rerollInterval = value
+            if autoRerollEnabled then
+                stopAutoReroll()
+                autoRerollEnabled = true
+                startAutoReroll()
+            end
+        end
+    })
+
+    rerollSection:Button({
+        Title = "立刻重抽",
+        Icon = "zap",
+        Callback = function()
+            rerollPacks()
+            WindUI:Notify({
+                Title = "重抽",
+                Content = "已发送重抽请求",
+                Duration = 2
+            })
+        end
+    })
+
+    -- ==================== Tab 6: UI设置 ====================
+    local settingsTab = Window:Tab({Title = "UI设置", Icon = "palette", Locked = false})
+    local settingsSection = settingsTab:Section({Title = "界面设置", Icon = "settings", Opened = true})
+
+    settingsSection:Paragraph({
+        Title = "UI设置",
+        Desc = "自定义界面外观",
+        Image = "settings",
+        ImageSize = 20,
+        Color = "White"
+    })
+
+    settingsSection:Toggle({
+        Title = "启用边框",
+        Value = borderEnabled,
+        Callback = function(value)
+            borderEnabled = value
+            local mainFrame = Window.UIElements and Window.UIElements.Main
+            if mainFrame then
+                local rainbowStroke = mainFrame:FindFirstChild("RainbowStroke")
+                if rainbowStroke then
+                    rainbowStroke.Enabled = value
+                    if value and windowOpen and not rainbowBorderAnimation then
+                        startBorderAnimation(Window, animationSpeed)
+                    elseif not value and rainbowBorderAnimation then
+                        rainbowBorderAnimation:Disconnect()
+                        rainbowBorderAnimation = nil
+                    end
+
+                    WindUI:Notify({
+                        Title = "边框",
+                        Content = value and "已启用" or "已禁用",
+                        Duration = 2
+                    })
+                end
+            end
+        end
+    })
+
+    settingsSection:Toggle({
+        Title = "启用字体颜色",
+        Value = fontColorEnabled,
+        Callback = function(value)
+            fontColorEnabled = value
+            applyFontColorsToWindow(currentFontColorScheme)
+
+            WindUI:Notify({
+                Title = "字体颜色",
+                Content = value and "已启用" or "已禁用",
+                Duration = 2
+            })
+        end
+    })
+
+    settingsSection:Toggle({
+        Title = "启用音效",
+        Value = soundEnabled,
+        Callback = function(value)
+            soundEnabled = value
+            WindUI:Notify({
+                Title = "音效",
+                Content = value and "已启用" or "已禁用",
+                Duration = 2
+            })
+        end
+    })
+
+    settingsSection:Toggle({
+        Title = "启用背景模糊",
+        Value = blurEnabled,
+        Callback = function(value)
+            blurEnabled = value
+            applyBlurEffect(value)
+            WindUI:Notify({
+                Title = "背景模糊",
+                Content = value and "已启用" or "已禁用",
+                Duration = 2
+            })
+        end
+    })
+
+    local colorSchemeNames = {}
+    for name, _ in pairs(COLOR_SCHEMES) do
+        table.insert(colorSchemeNames, name)
+    end
+    table.sort(colorSchemeNames)
+
+    settingsSection:Dropdown({
+        Title = "边框颜色方案",
+        Desc = "选择喜欢的颜色组合",
+        Values = colorSchemeNames,
+        Value = "银蓝颜色",
+        Callback = function(value)
+            currentBorderColorScheme = value
+            local success = initializeRainbowBorder(value, animationSpeed)
+            playSound()
+        end
+    })
+
+    settingsSection:Dropdown({
+        Title = "字体颜色方案",
+        Desc = "选择文字颜色组合",
+        Values = colorSchemeNames,
+        Value = "银蓝颜色",
+        Callback = function(value)
+            currentFontColorScheme = value
+            applyFontColorsToWindow(value)
+            playSound()
+        end
+    })
+
+    local fontOptions = {}
+    for _, fontName in ipairs(FONT_STYLES) do
+        local description = FONT_DESCRIPTIONS[fontName] or fontName
+        table.insert(fontOptions, {text = description, value = fontName})
+    end
+
+    table.sort(fontOptions, function(a, b)
+        return a.text < b.text
+    end)
+
+    local fontValues = {}
+    local fontValueToName = {}
+    for _, option in ipairs(fontOptions) do
+        table.insert(fontValues, option.text)
+        fontValueToName[option.text] = option.value
+    end
+
+    settingsSection:Dropdown({
+        Title = "字体样式",
+        Desc = "选择文字字体样式 (" .. #FONT_STYLES .. " 种可用)",
+        Values = fontValues,
+        Value = "经典哥特体",
+        Callback = function(value)
+            local fontName = fontValueToName[value]
+            if fontName then
+                currentFontStyle = fontName
+                local successCount, totalCount = applyFontStyleToWindow(fontName)
+                playSound()
+            end
+        end
+    })
+
+    settingsSection:Slider({
+        Title = "边框转动速度",
+        Desc = "调整边框旋转的快慢",
+        Value = { 
+            Min = 1,
+            Max = 10,
+            Default = 2,
+        },
+        Callback = function(value)
+            animationSpeed = value
+            if rainbowBorderAnimation then
+                rainbowBorderAnimation:Disconnect()
+                rainbowBorderAnimation = nil
+            end
+            if borderEnabled then
+                startBorderAnimation(Window, animationSpeed)
+            end
+
+            applyFontColorsToWindow(currentFontColorScheme)
+            playSound()
+        end
+    })
+
+    settingsSection:Slider({
+        Title = "UI整体缩放",
+        Desc = "调整UI大小比例",
+        Value = { 
+            Min = 0.5,
+            Max = 1.5,
+            Default = 1,
+        },
+        Step = 0.1,
+        Callback = function(value)
+            uiScale = value
+            if Window and Window.UIElements and Window.UIElements.Main then
+                local mainFrame = Window.UIElements.Main
+                local screenSize = workspace.CurrentCamera.ViewportSize
+                local newW = math.min(600 * value, screenSize.X - 40)
+                local newH = math.min(400 * value, screenSize.Y - 80)
+                mainFrame.Size = UDim2.fromOffset(newW, newH)
+            end
+            playSound()
+        end
+    })
+
+    settingsSection:Divider()
+
+    settingsSection:Slider({
+        Title = "UI透明度",
+        Desc = "调整整个UI的透明度",
+        Value = { 
+            Min = 0,
+            Max = 1,
+            Default = 0.2,
+        },
+        Step = 0.1,
+        Callback = function(value)
+            Window:ToggleTransparency(tonumber(value) > 0)
+            WindUI.TransparencyValue = tonumber(value)
+            playSound()
+        end
+    })
+
+    settingsSection:Slider({
+        Title = "调整UI宽度",
+        Desc = "调整窗口的宽度",
+        Value = { 
+            Min = 300,
+            Max = 800,
+            Default = 600,
+        },
+        Callback = function(value)
+            if Window.UIElements and Window.UIElements.Main then
+                local screenSize = workspace.CurrentCamera.ViewportSize
+                local newW = math.min(value, screenSize.X - 40)
+                local currentHeight = Window.UIElements.Main.Size.Y.Offset
+                Window.UIElements.Main.Size = UDim2.fromOffset(newW, currentHeight)
+            end
+            playSound()
+        end
+    })
+
+    settingsSection:Slider({
+        Title = "调整UI高度",
+        Desc = "调整窗口的高度",
+        Value = { 
+            Min = 250,
+            Max = 600,
+            Default = 400,
+        },
+        Callback = function(value)
+            if Window.UIElements and Window.UIElements.Main then
+                local screenSize = workspace.CurrentCamera.ViewportSize
+                local currentWidth = Window.UIElements.Main.Size.X.Offset
+                local newH = math.min(value, screenSize.Y - 80)
+                Window.UIElements.Main.Size = UDim2.fromOffset(currentWidth, newH)
+            end
+            playSound()
+        end
+    })
+
+    settingsSection:Slider({
+        Title = "边框粗细",
+        Desc = "调整边框的粗细",
+        Value = { 
+            Min = 1,
+            Max = 5,
+            Default = 1.5,
+        },
+        Step = 0.5,
+        Callback = function(value)
+            local mainFrame = Window.UIElements and Window.UIElements.Main
+            if mainFrame then
+                local rainbowStroke = mainFrame:FindFirstChild("RainbowStroke")
+                if rainbowStroke then
+                    rainbowStroke.Thickness = value
+                end
+            end
+            playSound()
+        end
+    })
+
+    settingsSection:Slider({
+        Title = "圆角大小",
+        Desc = "调整UI圆角的大小",
+        Value = { 
+            Min = 0,
+            Max = 20,
+            Default = 4,
+        },
+        Callback = function(value)
+            local mainFrame = Window.UIElements and Window.UIElements.Main
+            if mainFrame then
+                local corner = mainFrame:FindFirstChildOfClass("UICorner")
+                if not corner then
+                    corner = Instance.new("UICorner")
+                    corner.Parent = mainFrame
+                end
+                corner.CornerRadius = UDim.new(0, value)
+            end
+            playSound()
+        end
+    })
+
+    settingsSection:Button({
+        Title = "恢复UI到原位",
+        Icon = "rotate-ccw",
+        Callback = function()
+            if Window.UIElements and Window.UIElements.Main then
+                Window.UIElements.Main.Position = UDim2.new(0.5, 0, 0.5, 0)
+                playSound()
+            end
+        end
+    })
+
+    settingsSection:Button({
+        Title = "重置UI大小",
+        Icon = "maximize-2",
+        Callback = function()
+            if Window.UIElements and Window.UIElements.Main then
+                local screenSize = workspace.CurrentCamera.ViewportSize
+                local newW = math.min(600, screenSize.X - 40)
+                local newH = math.min(400, screenSize.Y - 80)
+                Window.UIElements.Main.Size = UDim2.fromOffset(newW, newH)
+                playSound()
+            end
+        end
+    })
+
+    settingsSection:Button({
+        Title = "随机字体",
+        Icon = "shuffle",
+        Callback = function()
+            local randomFont = FONT_STYLES[math.random(1, #FONT_STYLES)]
+            currentFontStyle = randomFont
+            applyFontStyleToWindow(randomFont)
+            playSound()
+        end
+    })
+
+    settingsSection:Button({
+        Title = "随机颜色",
+        Icon = "palette",
+        Callback = function()
+            local randomColor = colorSchemeNames[math.random(1, #colorSchemeNames)]
+            currentBorderColorScheme = randomColor
+            initializeRainbowBorder(randomColor, animationSpeed)
+            playSound()
+        end
+    })
+
+    settingsSection:Divider()
+
+    settingsSection:Button({
+        Title = "刷新字体颜色",
+        Icon = "refresh-cw",
+        Callback = function()
+            applyFontColorsToWindow(currentFontColorScheme)
+            playSound()
+        end
+    })
+
+    settingsSection:Button({
+        Title = "刷新字体样式",
+        Icon = "refresh-cw",
+        Callback = function()
+            local successCount, totalCount = applyFontStyleToWindow(currentFontStyle)
+            playSound()
+        end
+    })
+
+    settingsSection:Button({
+        Title = "测试所有字体",
+        Icon = "check-circle",
+        Callback = function()
+            local workingFonts = {}
+            local totalFonts = #FONT_STYLES
+
+            for i, fontName in ipairs(FONT_STYLES) do
+                local success = pcall(function()
+                    local test = Enum.Font[fontName]
+                end)
+
+                if success then
+                    table.insert(workingFonts, fontName)
+                end
+            end
+            playSound()
+        end
+    })
+
+    settingsSection:Button({
+        Title = "导出设置",
+        Icon = "download",
+        Callback = function()
+            local settings = {
+                font = currentFontStyle,
+                borderColor = currentBorderColorScheme,
+                fontSize = currentFontColorScheme,
+                speed = animationSpeed,
+                scale = uiScale
+            }
+            setclipboard("Card cheat设置: " .. game:GetService("HttpService"):JSONEncode(settings))
+            playSound()
+        end
+    })
+
+    Window:OnClose(function()
+        windowOpen = false
+        if rainbowBorderAnimation then
+            rainbowBorderAnimation:Disconnect()
+            rainbowBorderAnimation = nil
+        end
+        applyBlurEffect(false)
+    end)
+
+    Window:OnDestroy(function()
+        windowOpen = false
+        if rainbowBorderAnimation then
+            rainbowBorderAnimation:Disconnect()
+            rainbowBorderAnimation = nil
+        end
+        for _, animation in pairs(fontColorAnimations) do
+            animation:Disconnect()
+        end
+        fontColorAnimations = {}
+        applyBlurEffect(false)
+        hidePlaceMarkers()   -- 彻底销毁时清理标记
+    end)
+end
+
+-- 直接启动主界面（不再显示确认弹窗）
+createUI()
