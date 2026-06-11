@@ -1,0 +1,472 @@
+-- Advanced Tech Style Loading UI + Progress Bar - Dynamic Dots Version
+-- Placement: StarterPlayerScripts -> LocalScript
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local ContentProvider = game:GetService("ContentProvider")
+
+local player = Players.LocalPlayer
+local playerGui = player.PlayerGui
+
+-- Color Settings
+local COLORS = {
+    PrimaryGlow = Color3.fromHex("#00D4FF"),
+    SecondaryGlow = Color3.fromHex("#0099CC"),
+    ParticleWhite = Color3.fromHex("#F0F8FF"),
+    ParticleBlue = Color3.fromHex("#66D9FF"),
+    Background = Color3.fromHex("#000000"),
+    TextColor = Color3.fromHex("#80E5FF")
+}
+
+-- Animation Settings
+local ANIMATION = {
+    CubeRotateTime = 22,
+    FadeOutTime = 1.0,
+    LoadSimulationTime = 5.5,
+    EdgeFlowTime = 1.8,
+    ProgressFlowTime = 1.5,
+    ParticleCount = 35,
+    ParticleSpeed = 15,
+    DotsAnimationInterval = 0.4 -- Loading dots switch interval (seconds)
+}
+
+-- ==================== Create Main UI Container ====================
+local loadingGui = Instance.new("ScreenGui")
+loadingGui.Name = "AdvancedLoadingUI"
+loadingGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+loadingGui.DisplayOrder = 100
+loadingGui.IgnoreGuiInset = true
+loadingGui.Parent = playerGui
+
+-- Semi-transparent black background
+local background = Instance.new("Frame")
+background.Name = "Background"
+background.Size = UDim2.fromScale(1, 1)
+background.BackgroundColor3 = COLORS.Background
+background.BackgroundTransparency = 0.28
+background.Parent = loadingGui
+
+-- ==================== Fullscreen Particle Effect System ====================
+local particlesContainer = Instance.new("Frame")
+particlesContainer.Name = "ParticlesContainer"
+particlesContainer.Size = UDim2.fromScale(1, 1)
+particlesContainer.BackgroundTransparency = 1
+particlesContainer.ClipsDescendants = true
+particlesContainer.Parent = loadingGui
+
+local particles = {}
+local function createParticle()
+    local particle = Instance.new("Frame")
+    particle.Name = "Particle"
+    particle.Size = UDim2.fromOffset(math.random(2, 5), math.random(2, 5))
+    particle.BackgroundColor3 = math.random() > 0.5 and COLORS.ParticleWhite or COLORS.ParticleBlue
+    particle.BackgroundTransparency = math.random(0.5, 0.85)
+    particle.BorderSizePixel = 0
+    particle.Parent = particlesContainer
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = particle
+
+    local viewportSize = workspace.CurrentCamera.ViewportSize
+    local startX = math.random(0, viewportSize.X)
+    local startY = math.random(0, viewportSize.Y)
+    local speed = math.random(ANIMATION.ParticleSpeed * 0.5, ANIMATION.ParticleSpeed * 1.5)
+    local angle = math.random() * math.pi * 2
+    local velocityX = math.cos(angle) * speed
+    local velocityY = math.sin(angle) * speed
+
+    particle.Position = UDim2.fromOffset(startX, startY)
+
+    return particle, velocityX, velocityY
+end
+
+for _ = 1, ANIMATION.ParticleCount do
+    table.insert(particles, {createParticle()})
+end
+
+-- ==================== Multi-Layer Light Streak System ====================
+local lightStreaksContainer = Instance.new("Frame")
+lightStreaksContainer.Name = "LightStreaksContainer"
+lightStreaksContainer.Size = UDim2.fromScale(1, 1)
+lightStreaksContainer.BackgroundTransparency = 1
+lightStreaksContainer.ClipsDescendants = true
+lightStreaksContainer.Parent = loadingGui
+
+local function createLightStreak(layer)
+    local streak = Instance.new("Frame")
+    streak.Name = "LightStreak_Layer"..layer
+    streak.Size = UDim2.fromOffset(math.random(200, 500), layer == 1 and 1.5 or 2.5)
+    streak.BackgroundColor3 = layer == 1 and COLORS.SecondaryGlow or COLORS.PrimaryGlow
+    streak.BorderSizePixel = 0
+    streak.AnchorPoint = Vector2.new(0.5, 0.5)
+    streak.Rotation = math.random(-40, 40)
+    streak.BackgroundTransparency = layer == 1 and 0.7 or 0.4
+    streak.Parent = lightStreaksContainer
+
+    local streakGradient = Instance.new("UIGradient")
+    streakGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.25, 0.5),
+        NumberSequenceKeypoint.new(0.75, 0.5),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    streakGradient.Parent = streak
+
+    local speed = layer == 1 and math.random(40, 90) or math.random(100, 200)
+    local direction = math.random() > 0.5 and 1 or -1
+    local viewportSize = workspace.CurrentCamera.ViewportSize
+    local startX = direction == 1 and -streak.AbsoluteSize.X/2 or viewportSize.X + streak.AbsoluteSize.X/2
+    local startY = math.random(0, viewportSize.Y)
+    
+    streak.Position = UDim2.fromOffset(startX, startY)
+    
+    return streak, speed, direction
+end
+
+local streaks = {}
+for layer = 1, 2 do
+    for _ = 1, 6 do
+        table.insert(streaks, {createLightStreak(layer)})
+    end
+end
+
+-- ==================== Central Holographic Cube ====================
+local hologramContainer = Instance.new("Frame")
+hologramContainer.Name = "HologramContainer"
+hologramContainer.Size = UDim2.fromOffset(220, 220)
+hologramContainer.Position = UDim2.fromScale(0.5, 0.42)
+hologramContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+hologramContainer.BackgroundTransparency = 1
+hologramContainer.Parent = loadingGui
+
+-- Cube wireframe edges
+local cubeEdges = {}
+local edgeSize = 150
+local edgeThickness = 1.5
+
+-- Front 4 edges
+local frontTop = Instance.new("Frame")
+frontTop.Size = UDim2.fromOffset(edgeSize, edgeThickness)
+frontTop.Position = UDim2.fromScale(0.5, 0.2)
+frontTop.AnchorPoint = Vector2.new(0.5, 0.5)
+frontTop.BackgroundColor3 = COLORS.PrimaryGlow
+frontTop.Parent = hologramContainer
+table.insert(cubeEdges, frontTop)
+
+local frontBottom = frontTop:Clone()
+frontBottom.Position = UDim2.fromScale(0.5, 0.8)
+frontBottom.Parent = hologramContainer
+table.insert(cubeEdges, frontBottom)
+
+local frontLeft = Instance.new("Frame")
+frontLeft.Size = UDim2.fromOffset(edgeThickness, edgeSize)
+frontLeft.Position = UDim2.fromScale(0.2, 0.5)
+frontLeft.AnchorPoint = Vector2.new(0.5, 0.5)
+frontLeft.BackgroundColor3 = COLORS.PrimaryGlow
+frontLeft.Parent = hologramContainer
+table.insert(cubeEdges, frontLeft)
+
+local frontRight = frontLeft:Clone()
+frontRight.Position = UDim2.fromScale(0.8, 0.5)
+frontRight.Parent = hologramContainer
+table.insert(cubeEdges, frontRight)
+
+-- Rear 4 edges
+local backOffset = 32
+local backTop = frontTop:Clone()
+backTop.Position = UDim2.fromScale(0.5, 0.2) + UDim2.fromOffset(backOffset, -backOffset)
+backTop.BackgroundTransparency = 0.55
+backTop.Parent = hologramContainer
+table.insert(cubeEdges, backTop)
+
+local backBottom = frontBottom:Clone()
+backBottom.Position = UDim2.fromScale(0.5, 0.8) + UDim2.fromOffset(backOffset, -backOffset)
+backBottom.BackgroundTransparency = 0.55
+backBottom.Parent = hologramContainer
+table.insert(cubeEdges, backBottom)
+
+local backLeft = frontLeft:Clone()
+backLeft.Position = UDim2.fromScale(0.2, 0.5) + UDim2.fromOffset(backOffset, -backOffset)
+backLeft.BackgroundTransparency = 0.55
+backLeft.Parent = hologramContainer
+table.insert(cubeEdges, backLeft)
+
+local backRight = frontRight:Clone()
+backRight.Position = UDim2.fromScale(0.8, 0.5) + UDim2.fromOffset(backOffset, -backOffset)
+backRight.BackgroundTransparency = 0.55
+backRight.Parent = hologramContainer
+table.insert(cubeEdges, backRight)
+
+-- Connecting 4 edges between front and rear
+local connectTopLeft = Instance.new("Frame")
+connectTopLeft.Size = UDim2.fromOffset(math.sqrt(backOffset^2*2), edgeThickness)
+connectTopLeft.Position = UDim2.fromScale(0.2, 0.2)
+connectTopLeft.AnchorPoint = Vector2.new(0, 0.5)
+connectTopLeft.Rotation = -45
+connectTopLeft.BackgroundColor3 = COLORS.PrimaryGlow
+connectTopLeft.BackgroundTransparency = 0.55
+connectTopLeft.Parent = hologramContainer
+table.insert(cubeEdges, connectTopLeft)
+
+local connectTopRight = connectTopLeft:Clone()
+connectTopRight.Position = UDim2.fromScale(0.8, 0.2)
+connectTopRight.Parent = hologramContainer
+table.insert(cubeEdges, connectTopRight)
+
+local connectBottomLeft = connectTopLeft:Clone()
+connectBottomLeft.Position = UDim2.fromScale(0.2, 0.8)
+connectBottomLeft.Parent = hologramContainer
+table.insert(cubeEdges, connectBottomLeft)
+
+local connectBottomRight = connectTopLeft:Clone()
+connectBottomRight.Position = UDim2.fromScale(0.8, 0.8)
+connectBottomRight.Parent = hologramContainer
+table.insert(cubeEdges, connectBottomRight)
+
+-- Edge glow flow effect for cube
+local edgeFlows = {}
+for i, edge in ipairs(cubeEdges) do
+    local flow = Instance.new("Frame")
+    flow.Name = "EdgeFlow_"..i
+    flow.Size = UDim2.fromOffset(30, edgeThickness + 2)
+    flow.BackgroundColor3 = COLORS.PrimaryGlow
+    flow.BackgroundTransparency = 0.2
+    flow.AnchorPoint = Vector2.new(0.5, 0.5)
+    flow.Parent = edge
+
+    local flowGradient = Instance.new("UIGradient")
+    flowGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.5, 0),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    flowGradient.Parent = flow
+
+    table.insert(edgeFlows, {
+        flow = flow,
+        offset = math.random() * ANIMATION.EdgeFlowTime,
+        isVertical = edge.Size.X.Offset == edgeThickness
+    })
+end
+
+-- ==================== Bottom Loading Text & Progress Bar (Dynamic Dots Added) ====================
+local loadingInfoContainer = Instance.new("Frame")
+loadingInfoContainer.Name = "LoadingInfoContainer"
+loadingInfoContainer.Size = UDim2.fromOffset(260, 45)
+loadingInfoContainer.Position = UDim2.fromScale(0.5, 0.75)
+loadingInfoContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+loadingInfoContainer.BackgroundTransparency = 1
+loadingInfoContainer.Parent = loadingGui
+
+-- Loading text
+local loadingText = Instance.new("TextLabel")
+loadingText.Name = "LoadingText"
+loadingText.Size = UDim2.fromScale(1, 0.5)
+loadingText.Position = UDim2.fromScale(0.5, 0)
+loadingText.AnchorPoint = Vector2.new(0.5, 0)
+loadingText.BackgroundTransparency = 1
+-- Remove static dots, use dynamic generation
+loadingText.Text = "SCRIPT LOADING"
+loadingText.Font = Enum.Font.Code
+loadingText.TextSize = 16
+loadingText.TextColor3 = COLORS.TextColor
+loadingText.TextTransparency = 0.2
+loadingText.Parent = loadingInfoContainer
+
+-- Control variable for dots animation
+local dotsAnimationRunning = true
+local baseLoadingText = "SCRIPT LOADING"
+
+-- Start loading dots loop animation (coroutine, no main thread block)
+task.spawn(function()
+    local dotCount = 0
+    while dotsAnimationRunning do
+        dotCount = dotCount % 3 + 1 -- Loop: 1 → 2 → 3 → 1
+        loadingText.Text = baseLoadingText .. string.rep(".", dotCount)
+        task.wait(ANIMATION.DotsAnimationInterval)
+    end
+end)
+
+-- Progress bar background
+local progressBarBg = Instance.new("Frame")
+progressBarBg.Name = "ProgressBarBg"
+progressBarBg.Size = UDim2.fromScale(1, 0.12)
+progressBarBg.Position = UDim2.fromScale(0.5, 0.85)
+progressBarBg.AnchorPoint = Vector2.new(0.5, 0.5)
+progressBarBg.BackgroundColor3 = COLORS.SecondaryGlow
+progressBarBg.BackgroundTransparency = 0.8
+progressBarBg.BorderSizePixel = 0
+progressBarBg.ClipsDescendants = true
+progressBarBg.Parent = loadingInfoContainer
+
+local progressBarCorner = Instance.new("UICorner")
+progressBarCorner.CornerRadius = UDim.new(0, 4)
+progressBarCorner.Parent = progressBarBg
+
+-- Progress bar fill area
+local progressBarFill = Instance.new("Frame")
+progressBarFill.Name = "ProgressBarFill"
+progressBarFill.Size = UDim2.fromScale(0, 1)
+progressBarFill.BackgroundColor3 = COLORS.PrimaryGlow
+progressBarFill.BorderSizePixel = 0
+progressBarFill.ClipsDescendants = true
+progressBarFill.Parent = progressBarBg
+
+local progressFillCorner = Instance.new("UICorner")
+progressFillCorner.CornerRadius = UDim.new(0, 4)
+progressFillCorner.Parent = progressBarFill
+
+-- Progress bar flow glow effect
+local progressFlow = Instance.new("Frame")
+progressFlow.Name = "ProgressFlow"
+progressFlow.Size = UDim2.fromScale(0.4, 1)
+progressFlow.BackgroundColor3 = COLORS.ParticleWhite
+progressFlow.BackgroundTransparency = 0.5
+progressFlow.Parent = progressBarFill
+
+local progressFlowGradient = Instance.new("UIGradient")
+progressFlowGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.5, 0),
+    NumberSequenceKeypoint.new(1, 1)
+})
+progressFlowGradient.Parent = progressFlow
+
+-- ==================== Animation System ====================
+-- Continuous cube rotation
+local cubeRotateTween = TweenService:Create(
+    hologramContainer,
+    TweenInfo.new(ANIMATION.CubeRotateTime, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1, false),
+    {Rotation = 360}
+)
+cubeRotateTween:Play()
+
+-- Progress bar fill animation from 0% to 100%
+local progressTween = TweenService:Create(
+    progressBarFill,
+    TweenInfo.new(ANIMATION.LoadSimulationTime, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+    {Size = UDim2.fromScale(1, 1)}
+)
+progressTween:Play()
+
+-- Main loop for all animations
+local mainConnection = RunService.Heartbeat:Connect(function(deltaTime)
+    local viewportSize = workspace.CurrentCamera.ViewportSize
+    local currentTime = os.clock()
+
+    -- Particle movement animation
+    for _, particleData in ipairs(particles) do
+        local particle, vx, vy = unpack(particleData)
+        local currentX = particle.Position.X.Offset
+        local currentY = particle.Position.Y.Offset
+        local newX = currentX + vx * deltaTime
+        local newY = currentY + vy * deltaTime
+
+        if newX < 0 or newX > viewportSize.X then
+            vx = -vx
+            newX = math.clamp(newX, 0, viewportSize.X)
+        end
+        if newY < 0 or newY > viewportSize.Y then
+            vy = -vy
+            newY = math.clamp(newY, 0, viewportSize.Y)
+        end
+
+        particle.Position = UDim2.fromOffset(newX, newY)
+        particleData[2], particleData[3] = vx, vy
+    end
+
+    -- Light streak scrolling animation
+    for _, streakData in ipairs(streaks) do
+        local streak, speed, direction = unpack(streakData)
+        local currentX = streak.Position.X.Offset
+        local newX = currentX + speed * direction * deltaTime
+        
+        if (direction == 1 and newX > viewportSize.X + streak.AbsoluteSize.X/2) or
+           (direction == -1 and newX < -streak.AbsoluteSize.X/2) then
+            newX = direction == 1 and -streak.AbsoluteSize.X/2 or viewportSize.X + streak.AbsoluteSize.X/2
+            streak.Position = UDim2.fromOffset(newX, math.random(0, viewportSize.Y))
+            streak.Rotation = math.random(-40, 40)
+        else
+            streak.Position = UDim2.fromOffset(newX, streak.Position.Y.Offset)
+        end
+    end
+
+    -- Cube edge glow movement
+    for _, flowData in ipairs(edgeFlows) do
+        local flow = flowData.flow
+        local offset = flowData.offset
+        local isVertical = flowData.isVertical
+
+        local progress = ((currentTime + offset) % ANIMATION.EdgeFlowTime) / ANIMATION.EdgeFlowTime
+        
+        if isVertical then
+            flow.Position = UDim2.fromScale(0.5, progress)
+        else
+            flow.Position = UDim2.fromScale(progress, 0.5)
+        end
+    end
+
+    -- Progress bar glow flow animation
+    local progressFlowProgress = (currentTime % ANIMATION.ProgressFlowTime) / ANIMATION.ProgressFlowTime
+    progressFlow.Position = UDim2.fromScale(progressFlowProgress - 0.2, 0)
+end)
+
+-- ==================== Loading Complete Logic ====================
+local function onLoadingComplete()
+    -- Stop dots animation to prevent memory leak
+    dotsAnimationRunning = false
+    
+    -- Disconnect all animation connections
+    mainConnection:Disconnect()
+    cubeRotateTween:Cancel()
+    progressTween:Cancel()
+    
+    local fadeTweenInfo = TweenInfo.new(ANIMATION.FadeOutTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    
+    -- Fade out background
+    TweenService:Create(background, fadeTweenInfo, {BackgroundTransparency = 1}):Play()
+    
+    -- Fade out all particles
+    for _, particleData in ipairs(particles) do
+        local particle = particleData[1]
+        TweenService:Create(particle, fadeTweenInfo, {BackgroundTransparency = 1}):Play()
+    end
+    
+    -- Fade out all light streaks
+    for _, streakData in ipairs(streaks) do
+        local streak = streakData[1]
+        TweenService:Create(streak, fadeTweenInfo, {BackgroundTransparency = 1}):Play()
+    end
+    
+    -- Fade out cube edges and glow effects
+    for _, edge in ipairs(cubeEdges) do
+        TweenService:Create(edge, fadeTweenInfo, {BackgroundTransparency = 1}):Play()
+    end
+    for _, flowData in ipairs(edgeFlows) do
+        TweenService:Create(flowData.flow, fadeTweenInfo, {BackgroundTransparency = 1}):Play()
+    end
+    
+    -- Fade out progress bar and text
+    TweenService:Create(loadingInfoContainer, fadeTweenInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(loadingText, fadeTweenInfo, {TextTransparency = 1}):Play()
+    TweenService:Create(progressBarBg, fadeTweenInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(progressBarFill, fadeTweenInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(progressFlow, fadeTweenInfo, {BackgroundTransparency = 1}):Play()
+    
+    -- Destroy UI after fade animation ends
+    task.wait(ANIMATION.FadeOutTime)
+    loadingGui:Destroy()
+end
+
+-- ==================== Execute Loading Process ====================
+-- Simulate loading (replace with your real loading logic)
+task.wait(ANIMATION.LoadSimulationTime)
+
+-- Real asset preload example (uncomment to use)
+-- local assetsToLoad = {workspace, game.ReplicatedStorage}
+-- for _, asset in ipairs(assetsToLoad) do
+--     ContentProvider:PreloadAsync({asset})
+-- end
+
+onLoadingComplete()
