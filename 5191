@@ -1,0 +1,1298 @@
+--Deepseek3% Kimi97%
+-- 加载 WindUI
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/gycgchgyfytdttr/shenqin/refs/heads/main/ui.lua"))()
+WindUI.TransparencyValue = 0.2
+WindUI:SetTheme("Dark")
+
+-- 获取核心服务
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local CurrentCamera = Workspace.CurrentCamera
+
+-- 获取远程事件 (如果游戏里没有这些，不影响其他本地功能)
+local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+local SpawnCandidateResponse = Remotes and Remotes:FindFirstChild("SpawnCandidateResponse")
+
+-- 游戏对象路径
+local RoamingBaddies = Workspace:WaitForChild("RoamingBaddies", 5)
+
+-- ==================== 功能变量 ====================
+-- 自动打怪变量
+local autoFarmEnabled = false
+local autoAimEnabled = false
+local wallCheckEnabled = true
+local currentTarget = nil
+local farmDistance = 15
+local nearbyCheckDistance = 30
+
+-- 刷怪变量
+local autoSpawnEnabled = false
+local spawnInterval = 0.5
+local fixedSpawnEnabled = false
+local fixedSpawnPosition = nil
+local spawnLoop = nil
+
+-- 力场变量
+local auraEnabled = false
+local auraRadius = 15
+local auraVisualPart = nil
+
+-- 枪械变量
+local gunModLoop = nil
+
+-- 新增：持续扫描分项控制变量
+local autoScanFireRate = true
+local autoScanReload = true
+local autoScanNoRecoil = true
+
+-- 新增：怪物聚集变量
+local stackBaddiesEnabled = false
+local stackDistance = 10
+local stackLoop = nil
+
+-- 新增：传送至面前地面变量
+local stackGroundEnabled = false
+local stackGroundDistance = 10
+local stackGroundLoop = nil
+
+-- 新增：传送至最近怪头顶变量
+local teleportToHeadEnabled = false
+local headTeleportLoop = nil
+local headTeleportTarget = nil
+local headTeleportHeight = 8
+local headTeleportMinHeight = 5
+local headTeleportMaxHeight = 30
+local headTeleportConnection = nil
+
+-- 新增：无敌模式变量
+local godModeEnabled = false
+local godModeConnection = nil
+
+-- 新增：死亡重生自动装备枪械变量
+local autoEquipGunEnabled = false
+local selectedGunSlot = 1
+local autoEquipConnection = nil
+
+-- ==================== 核心辅助函数 ====================
+
+-- 获取最近存活的怪物
+local function getNearestBaddie()
+    local nearest = nil
+    local minDist = math.huge
+    local character = LocalPlayer.Character
+    local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return nil end
+    for _, baddie in ipairs(RoamingBaddies:GetChildren()) do
+        if baddie:IsA("Model") then
+            local hum = baddie:FindFirstChild("Humanoid")
+            local hrp = baddie:FindFirstChild("HumanoidRootPart")
+            if hum and hum.Health > 0 and hrp then
+                local dist = (myHrp.Position - hrp.Position).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    nearest = baddie
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+-- 获取指定范围内的怪物数量
+local function getBaddiesInRange(range)
+    local count = 0
+    local character = LocalPlayer.Character
+    local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return 0 end
+    for _, baddie in ipairs(RoamingBaddies:GetChildren()) do
+        if baddie:IsA("Model") then
+            local hum = baddie:FindFirstChild("Humanoid")
+            local hrp = baddie:FindFirstChild("HumanoidRootPart")
+            if hum and hum.Health > 0 and hrp then
+                if (myHrp.Position - hrp.Position).Magnitude <= range then
+                    count = count + 1
+                end
+            end
+        end
+    end
+    return count
+end
+
+-- 收集所有需要排除的实例（玩家角色 + 所有怪物）
+local function getRaycastBlacklist()
+    local blacklist = {LocalPlayer.Character}
+    for _, baddie in ipairs(RoamingBaddies:GetChildren()) do
+        if baddie:IsA("Model") then
+            table.insert(blacklist, baddie)
+        end
+    end
+    return blacklist
+end
+
+-- 地面检测：从某位置找到正下方的地面Y坐标
+local function findGroundY(position)
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = getRaycastBlacklist()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.IgnoreWater = true
+    local origin = Vector3.new(position.X, position.Y + 5, position.Z)
+    local direction = Vector3.new(0, -50, 0)
+    local result = Workspace:Raycast(origin, direction, raycastParams)
+    if result then return result.Position.Y end
+    origin = Vector3.new(position.X, position.Y + 20, position.Z)
+    direction = Vector3.new(0, -100, 0)
+    result = Workspace:Raycast(origin, direction, raycastParams)
+    if result then return result.Position.Y end
+    return nil
+end
+
+-- 天花板检测：从某位置找到正上方的天花板Y坐标
+local function findCeilingY(position)
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = getRaycastBlacklist()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.IgnoreWater = true
+    local origin = Vector3.new(position.X, position.Y + 2, position.Z)
+    local direction = Vector3.new(0, 100, 0)
+    local result = Workspace:Raycast(origin, direction, raycastParams)
+    if result then return result.Position.Y end
+    return nil
+end
+
+-- 房间检测系统
+local function getRoomSafePosition(targetPosition)
+    local character = LocalPlayer.Character
+    local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return nil end
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = getRaycastBlacklist()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.IgnoreWater = true
+    local directions = {
+        Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0),
+        Vector3.new(0, 0, 1), Vector3.new(0, 0, -1),
+        Vector3.new(0, 1, 0), Vector3.new(0, -1, 0),
+    }
+    local wallDistances = {}
+    local hasGround = false
+    local groundY = nil
+    for _, dir in ipairs(directions) do
+        local origin = targetPosition + (dir * 0.5)
+        local result = Workspace:Raycast(origin, dir * 100, raycastParams)
+        if result then
+            local dist = (result.Position - targetPosition).Magnitude
+            table.insert(wallDistances, dist)
+            if dir.Y < 0 then hasGround = true; groundY = result.Position.Y end
+        else
+            table.insert(wallDistances, math.huge)
+        end
+    end
+    local horizontalWalls = 0
+    for i = 1, 4 do if wallDistances[i] < 50 then horizontalWalls = horizontalWalls + 1 end end
+    if horizontalWalls < 2 or not hasGround then return nil end
+    if not groundY then groundY = findGroundY(targetPosition) end
+    if not groundY then return nil end
+    local myPos = myHrp.Position
+    local toPlayer = myPos - targetPosition
+    toPlayer = Vector3.new(toPlayer.X, 0, toPlayer.Z)
+    if toPlayer.Magnitude < 0.1 then toPlayer = Vector3.new(0, 0, 1) end
+    toPlayer = toPlayer.Unit
+    local destination = Vector3.new(
+        targetPosition.X + toPlayer.X * farmDistance,
+        groundY + 3,
+        targetPosition.Z + toPlayer.Z * farmDistance
+    )
+    local destGroundY = findGroundY(destination)
+    if not destGroundY or destGroundY < groundY - 10 then return nil end
+    destination = Vector3.new(destination.X, destGroundY + 3, destination.Z)
+    return destination
+end
+
+-- 墙壁检测
+local function isVisible(targetPosition)
+    if not wallCheckEnabled then return true end
+    local character = LocalPlayer.Character
+    if not character then return false end
+    local origin = CurrentCamera.CFrame.Position
+    local direction = targetPosition - origin
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = getRaycastBlacklist()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.IgnoreWater = true
+    local result = Workspace:Raycast(origin, direction, raycastParams)
+    return result == nil
+end
+
+-- 自动装备枪械函数
+local function autoEquipGun()
+    if not autoEquipGunEnabled then return end
+    local character = LocalPlayer.Character
+    if not character then return end
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if not backpack then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    task.wait(0.3)
+    local tools = {}
+    for _, item in ipairs(backpack:GetChildren()) do
+        if item:IsA("Tool") then table.insert(tools, item) end
+    end
+    for _, item in ipairs(character:GetChildren()) do
+        if item:IsA("Tool") then return end
+    end
+    local targetIndex = selectedGunSlot
+    if targetIndex <= #tools then
+        local targetTool = tools[targetIndex]
+        if targetTool then
+            pcall(function() humanoid:EquipTool(targetTool) end)
+        end
+    elseif #tools > 0 then
+        pcall(function() humanoid:EquipTool(tools[1]) end)
+    end
+end
+
+-- 启动自动装备监听
+local function startAutoEquip()
+    if autoEquipConnection then pcall(function() autoEquipConnection:Disconnect() end) end
+    autoEquipConnection = LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+        if not autoEquipGunEnabled then return end
+        task.wait(0.5)
+        autoEquipGun()
+    end)
+end
+
+-- 停止自动装备监听
+local function stopAutoEquip()
+    if autoEquipConnection then pcall(function() autoEquipConnection:Disconnect() end) autoEquipConnection = nil end
+end
+
+-- ==================== 自动化循环 ====================
+
+RunService.RenderStepped:Connect(function()
+    local character = LocalPlayer.Character
+    local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+    local myHum = character and character:FindFirstChild("Humanoid")
+    if not myHrp or (myHum and myHum.Health <= 0) then return end
+    if autoAimEnabled then
+        if not currentTarget or not currentTarget.Parent or (currentTarget:FindFirstChild("Humanoid") and currentTarget:FindFirstChild("Humanoid").Health <= 0) then
+            currentTarget = getNearestBaddie()
+        end
+        if currentTarget then
+            local targetHead = currentTarget:FindFirstChild("Head") or currentTarget:FindFirstChild("HumanoidRootPart")
+            if targetHead and isVisible(targetHead.Position) then
+                local targetCFrame = CFrame.new(CurrentCamera.CFrame.Position, targetHead.Position)
+                CurrentCamera.CFrame = CurrentCamera.CFrame:Lerp(targetCFrame, 0.4)
+            end
+        end
+    end
+    if autoFarmEnabled then
+        local baddiesNearby = getBaddiesInRange(nearbyCheckDistance)
+        if baddiesNearby == 0 then
+            local target = getNearestBaddie()
+            if target then
+                local targetHrp = target:FindFirstChild("HumanoidRootPart")
+                if targetHrp then
+                    local safePosition = getRoomSafePosition(targetHrp.Position)
+                    if safePosition then
+                        local targetPos = targetHrp.Position
+                        local lookDir = Vector3.new(targetPos.X - safePosition.X, 0, targetPos.Z - safePosition.Z)
+                        if lookDir.Magnitude > 0.1 then lookDir = lookDir.Unit else lookDir = Vector3.new(0, 0, 1) end
+                        myHrp.CFrame = CFrame.new(safePosition, safePosition + lookDir)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    local character = LocalPlayer.Character
+    local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+    if auraVisualPart then
+        if auraEnabled and myHrp then
+            auraVisualPart.CFrame = myHrp.CFrame
+            auraVisualPart.Size = Vector3.new(auraRadius * 2, auraRadius * 2, auraRadius * 2)
+            auraVisualPart.Parent = Workspace
+        else
+            auraVisualPart.Parent = nil
+        end
+    end
+    if auraEnabled and myHrp then
+        for _, baddie in ipairs(RoamingBaddies:GetChildren()) do
+            local hum = baddie:FindFirstChild("Humanoid")
+            local hrp = baddie:FindFirstChild("HumanoidRootPart")
+            if hum and hum.Health > 0 and hrp then
+                local dist = (hrp.Position - myHrp.Position).Magnitude
+                if dist <= auraRadius then
+                    local pushDir = (hrp.Position - myHrp.Position)
+                    pushDir = Vector3.new(pushDir.X, 0, pushDir.Z)
+                    if pushDir.Magnitude < 0.1 then pushDir = Vector3.new(math.random(-1,1), 0, math.random(-1,1)) if pushDir.Magnitude == 0 then pushDir = Vector3.new(1,0,0) end end
+                    pushDir = pushDir.Unit
+                    local pushTargetPos = myHrp.Position + (pushDir * (auraRadius + 1))
+                    hrp.CFrame = CFrame.new(Vector3.new(pushTargetPos.X, hrp.Position.Y, pushTargetPos.Z))
+                end
+            end
+        end
+    end
+end)
+
+-- ==================== 无敌模式 ====================
+local godModeConnections = {}
+local godModeCharacterConn = nil
+local godModeHumanoid = nil
+local godModeLastHealth = nil
+
+local function clearGodModeConnections()
+    for _, conn in ipairs(godModeConnections) do pcall(function() conn:Disconnect() end) end
+    godModeConnections = {}
+    if godModeCharacterConn then pcall(function() godModeCharacterConn:Disconnect() end) godModeCharacterConn = nil end
+    godModeHumanoid = nil
+    godModeLastHealth = nil
+end
+
+local function bindGodModeToHumanoid(humanoid)
+    if not humanoid or not godModeEnabled then return end
+    godModeHumanoid = humanoid
+    godModeLastHealth = humanoid.Health
+    local healthChangedConn = humanoid.HealthChanged:Connect(function(newHealth)
+        if not godModeEnabled then return end
+        if newHealth < godModeLastHealth then pcall(function() humanoid.Health = humanoid.MaxHealth end) end
+        godModeLastHealth = humanoid.MaxHealth
+    end)
+    table.insert(godModeConnections, healthChangedConn)
+    local propChangedConn = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+        if not godModeEnabled then return end
+        pcall(function() if humanoid.Health < humanoid.MaxHealth then humanoid.Health = humanoid.MaxHealth end end)
+    end)
+    table.insert(godModeConnections, propChangedConn)
+    local heartbeatConn = RunService.Heartbeat:Connect(function()
+        if not godModeEnabled then return end
+        pcall(function()
+            if humanoid and humanoid.Parent then
+                if humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then humanoid.Health = humanoid.MaxHealth end
+                if humanoid.MaxHealth < 100 then humanoid.MaxHealth = 100 end
+            end
+        end)
+    end)
+    table.insert(godModeConnections, heartbeatConn)
+    local stateChangedConn = humanoid.StateChanged:Connect(function(oldState, newState)
+        if not godModeEnabled then return end
+        if newState == Enum.HumanoidStateType.Dead then
+            pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) humanoid.Health = humanoid.MaxHealth end)
+        end
+    end)
+    table.insert(godModeConnections, stateChangedConn)
+    pcall(function() humanoid.Health = humanoid.MaxHealth end)
+end
+
+local function startGodMode()
+    clearGodModeConnections()
+    local character = LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then bindGodModeToHumanoid(humanoid) end
+    end
+    godModeCharacterConn = LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+        if not godModeEnabled then return end
+        task.wait(0.1)
+        local humanoid = newCharacter:FindFirstChildOfClass("Humanoid")
+        if humanoid then bindGodModeToHumanoid(humanoid) end
+    end)
+    if character then
+        local humanoidWatcher = character.ChildAdded:Connect(function(child)
+            if not godModeEnabled then return end
+            if child:IsA("Humanoid") then task.wait(0.05) bindGodModeToHumanoid(child) end
+        end)
+        table.insert(godModeConnections, humanoidWatcher)
+    end
+end
+
+local function stopGodMode()
+    clearGodModeConnections()
+end
+
+-- 刷怪循环
+local function startSpawning()
+    if spawnLoop then task.cancel(spawnLoop) end
+    spawnLoop = task.spawn(function()
+        while autoSpawnEnabled do
+            if SpawnCandidateResponse then
+                local candidates = {}
+                for i = 1, 5 do
+                    if fixedSpawnEnabled and fixedSpawnPosition then
+                        table.insert(candidates, fixedSpawnPosition)
+                    else
+                        local character = LocalPlayer.Character
+                        local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+                        if myHrp then
+                            local randomOffset = Vector3.new(math.random(-30, 30), 0, math.random(-30, 30))
+                            table.insert(candidates, myHrp.Position + randomOffset)
+                        end
+                    end
+                end
+                if #candidates > 0 then pcall(function() SpawnCandidateResponse:FireServer(candidates) end) end
+            end
+            task.wait(spawnInterval)
+        end
+    end)
+end
+
+local function stopSpawning()
+    if spawnLoop then task.cancel(spawnLoop) spawnLoop = nil end
+end
+
+-- ==================== 枪械功能 ====================
+
+local function applyFireRateOnly()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local tool = character:FindFirstChildOfClass("Tool")
+    if not tool then return end
+    for attrName, attrValue in pairs(tool:GetAttributes()) do
+        local lowerName = string.lower(attrName)
+        if lowerName:find("rate") or lowerName:find("cooldown") or lowerName:find("delay") then
+            if type(attrValue) == "number" then tool:SetAttribute(attrName, 0) end
+        elseif lowerName:find("rpm") then
+            if type(attrValue) == "number" then tool:SetAttribute(attrName, 99999) end
+        end
+    end
+    for _, obj in pairs(tool:GetDescendants()) do
+        if obj:IsA("NumberValue") or obj:IsA("IntValue") then
+            local lowerName = string.lower(obj.Name)
+            if lowerName:find("rate") or lowerName:find("cooldown") or lowerName:find("time") or lowerName:find("delay") then obj.Value = 0
+            elseif lowerName:find("rpm") then obj.Value = 99999 end
+        end
+        if obj:IsA("ModuleScript") then
+            pcall(function()
+                local configTable = require(obj)
+                if type(configTable) == "table" then
+                    for k, v in pairs(configTable) do
+                        local keyStr = string.lower(tostring(k))
+                        if type(v) == "number" then
+                            if keyStr:find("firerate") or keyStr:find("cooldown") or keyStr:find("delay") or keyStr:find("waittime") then configTable[k] = 0.001
+                            elseif keyStr:find("rpm") then configTable[k] = 99999 end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end
+
+local function applyReloadOnly()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local tool = character:FindFirstChildOfClass("Tool")
+    if not tool then return end
+    for attrName, attrValue in pairs(tool:GetAttributes()) do
+        local lowerName = string.lower(attrName)
+        if lowerName:find("reload") then if type(attrValue) == "number" then tool:SetAttribute(attrName, 0) end end
+    end
+    for _, obj in pairs(tool:GetDescendants()) do
+        if obj:IsA("NumberValue") or obj:IsA("IntValue") then
+            if string.lower(obj.Name):find("reload") then obj.Value = 0 end
+        end
+        if obj:IsA("ModuleScript") then
+            pcall(function()
+                local configTable = require(obj)
+                if type(configTable) == "table" then
+                    for k, v in pairs(configTable) do
+                        local keyStr = string.lower(tostring(k))
+                        if type(v) == "number" then
+                            if keyStr:find("reload") or keyStr:find("reloadtime") or keyStr:find("reloadspeed") then configTable[k] = 0 end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end
+
+local function applyNoRecoilOnly()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local tool = character:FindFirstChildOfClass("Tool")
+    if not tool then return end
+    for attrName, attrValue in pairs(tool:GetAttributes()) do
+        local lowerName = string.lower(attrName)
+        if lowerName:find("recoil") or lowerName:find("kick") or lowerName:find("spread") or lowerName:find("accuracy") or lowerName:find("camshake") or lowerName:find("shake") or lowerName:find("viewkick") or lowerName:find("bloom") or lowerName:find("sway") or lowerName:find("stability") then
+            if typeof(attrValue) == "Vector3" then tool:SetAttribute(attrName, Vector3.new(0, 0, 0))
+            elseif typeof(attrValue) == "Vector2" then tool:SetAttribute(attrName, Vector2.new(0, 0))
+            elseif type(attrValue) == "number" then tool:SetAttribute(attrName, 0) end
+        end
+    end
+    for _, obj in pairs(tool:GetDescendants()) do
+        if obj:IsA("NumberValue") or obj:IsA("IntValue") then
+            local lowerName = string.lower(obj.Name)
+            if lowerName:find("recoil") or lowerName:find("kick") or lowerName:find("spread") or lowerName:find("accuracy") or lowerName:find("camshake") or lowerName:find("shake") or lowerName:find("viewkick") or lowerName:find("muzzle") or lowerName:find("bloom") or lowerName:find("sway") or lowerName:find("stability") then obj.Value = 0 end
+        end
+        if obj:IsA("Vector3Value") then
+            local lowerName = string.lower(obj.Name)
+            if lowerName:find("recoil") or lowerName:find("kick") or lowerName:find("offset") or lowerName:find("spread") then obj.Value = Vector3.new(0, 0, 0) end
+        end
+        if obj:IsA("ModuleScript") then
+            pcall(function()
+                local configTable = require(obj)
+                if type(configTable) == "table" then
+                    for k, v in pairs(configTable) do
+                        local keyStr = string.lower(tostring(k))
+                        if keyStr:find("recoil") or keyStr:find("kick") or keyStr:find("spread") or keyStr:find("accuracy") or keyStr:find("weaponkick") or keyStr:find("camshake") or keyStr:find("shake") or keyStr:find("viewkick") or keyStr:find("muzzle") or keyStr:find("gunshake") or keyStr:find("bloom") or keyStr:find("sway") or keyStr:find("stability") or keyStr:find("weaponsway") then
+                            if typeof(v) == "Vector3" then configTable[k] = Vector3.new(0, 0, 0)
+                            elseif typeof(v) == "Vector2" then configTable[k] = Vector2.new(0, 0)
+                            elseif type(v) == "number" then configTable[k] = 0 end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end
+
+-- 禁用怪物碰撞
+local function disableBaddieCollision(baddie)
+    for _, part in ipairs(baddie:GetDescendants()) do
+        if part:IsA("BasePart") then part.CanCollide = false end
+    end
+end
+
+-- 冻结怪物
+local function freezeBaddie(baddie)
+    local hum = baddie:FindFirstChild("Humanoid")
+    if hum then hum.WalkSpeed = 0; hum.JumpPower = 0; pcall(function() hum.AutoRotate = false end) end
+    local animator = baddie:FindFirstChild("Animator", true)
+    if animator then for _, track in ipairs(animator:GetPlayingAnimationTracks()) do track:AdjustSpeed(0) end end
+end
+
+-- 怪物聚集到镜头前
+local function startStackingBaddies()
+    if stackLoop then task.cancel(stackLoop) end
+    stackLoop = task.spawn(function()
+        while stackBaddiesEnabled do
+            local character = LocalPlayer.Character
+            local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+            if not myHrp then task.wait(0.1) continue end
+            local camCF = CurrentCamera.CFrame
+            local targetPos = camCF.Position + (camCF.LookVector * stackDistance)
+            for _, baddie in ipairs(RoamingBaddies:GetChildren()) do
+                if baddie:IsA("Model") then
+                    local hum = baddie:FindFirstChild("Humanoid")
+                    local hrp = baddie:FindFirstChild("HumanoidRootPart")
+                    if hum and hum.Health > 0 and hrp then
+                        disableBaddieCollision(baddie)
+                        hrp.CFrame = CFrame.new(targetPos)
+                    end
+                end
+            end
+            task.wait(0.05)
+        end
+    end)
+end
+
+local function stopStackingBaddies()
+    if stackLoop then task.cancel(stackLoop) stackLoop = nil end
+end
+
+-- 传送至面前地面
+local function startStackingGround()
+    if stackGroundLoop then task.cancel(stackGroundLoop) end
+    stackGroundLoop = task.spawn(function()
+        while stackGroundEnabled do
+            local character = LocalPlayer.Character
+            local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+            if not myHrp then task.wait(0.1) continue end
+            local myPos = myHrp.Position
+            local lookDir = myHrp.CFrame.LookVector
+            local targetHorizontal = Vector3.new(
+                myPos.X + lookDir.X * stackGroundDistance,
+                myPos.Y,
+                myPos.Z + lookDir.Z * stackGroundDistance
+            )
+            local groundY = findGroundY(targetHorizontal)
+            if not groundY then task.wait(0.05) continue end
+            local myGroundY = findGroundY(myPos)
+            if myGroundY and groundY > myGroundY + 10 then groundY = myGroundY end
+            for _, baddie in ipairs(RoamingBaddies:GetChildren()) do
+                if baddie:IsA("Model") then
+                    local hum = baddie:FindFirstChild("Humanoid")
+                    local hrp = baddie:FindFirstChild("HumanoidRootPart")
+                    if hum and hum.Health > 0 and hrp then
+                        disableBaddieCollision(baddie)
+                        freezeBaddie(baddie)
+                        local baddieHorizontal = Vector3.new(hrp.Position.X, myPos.Y, hrp.Position.Z)
+                        local baddieGroundY = findGroundY(baddieHorizontal)
+                        local finalGroundY = baddieGroundY or groundY
+                        local targetPos = Vector3.new(targetHorizontal.X, finalGroundY + 2.5, targetHorizontal.Z)
+                        local ceilingY = findCeilingY(targetPos)
+                        if ceilingY and (targetPos.Y + 5) > ceilingY then targetPos = Vector3.new(targetPos.X, ceilingY - 5, targetPos.Z) end
+                        hrp.CFrame = CFrame.new(targetPos)
+                    end
+                end
+            end
+            task.wait(0.05)
+        end
+    end)
+end
+
+local function stopStackingGround()
+    if stackGroundLoop then task.cancel(stackGroundLoop) stackGroundLoop = nil end
+end
+
+-- 传送至最近怪头顶
+local function startHeadTeleport()
+    if headTeleportLoop then task.cancel(headTeleportLoop) end
+    if headTeleportConnection then headTeleportConnection:Disconnect() end
+    headTeleportTarget = nil
+    headTeleportLoop = task.spawn(function()
+        while teleportToHeadEnabled do
+            local character = LocalPlayer.Character
+            local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+            local myHum = character and character:FindFirstChild("Humanoid")
+            if not myHrp or (myHum and myHum.Health <= 0) then task.wait(0.1) continue end
+            if headTeleportTarget then
+                local targetHum = headTeleportTarget:FindFirstChild("Humanoid")
+                local targetHrp = headTeleportTarget:FindFirstChild("HumanoidRootPart")
+                if not targetHum or targetHum.Health <= 0 or not targetHrp or not headTeleportTarget.Parent then headTeleportTarget = nil end
+            end
+            if not headTeleportTarget then headTeleportTarget = getNearestBaddie() end
+            if headTeleportTarget then
+                local targetHrp = headTeleportTarget:FindFirstChild("HumanoidRootPart")
+                if targetHrp then
+                    local targetPos = targetHrp.Position
+                    local headHeight = targetPos.Y + headTeleportHeight
+                    local ceilingY = findCeilingY(targetPos)
+                    if ceilingY then
+                        local maxAllowedHeight = ceilingY - 3
+                        if headHeight > maxAllowedHeight then headHeight = math.max(targetPos.Y + headTeleportMinHeight, maxAllowedHeight) end
+                    end
+                    if headHeight < targetPos.Y + headTeleportMinHeight then headHeight = targetPos.Y + headTeleportMinHeight end
+                    if headHeight > targetPos.Y + headTeleportMaxHeight then headHeight = targetPos.Y + headTeleportMaxHeight end
+                    local teleportPos = Vector3.new(targetPos.X, headHeight, targetPos.Z)
+                    myHrp.CFrame = CFrame.new(teleportPos)
+                    if myHrp.AssemblyLinearVelocity then myHrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0) end
+                    if myHrp.AssemblyAngularVelocity then myHrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0) end
+                end
+            else task.wait(0.2) end
+            task.wait(0.05)
+        end
+    end)
+    headTeleportConnection = RunService.Heartbeat:Connect(function()
+        if not teleportToHeadEnabled then return end
+        local character = LocalPlayer.Character
+        local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+        if not myHrp then return end
+        if headTeleportTarget then
+            local targetHrp = headTeleportTarget:FindFirstChild("HumanoidRootPart")
+            if targetHrp then
+                local targetPos = targetHrp.Position
+                local headHeight = targetPos.Y + headTeleportHeight
+                local ceilingY = findCeilingY(targetPos)
+                if ceilingY then
+                    local maxAllowedHeight = ceilingY - 3
+                    if headHeight > maxAllowedHeight then headHeight = math.max(targetPos.Y + headTeleportMinHeight, maxAllowedHeight) end
+                end
+                if headHeight < targetPos.Y + headTeleportMinHeight then headHeight = targetPos.Y + headTeleportMinHeight end
+                if headHeight > targetPos.Y + headTeleportMaxHeight then headHeight = targetPos.Y + headTeleportMaxHeight end
+                local desiredPos = Vector3.new(targetPos.X, headHeight, targetPos.Z)
+                myHrp.CFrame = CFrame.new(desiredPos)
+                myHrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            end
+        end
+    end)
+end
+
+local function stopHeadTeleport()
+    if headTeleportLoop then task.cancel(headTeleportLoop) headTeleportLoop = nil end
+    if headTeleportConnection then headTeleportConnection:Disconnect() headTeleportConnection = nil end
+    headTeleportTarget = nil
+end
+
+-- 初始化可视化力场球
+local function initAuraVisual()
+    if not auraVisualPart then
+        auraVisualPart = Instance.new("Part")
+        auraVisualPart.Name = "RobotAura"
+        auraVisualPart.Shape = Enum.PartType.Ball
+        auraVisualPart.Material = Enum.Material.ForceField
+        auraVisualPart.Color = Color3.fromRGB(50, 150, 255)
+        auraVisualPart.Transparency = 0.6
+        auraVisualPart.CanCollide = false
+        auraVisualPart.Anchored = true
+        auraVisualPart.CastShadow = false
+    end
+end
+initAuraVisual()
+
+-- ==================== UI 特效变量 ====================
+local rainbowBorderAnimation
+local currentBorderColorScheme = "银蓝颜色"
+local currentFontColorScheme = "银蓝颜色"
+local borderInitialized = false
+local animationSpeed = 2
+local borderEnabled = true
+local fontColorEnabled = true
+local uiScale = 1
+local blurEnabled = false
+local soundEnabled = true
+local FONT_STYLES = {} -- 保留变量但精简
+local FONT_DESCRIPTIONS = {}
+local COLOR_SCHEMES = {
+    ["彩虹颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF0000")),ColorSequenceKeypoint.new(0.16, Color3.fromHex("FFA500")),ColorSequenceKeypoint.new(0.33, Color3.fromHex("FFFF00")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("00FF00")),ColorSequenceKeypoint.new(0.66, Color3.fromHex("0000FF")),ColorSequenceKeypoint.new(0.83, Color3.fromHex("4B0082")),ColorSequenceKeypoint.new(1, Color3.fromHex("EE82EE"))}),"palette"},
+    ["黑红颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("000000")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FF0000")),ColorSequenceKeypoint.new(1, Color3.fromHex("000000"))}),"alert-triangle"},
+    ["蓝白颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FFFFFF")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("1E90FF")),ColorSequenceKeypoint.new(1, Color3.fromHex("FFFFFF"))}),"droplet"},
+    ["紫金颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FFD700")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("8A2BE2")),ColorSequenceKeypoint.new(1, Color3.fromHex("FFD700"))}),"crown"},
+    ["蓝黑颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("000000")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("0000FF")),ColorSequenceKeypoint.new(1, Color3.fromHex("000000"))}),"moon"},
+    ["绿紫颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("00FF00")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("800080")),ColorSequenceKeypoint.new(1, Color3.fromHex("00FF00"))}),"zap"},
+    ["粉蓝颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF69B4")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("00BFFF")),ColorSequenceKeypoint.new(1, Color3.fromHex("FF69B4"))}),"heart"},
+    ["橙青颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF4500")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("00CED1")),ColorSequenceKeypoint.new(1, Color3.fromHex("FF4500"))}),"sun"},
+    ["红金颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF0000")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FFD700")),ColorSequenceKeypoint.new(1, Color3.fromHex("FF0000"))}),"award"},
+    ["银蓝颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("C0C0C0")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("4682B4")),ColorSequenceKeypoint.new(1, Color3.fromHex("C0C0C0"))}),"star"},
+    ["霓虹颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF00FF")),ColorSequenceKeypoint.new(0.25, Color3.fromHex("00FFFF")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FFFF00")),ColorSequenceKeypoint.new(0.75, Color3.fromHex("FF00FF")),ColorSequenceKeypoint.new(1, Color3.fromHex("00FFFF"))}),"sparkles"},
+    ["森林颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("228B22")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("32CD32")),ColorSequenceKeypoint.new(1, Color3.fromHex("228B22"))}),"tree"},
+    ["火焰颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF4500")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FF0000")),ColorSequenceKeypoint.new(1, Color3.fromHex("FF8C00"))}),"flame"},
+    ["海洋颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("000080")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("1E90FF")),ColorSequenceKeypoint.new(1, Color3.fromHex("00BFFF"))}),"waves"},
+    ["日落颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF4500")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FF8C00")),ColorSequenceKeypoint.new(1, Color3.fromHex("FFD700"))}),"sunset"},
+    ["银河颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("4B0082")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("8A2BE2")),ColorSequenceKeypoint.new(1, Color3.fromHex("9370DB"))}),"galaxy"},
+    ["糖果颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("FF69B4")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("FF1493")),ColorSequenceKeypoint.new(1, Color3.fromHex("FFB6C1"))}),"candy"},
+    ["金属颜色"] = {ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("C0C0C0")),ColorSequenceKeypoint.new(0.5, Color3.fromHex("A9A9A9")),ColorSequenceKeypoint.new(1, Color3.fromHex("696969"))}),"shield"}
+}
+local configFile = "AngryRobot/config.json"
+local fontColorAnimations = {}
+local Window = nil
+local windowOpen = true
+
+local function applyFontColorGradient(textElement, colorScheme)
+    if not textElement or not textElement:IsA("TextLabel") and not textElement:IsA("TextButton") and not textElement:IsA("TextBox") then return end
+    local existingGradient = textElement:FindFirstChild("FontColorGradient")
+    if existingGradient then existingGradient:Destroy() end
+    if fontColorAnimations[textElement] then fontColorAnimations[textElement]:Disconnect() fontColorAnimations[textElement] = nil end
+    if not fontColorEnabled then textElement.TextColor3 = Color3.new(1, 1, 1) return end
+    local schemeData = COLOR_SCHEMES[colorScheme or currentFontColorScheme]
+    if not schemeData then return end
+    local fontGradient = Instance.new("UIGradient")
+    fontGradient.Name = "FontColorGradient"
+    fontGradient.Color = schemeData[1]
+    fontGradient.Rotation = 0
+    fontGradient.Parent = textElement
+    textElement.TextColor3 = Color3.new(1, 1, 1)
+    local animation
+    animation = game:GetService("RunService").Heartbeat:Connect(function()
+        if not textElement or textElement.Parent == nil then animation:Disconnect() fontColorAnimations[textElement] = nil return end
+        if not fontGradient or fontGradient.Parent == nil then animation:Disconnect() fontColorAnimations[textElement] = nil return end
+        local time = tick()
+        fontGradient.Rotation = (time * animationSpeed * 30) % 360
+    end)
+    fontColorAnimations[textElement] = animation
+end
+
+local function applyFontStyleToWindow(fontStyle)
+    if not Window or not Window.UIElements then wait(0.5) if not Window or not Window.UIElements then return false end end
+    local successCount = 0
+    local totalCount = 0
+    local function processElement(element)
+        for _, child in ipairs(element:GetDescendants()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                totalCount = totalCount + 1
+                pcall(function() child.Font = Enum.Font[fontStyle] successCount = successCount + 1 end)
+            end
+        end
+    end
+    processElement(Window.UIElements.Main)
+    return successCount, totalCount
+end
+
+local function applyFontColorsToWindow(colorScheme)
+    if not Window or not Window.UIElements then return end
+    local function processElement(element)
+        for _, child in ipairs(element:GetDescendants()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                applyFontColorGradient(child, colorScheme)
+            end
+        end
+    end
+    processElement(Window.UIElements.Main)
+end
+
+local function createRainbowBorder(window, colorScheme, speed)
+    if not window or not window.UIElements then wait(1) if not window or not window.UIElements then return nil, nil end end
+    local mainFrame = window.UIElements.Main
+    if not mainFrame then return nil, nil end
+    local existingStroke = mainFrame:FindFirstChild("RainbowStroke")
+    if existingStroke then
+        local glowEffect = existingStroke:FindFirstChild("GlowEffect")
+        if glowEffect then
+            local schemeData = COLOR_SCHEMES[colorScheme or currentBorderColorScheme]
+            if schemeData then glowEffect.Color = schemeData[1] end
+        end
+        return existingStroke, rainbowBorderAnimation
+    end
+    if not mainFrame:FindFirstChildOfClass("UICorner") then
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 4)
+        corner.Parent = mainFrame
+    end
+    local rainbowStroke = Instance.new("UIStroke")
+    rainbowStroke.Name = "RainbowStroke"
+    rainbowStroke.Thickness = 1.5
+    rainbowStroke.Color = Color3.new(1, 1, 1)
+    rainbowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    rainbowStroke.LineJoinMode = Enum.LineJoinMode.Round
+    rainbowStroke.Enabled = borderEnabled
+    rainbowStroke.Parent = mainFrame
+    local glowEffect = Instance.new("UIGradient")
+    glowEffect.Name = "GlowEffect"
+    local schemeData = COLOR_SCHEMES[colorScheme or currentBorderColorScheme]
+    if schemeData then glowEffect.Color = schemeData[1] else glowEffect.Color = COLOR_SCHEMES["银蓝颜色"][1] end
+    glowEffect.Rotation = 0
+    glowEffect.Parent = rainbowStroke
+    return rainbowStroke, nil
+end
+
+local function startBorderAnimation(window, speed)
+    if not window or not window.UIElements then return nil end
+    local mainFrame = window.UIElements.Main
+    if not mainFrame then return nil end
+    local rainbowStroke = mainFrame:FindFirstChild("RainbowStroke")
+    if not rainbowStroke or not rainbowStroke.Enabled then return nil end
+    local glowEffect = rainbowStroke:FindFirstChild("GlowEffect")
+    if not glowEffect then return nil end
+    if rainbowBorderAnimation then rainbowBorderAnimation:Disconnect() rainbowBorderAnimation = nil end
+    local animation
+    animation = game:GetService("RunService").Heartbeat:Connect(function()
+        if not rainbowStroke or rainbowStroke.Parent == nil or not rainbowStroke.Enabled then animation:Disconnect() return end
+        local time = tick()
+        glowEffect.Rotation = (time * speed * 60) % 360
+    end)
+    rainbowBorderAnimation = animation
+    return animation
+end
+
+local function initializeRainbowBorder(scheme, speed)
+    speed = speed or animationSpeed
+    local rainbowStroke, _ = createRainbowBorder(Window, scheme, speed)
+    if rainbowStroke then
+        if borderEnabled then startBorderAnimation(Window, speed) end
+        borderInitialized = true
+        return true
+    end
+    return false
+end
+
+-- ==================== 主界面创建 ====================
+function createUI()
+    local screenSize = workspace.CurrentCamera.ViewportSize
+    local maxWidth = math.min(600, screenSize.X - 40)
+    local maxHeight = math.min(400, screenSize.Y - 80)
+
+    Window = WindUI:CreateWindow({
+        Title = 'Area 51 Survival',
+        Icon = "crosshair",
+        IconThemed = true,
+        Author = "这是开源的，觉得我做的不够好拿去二改也是可以的",
+        Folder = "Area51Helper",
+        Size = UDim2.fromOffset(maxWidth, maxHeight),
+        Transparent = true,
+        Theme = "Dark",
+        HideSearchBar = false,
+        ScrollBarEnabled = true,
+        Resizable = true,
+        Background = "https://raw.githubusercontent.com/122525a/OHIO/main/Image_1771401973057_62.jpg",
+        BackgroundImageTransparency = 0.45,
+        User = {
+            Enabled = true,
+            Callback = function() end,
+            Anonymous = false
+        },
+        SideBarWidth = 200,
+        Search = {
+            Enabled = true,
+            Placeholder = "搜索...",
+            Callback = function(searchText) end
+        },
+        SidePanel = {
+            Enabled = true,
+            Content = {
+                {
+                    Type = "Button",
+                    Text = "",
+                    Style = "Subtle",
+                    Size = UDim2.new(1, -20, 0, 30),
+                    Callback = function() end
+                }
+            }
+        }
+    })
+
+    Window:EditOpenButton({
+        Title = "",
+        Icon = "crosshair",
+        CornerRadius = UDim.new(0, 0),
+        StrokeThickness = 4,
+        Color = ColorSequence.new(Color3.fromHex("4682B4")),
+        Draggable = true,
+    })
+
+    -- 移除版本标签，这里原本有 Tag，直接注释/删除
+
+    spawn(function()
+        while true do
+            for hue = 0.55, 0.65, 0.005 do
+                local color = Color3.fromHSV(hue, 0.6, 1)
+                Window:EditOpenButton({ Color = ColorSequence.new(color) })
+                wait(0.08)
+            end
+            for hue = 0.65, 0.55, -0.005 do
+                local color = Color3.fromHSV(hue, 0.6, 1)
+                Window:EditOpenButton({ Color = ColorSequence.new(color) })
+                wait(0.08)
+            end
+        end
+    end)
+
+    if not borderInitialized then
+        spawn(function()
+            wait(0.5)
+            initializeRainbowBorder("银蓝颜色", animationSpeed)
+            wait(0.5)
+            applyFontStyleToWindow("SourceSansBold")
+            wait(0.5)
+            applyFontColorsToWindow("银蓝颜色")
+        end)
+    end
+
+    Window:OnClose(function()
+        windowOpen = false
+        if rainbowBorderAnimation then rainbowBorderAnimation:Disconnect() rainbowBorderAnimation = nil end
+    end)
+
+    local originalOpenFunction = Window.Open
+    Window.Open = function(...)
+        windowOpen = true
+        local result = originalOpenFunction(...)
+        if borderInitialized and borderEnabled and not rainbowBorderAnimation then
+            wait(0.1)
+            startBorderAnimation(Window, animationSpeed)
+        end
+        return result
+    end
+
+    -- ==================== Tab 1: 强力功能 ====================
+    local powerTab = Window:Tab({Title = "强力功能", Icon = "zap", Locked = false})
+
+    local gunSection = powerTab:Section({Title = "火力覆盖模块", Icon = "tool", Opened = true})
+    -- 删除所有 Paragraph 说明
+
+    gunSection:Button({
+        Title = "修改射速 (可能被检测导致攻击无效)",
+        Icon = "fast-forward",
+        Callback = function()
+            applyFireRateOnly()
+        end
+    })
+
+    gunSection:Button({
+        Title = "修改换弹速度 (秒换)",
+        Icon = "repeat",
+        Callback = function()
+            applyReloadOnly()
+        end
+    })
+
+    gunSection:Button({
+        Title = "删除后坐力 (无后座)",
+        Icon = "crosshair",
+        Callback = function()
+            applyNoRecoilOnly()
+        end
+    })
+
+    gunSection:Button({
+        Title = "一键全部应用 (射速+换弹+无后座)",
+        Icon = "zap",
+        Callback = function()
+            applyFireRateOnly()
+            applyReloadOnly()
+            applyNoRecoilOnly()
+        end
+    })
+
+    -- ========== 修改点：持续扫描主开关 + 三个子选项 ==========
+    gunSection:Toggle({
+        Title = "开启全自动枪械修改 (持续扫描)",
+        Desc = "后台持续扫描，保持枪械始终处于破解状态",
+        Value = false,
+        Callback = function(state)
+            if state then
+                if gunModLoop then task.cancel(gunModLoop) end
+                gunModLoop = task.spawn(function()
+                    while state do
+                        if autoScanFireRate then applyFireRateOnly() end
+                        if autoScanReload then applyReloadOnly() end
+                        if autoScanNoRecoil then applyNoRecoilOnly() end
+                        task.wait(1)
+                    end
+                end)
+            else
+                if gunModLoop then task.cancel(gunModLoop) gunModLoop = nil end
+            end
+        end
+    })
+
+    gunSection:Toggle({
+        Title = "  ├ 持续扫描: 修改射速",
+        Desc = "扫描循环中是否包含射速破解",
+        Value = true,
+        Callback = function(state) autoScanFireRate = state end
+    })
+
+    gunSection:Toggle({
+        Title = "  ├ 持续扫描: 修改换弹",
+        Desc = "扫描循环中是否包含换弹破解",
+        Value = true,
+        Callback = function(state) autoScanReload = state end
+    })
+
+    gunSection:Toggle({
+        Title = "  └ 持续扫描: 删除后坐力",
+        Desc = "扫描循环中是否包含无后座破解",
+        Value = true,
+        Callback = function(state) autoScanNoRecoil = state end
+    })
+    -- =========================================================
+
+    local equipSection = powerTab:Section({Title = "自动装备枪械", Icon = "package", Opened = true})
+    -- 删除说明
+
+    equipSection:Toggle({
+        Title = "启用死亡重生自动装备",
+        Desc = "开启后，每次死亡重生会自动从背包装备选定的枪械",
+        Value = false,
+        Callback = function(state)
+            autoEquipGunEnabled = state
+            if state then startAutoEquip() else stopAutoEquip() end
+        end
+    })
+
+    local gun1Button = nil
+    local gun2Button = nil
+
+    local function updateGunSelectionUI()
+        if gun1Button and gun2Button then
+            if selectedGunSlot == 1 then
+                gun1Button:SetTitle("[已选择] 枪械 1")
+                gun2Button:SetTitle("枪械 2")
+            else
+                gun1Button:SetTitle("枪械 1")
+                gun2Button:SetTitle("[已选择] 枪械 2")
+            end
+        end
+    end
+
+    gun1Button = equipSection:Button({
+        Title = "[已选择] 枪械 1",
+        Icon = "crosshair",
+        Callback = function()
+            selectedGunSlot = 1
+            updateGunSelectionUI()
+        end
+    })
+
+    gun2Button = equipSection:Button({
+        Title = "枪械 2",
+        Icon = "crosshair",
+        Callback = function()
+            selectedGunSlot = 2
+            updateGunSelectionUI()
+        end
+    })
+
+    equipSection:Button({
+        Title = "立即手动装备",
+        Icon = "play",
+        Callback = function() autoEquipGun() end
+    })
+
+    local headSection = powerTab:Section({Title = "头顶传送模块", Icon = "arrow-up-circle", Opened = true})
+    headSection:Toggle({
+        Title = "启用传送至最近怪头顶",
+        Desc = "持续传送到最近怪物头顶上方，防下坠",
+        Value = false,
+        Callback = function(state)
+            teleportToHeadEnabled = state
+            if state then
+                if stackBaddiesEnabled then stackBaddiesEnabled = false stopStackingBaddies() end
+                if stackGroundEnabled then stackGroundEnabled = false stopStackingGround() end
+                startHeadTeleport()
+            else
+                stopHeadTeleport()
+            end
+        end
+    })
+
+    headSection:Slider({
+        Title = "头顶传送高度",
+        Desc = "传送到怪物头顶上方的距离（格）",
+        Value = { Min = 5, Max = 30, Default = 8 },
+        Step = 0.5,
+        Callback = function(value) headTeleportHeight = value end
+    })
+
+    local aimSection = powerTab:Section({Title = "平滑自瞄模块", Icon = "crosshair", Opened = true})
+    aimSection:Toggle({
+        Title = "启用平滑自瞄 (锁头)",
+        Desc = "磁性吸附头部，不和鼠标控制权打架",
+        Value = false,
+        Callback = function(state) autoAimEnabled = state end
+    })
+    aimSection:Toggle({
+        Title = "启用墙壁检测",
+        Desc = "怪物被墙挡住则自动取消锁定",
+        Value = true,
+        Callback = function(state) wallCheckEnabled = state end
+    })
+
+    local godSection = powerTab:Section({Title = "无敌模式", Icon = "shield", Opened = true})
+    godSection:Toggle({
+        Title = "删除扣血动画",
+        Desc = "这个我觉得还行，那个扣血动画我是真看着难受",
+        Value = false,
+        Callback = function(state)
+            godModeEnabled = state
+            if state then startGodMode() else stopGodMode() end
+        end
+    })
+
+    -- ==================== Tab 2: 78功能 ====================
+    local tab78 = Window:Tab({Title = "78功能", Icon = "settings", Locked = false})
+
+    local farmSection = tab78:Section({Title = "自动追击 (房间检测版)", Icon = "target", Opened = true})
+    farmSection:Toggle({
+        Title = "启用自动追尾(不稳定)",
+        Desc = "传送到怪物所在房间内",
+        Value = false,
+        Callback = function(state)
+            autoFarmEnabled = state
+            if state then currentTarget = nil end
+        end
+    })
+    farmSection:Slider({
+        Title = "传送保持距离",
+        Desc = "传送到怪物周围的间距",
+        Value = { Min = 5, Max = 50, Default = 15 },
+        Step = 1,
+        Callback = function(value) farmDistance = value end
+    })
+    farmSection:Slider({
+        Title = "附近检测距离",
+        Desc = "此范围内有怪则不传送",
+        Value = { Min = 10, Max = 100, Default = 30 },
+        Step = 5,
+        Callback = function(value) nearbyCheckDistance = value end
+    })
+
+    local defSection = tab78:Section({Title = "物理与空间排斥力场", Icon = "radio", Opened = true})
+    defSection:Toggle({
+        Title = "启动绝对排斥力场",
+        Desc = "开启无敌防近身保护",
+        Value = false,
+        Callback = function(state) auraEnabled = state end
+    })
+    defSection:Slider({
+        Title = "力场范围 (半径)",
+        Desc = "调节保护罩的大小",
+        Value = { Min = 5, Max = 50, Default = 15 },
+        Step = 1,
+        Callback = function(value) auraRadius = value end
+    })
+
+    local spawnSection = tab78:Section({Title = "刷怪控制器", Icon = "server", Opened = true})
+    spawnSection:Toggle({
+        Title = "启用疯狂刷怪(不确定有效性)",
+        Desc = "利用游戏事件高频召唤怪物",
+        Value = false,
+        Callback = function(state)
+            autoSpawnEnabled = state
+            if state then startSpawning() else stopSpawning() end
+        end
+    })
+    spawnSection:Slider({
+        Title = "刷怪频率 (秒)",
+        Desc = "发送刷怪请求的时间间隔",
+        Value = { Min = 0.1, Max = 5, Default = 0.5 },
+        Step = 0.1,
+        Callback = function(value) spawnInterval = value end
+    })
+    spawnSection:Toggle({
+        Title = "固定位置刷怪",
+        Desc = "让所有怪物固定刷在设定的位置",
+        Value = false,
+        Callback = function(state) fixedSpawnEnabled = state end
+    })
+    spawnSection:Button({
+        Title = "将当前位置设为刷怪点",
+        Icon = "map-pin",
+        Callback = function()
+            local character = LocalPlayer.Character
+            local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+            if myHrp then fixedSpawnPosition = myHrp.Position - Vector3.new(0, 2, 0) end
+        end
+    })
+
+    local stackSection = tab78:Section({Title = "怪物聚集模块", Icon = "align-center", Opened = true})
+    stackSection:Toggle({
+        Title = "启用怪物聚集 (跟随镜头)",
+        Desc = "持续将所有怪送到镜头前中心",
+        Value = false,
+        Callback = function(state)
+            stackBaddiesEnabled = state
+            if state then
+                if stackGroundEnabled then stackGroundEnabled = false stopStackingGround() end
+                if teleportToHeadEnabled then teleportToHeadEnabled = false stopHeadTeleport() end
+                startStackingBaddies()
+            else
+                stopStackingBaddies()
+            end
+        end
+    })
+    stackSection:Toggle({
+        Title = "启用怪物聚集 (面前地面)",
+        Desc = "持续将所有怪送到你正前方地面上",
+        Value = false,
+        Callback = function(state)
+            stackGroundEnabled = state
+            if state then
+                if stackBaddiesEnabled then stackBaddiesEnabled = false stopStackingBaddies() end
+                if teleportToHeadEnabled then teleportToHeadEnabled = false stopHeadTeleport() end
+                startStackingGround()
+            else
+                stopStackingGround()
+            end
+        end
+    })
+    stackSection:Slider({
+        Title = "聚集距离",
+        Desc = "怪物距离你/摄像头的远近",
+        Value = { Min = 3, Max = 30, Default = 10 },
+        Step = 1,
+        Callback = function(value)
+            stackDistance = value
+            stackGroundDistance = value
+        end
+    })
+
+    Window:OnClose(function()
+        windowOpen = false
+        if rainbowBorderAnimation then rainbowBorderAnimation:Disconnect() rainbowBorderAnimation = nil end
+    end)
+
+    Window:OnDestroy(function()
+        windowOpen = false
+        if rainbowBorderAnimation then rainbowBorderAnimation:Disconnect() rainbowBorderAnimation = nil end
+        for _, animation in pairs(fontColorAnimations) do animation:Disconnect() end
+        fontColorAnimations = {}
+    end)
+end
+
+createUI()
