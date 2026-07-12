@@ -63,6 +63,7 @@ do
 				return i
 			end
 		end
+		return nil
 	end
 
 	function utility:Sort(pattern, values)
@@ -529,7 +530,7 @@ do
 		local padding = 10
 		local textSize = game:GetService("TextService"):GetTextSize(text, 12, Enum.Font.Gotham, Vector2.new(math.huge, 16))
 
-		notification.Position = library.lastNotification or UDim2.new(0, padding, 1, -(notification.AbsoluteSize.Y + padding))
+		notification.Position = self.lastNotification or UDim2.new(0, padding, 1, -(notification.AbsoluteSize.Y + padding))
 		notification.Size = UDim2.new(0, 0, 0, 60)
 
 		utility:Tween(notification, {Size = UDim2.new(0, textSize.X + 70, 0, 60)}, 0.2)
@@ -552,7 +553,7 @@ do
 			active = false
 			notification.ClipsDescendants = true
 
-			library.lastNotification = notification.Position
+			self.lastNotification = notification.Position
 			notification.Flash.Position = UDim2.new(0, 0, 0, 0)
 			utility:Tween(notification.Flash, {Size = UDim2.new(1, 0, 1, 0)}, 0.2)
 
@@ -818,6 +819,7 @@ do
 		table.insert(libraryPages, newPos, self)
 
 		self.library:reorderPageButtons()
+		return nil
 	end
 
 	function page:addSection(data)
@@ -1300,6 +1302,7 @@ do
 
 				this.changedCallback(this.key)
 			end
+			return nil
 		end)
 
 		function this:Update(dataOptions)
@@ -1321,6 +1324,7 @@ do
 		this.title = data.title
 		this.default = data.default or Color3.new(255, 150, 150)
 		this.callback = data.callback or function() end
+		this.color3 = this.default
 
 		local colorpicker = utility:Create("ImageButton", {
 			Name = "ColorPicker",
@@ -1692,7 +1696,7 @@ do
 					if not allowed[text] and not tonumber(text) then
 						textbox.Text = text:sub(1, #text - 1)
 					elseif focused and not allowed[text] then
-						rgb[container.Name:lower()] = math.clamp(tonumber(textbox.Text), 0, 255)
+						rgb[container.Name:lower()] = math.clamp(tonumber(textbox.Text) or 0, 0, 255)
 
 						this.default = Color3.fromRGB(rgb.r, rgb.g, rgb.b)
 						hue, sat, brightness = Color3.toHSV(this.color3)
