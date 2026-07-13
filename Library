@@ -228,6 +228,7 @@ do
 				Size = UDim2.new(0, 511, 0, 428),
 				Image = "rbxassetid://4641149554",
 				ImageColor3 = themes.Background,
+				ImageTransparency = 0.15,
 				ScaleType = Enum.ScaleType.Slice,
 				SliceCenter = Rect.new(4, 4, 296, 296)
 			}, {
@@ -241,19 +242,6 @@ do
 					ImageColor3 = themes.Glow,
 					ScaleType = Enum.ScaleType.Slice,
 					SliceCenter = Rect.new(24, 24, 276, 276)
-				}),
-				utility:Create("ImageLabel", {
-					Name = "ContentBg",
-					BackgroundTransparency = 1,
-					Position = UDim2.new(0, 126, 0, 38),
-					Size = UDim2.new(1, -126, 1, -38),
-					ZIndex = 1,
-					Image = "rbxassetid://5028857472",
-					ImageColor3 = themes.Background,
-					ImageTransparency = 0.15,
-					ScaleType = Enum.ScaleType.Slice,
-					SliceCenter = Rect.new(4, 4, 296, 296),
-					ClipsDescendants = true
 				}),
 				utility:Create("ImageLabel", {
 					Name = "Pages",
@@ -858,6 +846,7 @@ do
 			ZIndex = 2,
 			Image = "rbxassetid://5028857472",
 			ImageColor3 = themes.LightContrast,
+			ImageTransparency = 0.2,
 			ScaleType = Enum.ScaleType.Slice,
 			SliceCenter = Rect.new(4, 4, 296, 296),
 			ClipsDescendants = true
