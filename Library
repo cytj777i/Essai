@@ -216,7 +216,7 @@ do
         -- new classes
 
         function library.new(data)
-                local title = data.title or "Tvirk"
+                local title = data.title or "Venyx"
 
                 local container = utility:Create("ScreenGui", {
                         Name = title,
