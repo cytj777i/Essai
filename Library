@@ -12,6 +12,49 @@ local tweeninfo = TweenInfo.new
 -- additional
 local utility = {}
 
+-- ==================== 设备检测与全局缩放 ====================
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
+
+local SCALE = 1
+local IS_MOBILE = false
+
+do
+	-- 参考 WindUI / Fluent / Rayfield 等库的移动端检测逻辑
+	-- 综合判断：有触摸且无键盘/鼠标输入设备时判定为手机
+	if GuiService:IsTenFootInterface() then
+		IS_MOBILE = false
+	elseif UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+		IS_MOBILE = true
+	elseif UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
+		IS_MOBILE = true
+	elseif UserInputService.TouchEnabled and UserInputService.KeyboardEnabled then
+		-- 触控笔记本/平板，按 PC 处理（保留键盘操作）
+		IS_MOBILE = false
+	end
+
+	-- 电脑端放大 1.25 倍（参考 Rayfield ~600x400、Orion ~525x375，当前 511x428 放大后约 639x535）
+	-- 手机端缩小到 0.58 倍（宽度约 296，确保不超出 320~428 的手机屏幕）
+	SCALE = IS_MOBILE and 0.58 or 1.25
+end
+
+-- 缩放辅助函数
+function utility:ScaleUDim2(udim2)
+	return UDim2.new(
+		udim2.X.Scale,
+		udim2.X.Offset ~= 0 and math.floor(udim2.X.Offset * SCALE) or 0,
+		udim2.Y.Scale,
+		udim2.Y.Offset ~= 0 and math.floor(udim2.Y.Offset * SCALE) or 0
+	)
+end
+
+function utility:ScaleN(n)
+	return math.floor(n * SCALE)
+end
+
+-- ==================== 设备检测结束 ====================
+
+
 -- themes
 local objects = {}
 local themes = {
@@ -111,10 +154,29 @@ do
                 local object = Instance.new(instance)
 
                 for i, v in pairs(properties or {}) do
-                        object[i] = v
+                        local finalValue = v
 
-                        if typeof(v) == "Color3" then -- save for theme changer later
-                                local theme = utility:Find(themes, v)
+                        if typeof(v) == "UDim2" then
+                                finalValue = UDim2.new(
+                                        v.X.Scale,
+                                        v.X.Offset ~= 0 and math.floor(v.X.Offset * SCALE) or 0,
+                                        v.Y.Scale,
+                                        v.Y.Offset ~= 0 and math.floor(v.Y.Offset * SCALE) or 0
+                                )
+                        elseif typeof(v) == "UDim" then
+                                finalValue = UDim.new(v.Scale, math.floor(v.Offset * SCALE))
+                        elseif typeof(v) == "Vector2" then
+                                finalValue = Vector2.new(math.floor(v.X * SCALE), math.floor(v.Y * SCALE))
+                        elseif typeof(v) == "number" and i == "TextSize" then
+                                finalValue = math.floor(v * SCALE)
+                        elseif typeof(v) == "number" and (i == "ScrollBarThickness" or i == "BorderSizePixel") then
+                                finalValue = v ~= 0 and math.max(1, math.floor(v * SCALE)) or 0
+                        end
+
+                        object[i] = finalValue
+
+                        if typeof(finalValue) == "Color3" then -- save for theme changer later
+                                local theme = utility:Find(themes, finalValue)
 
                                 if theme then
                                         objects[theme] = objects[theme] or {}
@@ -364,7 +426,7 @@ do
                         utility:Create("ImageLabel", {
                                 Name = "Main",
                                 BackgroundTransparency = 1,
-                                Position = UDim2.new(0.25, 0, 0.052435593, 0),
+                                Position = IS_MOBILE and UDim2.new(0.5, -math.floor(511 * SCALE / 2), 0.5, -math.floor(428 * SCALE / 2)) or UDim2.new(0.25, 0, 0.052435593, 0),
                                 Size = UDim2.new(0, 511, 0, 428),
                                 Image = "rbxassetid://4641149554",
                                 ImageColor3 = themes.Background,
@@ -501,7 +563,7 @@ do
                 if self.minimized then
                         -- 恢复
                         main.ClipsDescendants = false
-                        utility:Tween(main, {Size = UDim2.new(0, 511, 0, 428)}, 0.2)
+                        utility:Tween(main, {Size = utility:ScaleUDim2(UDim2.new(0, 511, 0, 428))}, 0.2)
                         wait(0.2)
                         pages.Visible = true
                         if self.focusedPage then
@@ -515,7 +577,7 @@ do
                         for _, page in ipairs(self.pages) do
                                 page.container.Visible = false
                         end
-                        utility:Tween(main, {Size = UDim2.new(0, 511, 0, 38)}, 0.2)
+                        utility:Tween(main, {Size = utility:ScaleUDim2(UDim2.new(0, 511, 0, 38))}, 0.2)
                         wait(0.2)
                         self.minimized = true
                 end
@@ -536,12 +598,12 @@ do
 
                 if self.position then
                         utility:Tween(container, {
-                                Size = UDim2.new(0, 511, 0, 428),
+                                Size = utility:ScaleUDim2(UDim2.new(0, 511, 0, 428)),
                                 Position = self.position
                         }, 0.2)
                         wait(0.2)
 
-                        utility:Tween(topbar, {Size = UDim2.new(1, 0, 0, 38)}, 0.2)
+                        utility:Tween(topbar, {Size = utility:ScaleUDim2(UDim2.new(1, 0, 0, 38))}, 0.2)
                         wait(0.2)
 
                         container.ClipsDescendants = false
@@ -554,8 +616,8 @@ do
                         wait(0.2)
 
                         utility:Tween(container, {
-                                Size = UDim2.new(0, 511, 0, 0),
-                                Position = self.position + UDim2.new(0, 0, 0, 428)
+                                Size = utility:ScaleUDim2(UDim2.new(0, 511, 0, 0)),
+                                Position = self.position + utility:ScaleUDim2(UDim2.new(0, 0, 0, 428))
                         }, 0.2)
                         wait(0.2)
                 end
@@ -655,18 +717,18 @@ do
                 notification.Title.Text = title
                 notification.Text.Text = text
 
-                local padding = 10
-                local textSize = game:GetService("TextService"):GetTextSize(text, 12, Enum.Font.Gotham, Vector2.new(math.huge, 16))
+                local padding = utility:ScaleN(10)
+                local textSize = game:GetService("TextService"):GetTextSize(text, utility:ScaleN(12), Enum.Font.Gotham, Vector2.new(math.huge, utility:ScaleN(16)))
 
                 notification.Position = self.lastNotification or UDim2.new(0, padding, 1, -(notification.AbsoluteSize.Y + padding))
-                notification.Size = UDim2.new(0, 0, 0, 60)
+                notification.Size = utility:ScaleUDim2(UDim2.new(0, 0, 0, 60))
 
-                utility:Tween(notification, {Size = UDim2.new(0, textSize.X + 70, 0, 60)}, 0.2)
+                utility:Tween(notification, {Size = UDim2.new(0, textSize.X + utility:ScaleN(70), 0, utility:ScaleN(60))}, 0.2)
                 wait(0.2)
 
                 notification.ClipsDescendants = false
                 utility:Tween(notification.Flash, {
-                        Size = UDim2.new(0, 0, 0, 60),
+                        Size = UDim2.new(0, 0, 0, utility:ScaleN(60)),
                         Position = UDim2.new(1, 0, 0, 0)
                 }, 0.2)
 
@@ -687,8 +749,8 @@ do
 
                         wait(0.2)
                         utility:Tween(notification, {
-                                Size = UDim2.new(0, 0, 0, 60),
-                                Position = notification.Position + UDim2.new(0, textSize.X + 70, 0, 0)
+                                Size = UDim2.new(0, 0, 0, utility:ScaleN(60)),
+                                Position = notification.Position + UDim2.new(0, textSize.X + utility:ScaleN(70), 0, 0)
                         }, 0.2)
 
                         wait(0.2)
@@ -856,7 +918,7 @@ do
                         -- sections
                         for i = 1, #selectedPage.sections do
                                 local pageSection = selectedPage.sections[i]
-                                utility:Tween(pageSection.container.Parent, {Size = UDim2.new(1, -10, 0, 28)}, 0.1)
+                                utility:Tween(pageSection.container.Parent, {Size = UDim2.new(1, utility:ScaleN(-10), 0, utility:ScaleN(28))}, 0.1)
                                 utility:Tween(pageSection.container.Title, {TextTransparency = 1}, 0.1)
                         end
 
@@ -967,7 +1029,7 @@ do
         end
 
         function page:Resize(scroll)
-                local padding = 10
+                local padding = utility:ScaleN(10)
                 local size = 0
 
                 for i = 1, #self.sections do
@@ -1040,7 +1102,7 @@ do
                         return
                 end
 
-                local padding = 4
+                local padding = utility:ScaleN(4)
                 local size = (4 * padding) + self.container.Title.AbsoluteSize.Y -- offset
 
                 for i, module in pairs(self.modules) do
@@ -1048,9 +1110,9 @@ do
                 end
 
                 if smooth then
-                        utility:Tween(self.container.Parent, {Size = UDim2.new(1, -10, 0, size)}, 0.05)
+                        utility:Tween(self.container.Parent, {Size = UDim2.new(1, utility:ScaleN(-10), 0, size)}, 0.05)
                 else
-                        self.container.Parent.Size = UDim2.new(1, -10, 0, size)
+                        self.container.Parent.Size = UDim2.new(1, utility:ScaleN(-10), 0, size)
                         self.page:Resize()
                 end
         end
@@ -1112,14 +1174,14 @@ do
                         end
 
                         -- animation
-                        utility:Pop(button, 10)
+                        utility:Pop(button, utility:ScaleN(10))
 
                         debounce = true
                         text.TextSize = 0
-                        utility:Tween(button.Title, {TextSize = 14}, 0.2)
+                        utility:Tween(button.Title, {TextSize = utility:ScaleN(14)}, 0.2)
 
                         wait(0.2)
-                        utility:Tween(button.Title, {TextSize = 12}, 0.2)
+                        utility:Tween(button.Title, {TextSize = utility:ScaleN(12)}, 0.2)
 
                         this.callback()
 
@@ -1290,13 +1352,13 @@ do
 
                 textbox.MouseButton1Click:Connect(function()
 
-                        if textbox.Button.Size ~= UDim2.new(0, 100, 0, 16) then
+                        if textbox.Button.Size ~= utility:ScaleUDim2(UDim2.new(0, 100, 0, 16)) then
                                 return
                         end
 
                         utility:Tween(textbox.Button, {
-                                Size = UDim2.new(0, 200, 0, 16),
-                                Position = UDim2.new(1, -210, 0.5, -8)
+                                Size = utility:ScaleUDim2(UDim2.new(0, 200, 0, 16)),
+                                Position = utility:ScaleUDim2(UDim2.new(1, -210, 0.5, -8))
                         }, 0.2)
 
                         wait()
@@ -1307,8 +1369,8 @@ do
 
                 tInput:GetPropertyChangedSignal("Text"):Connect(function()
 
-                        if button.ImageTransparency == 0 and (button.Size == UDim2.new(0, 200, 0, 16) or button.Size == UDim2.new(0, 100, 0, 16)) then -- i know, i dont like this either
-                                utility:Pop(button, 10)
+                        if button.ImageTransparency == 0 and (button.Size == utility:ScaleUDim2(UDim2.new(0, 200, 0, 16)) or button.Size == utility:ScaleUDim2(UDim2.new(0, 100, 0, 16))) then -- i know, i dont like this either
+                                utility:Pop(button, utility:ScaleN(10))
                         end
 
                         this.callback(tInput.Text)
@@ -1319,8 +1381,8 @@ do
                         tInput.TextXAlignment = Enum.TextXAlignment.Center
 
                         utility:Tween(textbox.Button, {
-                                Size = UDim2.new(0, 100, 0, 16),
-                                Position = UDim2.new(1, -110, 0.5, -8)
+                                Size = utility:ScaleUDim2(UDim2.new(0, 100, 0, 16)),
+                                Position = utility:ScaleUDim2(UDim2.new(1, -110, 0.5, -8))
                         }, 0.2)
 
                         this.callback(tInput.Text, true)
@@ -1407,7 +1469,7 @@ do
 
                 local animate = function()
                         if button.ImageTransparency == 0 then
-                                utility:Pop(button, 10)
+                                utility:Pop(button, utility:ScaleN(10))
                         end
                 end
 
@@ -1912,7 +1974,7 @@ do
                                 end
 
                                 if button.ImageTransparency == 0 then
-                                        utility:Pop(button, 10)
+                                        utility:Pop(button, utility:ScaleN(10))
                                 end
                         end
 
@@ -1933,7 +1995,7 @@ do
                                         rgb[prop] = this.default[prop:upper()] * 255
                                 end
 
-                                local x1, x2 = button.AbsoluteSize.X / 2, 162--tab.AbsoluteSize.X
+                                local x1, x2 = button.AbsoluteSize.X / 2, utility:ScaleN(162)--tab.AbsoluteSize.X
                                 local px, py = button.AbsolutePosition.X, button.AbsolutePosition.Y
 
                                 tab.ClipsDescendants = true
@@ -1941,7 +2003,7 @@ do
                                 tab.Size = UDim2.new(0, 0, 0, 0)
 
                                 tab.Position = UDim2.new(0, x1 + x2 + px, 0, py)
-                                utility:Tween(tab, {Size = UDim2.new(0, 162, 0, 169)}, 0.2)
+                                utility:Tween(tab, {Size = utility:ScaleUDim2(UDim2.new(0, 162, 0, 169))}, 0.2)
 
                                 -- update size and position
                                 wait(0.2)
@@ -2344,8 +2406,8 @@ do
                 local options = module.Options
 
                 local position = {
-                        In = UDim2.new(0, 2, 0.5, -6),
-                        Out = UDim2.new(0, 20, 0.5, -6)
+                        In = utility:ScaleUDim2(UDim2.new(0, 2, 0.5, -6)),
+                        Out = utility:ScaleUDim2(UDim2.new(0, 20, 0.5, -6))
                 }
 
                 local frame = toggle.Button.Frame
@@ -2354,13 +2416,13 @@ do
                 toggle.Title.Text = module.Options.title
 
                 utility:Tween(frame, {
-                        Size = UDim2.new(1, -22, 1, -9),
-                        Position = position[selectedPosition] + UDim2.new(0, 0, 0, 2.5)
+                        Size = UDim2.new(1, utility:ScaleN(-22), 1, utility:ScaleN(-9)),
+                        Position = position[selectedPosition] + utility:ScaleUDim2(UDim2.new(0, 0, 0, 2.5))
                 }, 0.2)
 
                 wait(0.1)
                 utility:Tween(frame, {
-                        Size = UDim2.new(1, -22, 1, -4),
+                        Size = UDim2.new(1, utility:ScaleN(-22), 1, utility:ScaleN(-4)),
                         Position = position[selectedPosition]
                 }, 0.1)
         end
@@ -2462,7 +2524,7 @@ do
                 utility:Tween(bar.Fill, {Size = UDim2.new(percent, 0, 1, 0)}, 0.1)
 
                 if options.value ~= options.lvalue and slider.ImageTransparency == 0 then
-                        utility:Pop(slider, 10)
+                        utility:Pop(slider, utility:ScaleN(10))
                 end
 
                 return options.value
@@ -2479,7 +2541,7 @@ do
 
                 local entries = 0
 
-                utility:Pop(dropdown.Search, 10)
+                utility:Pop(dropdown.Search, utility:ScaleN(10))
 
                 for i, button in pairs(dropdown.List.Frame:GetChildren()) do
                         if button:IsA("ImageButton") then
@@ -2528,7 +2590,7 @@ do
                 local frame = dropdown.List.Frame
 
                 if (not aOptions.noOpen) then
-                        utility:Tween(dropdown, {Size = UDim2.new(1, 0, 0, (entries == 0 and 30) or math.clamp(entries, 0, 3) * 34 + 38)}, 0.3)
+                        utility:Tween(dropdown, {Size = UDim2.new(1, 0, 0, (entries == 0 and utility:ScaleN(30)) or math.clamp(entries, 0, 3) * utility:ScaleN(34) + utility:ScaleN(38))}, 0.3)
                         utility:Tween(dropdown.Search.Button, {Rotation = not aOptions.update and 180 or 0}, 0.3)
                 end
 
@@ -2540,7 +2602,7 @@ do
                                 end
                         end
 
-                        frame.CanvasSize = UDim2.new(0, 0, 0, (entries * 34) - 4)
+                        frame.CanvasSize = UDim2.new(0, 0, 0, (entries * utility:ScaleN(34)) - utility:ScaleN(4))
                         frame.ScrollBarImageTransparency = 0
                 else
                         frame.CanvasSize = UDim2.new(0, 0, 0, 0)
