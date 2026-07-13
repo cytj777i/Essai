@@ -228,7 +228,7 @@ do
                                 Size = UDim2.new(0, 511, 0, 428),
                                 Image = "rbxassetid://4641149554",
                                 ImageColor3 = themes.Background,
-                                ImageTransparency = 0.30, --磨砂玻璃质感2
+                                ImageTransparency = 0.34, --磨砂玻璃质感2
                                 ScaleType = Enum.ScaleType.Slice,
                                 SliceCenter = Rect.new(4, 4, 296, 296)
                         }, {
@@ -846,7 +846,7 @@ do
                         ZIndex = 2,
                         Image = "rbxassetid://5028857472",
                         ImageColor3 = themes.LightContrast,
-                        ImageTransparency = 0.45, --UI磨砂玻璃质感1
+                        ImageTransparency = 0.49, --UI磨砂玻璃质感1
                         ScaleType = Enum.ScaleType.Slice,
                         SliceCenter = Rect.new(4, 4, 296, 296),
                         ClipsDescendants = true
