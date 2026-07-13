@@ -228,7 +228,7 @@ do
 				Size = UDim2.new(0, 511, 0, 428),
 				Image = "rbxassetid://4641149554",
 				ImageColor3 = themes.Background,
-				ImageTransparency = 0.15,
+				ImageTransparency = 0.45,
 				ScaleType = Enum.ScaleType.Slice,
 				SliceCenter = Rect.new(4, 4, 296, 296)
 			}, {
@@ -846,7 +846,7 @@ do
 			ZIndex = 2,
 			Image = "rbxassetid://5028857472",
 			ImageColor3 = themes.LightContrast,
-			ImageTransparency = 0.2,
+			ImageTransparency = 0.6,
 			ScaleType = Enum.ScaleType.Slice,
 			SliceCenter = Rect.new(4, 4, 296, 296),
 			ClipsDescendants = true
