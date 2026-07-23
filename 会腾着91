@@ -1,0 +1,107 @@
+local Players = game:GetService("Players")
+local SoundService = game:GetService("SoundService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+-- ========== 循环音乐 ==========
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://88457346646245"
+sound.Looped = true
+sound.Volume = 1
+sound.Parent = SoundService
+sound:Play()
+
+-- ========== 角色处理 ==========
+local function setupCharacter(char)
+	local humanoid = char:WaitForChild("Humanoid")
+	local head = char:WaitForChild("Head")
+	local hrp = char:WaitForChild("HumanoidRootPart")
+
+	-- 头顶红色"会腾着"
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "HuiTengZhe"
+	billboard.Size = UDim2.new(0, 220, 0, 60)
+	billboard.StudsOffset = Vector3.new(0, 4.5, 0)
+	billboard.AlwaysOnTop = true
+	billboard.Adornee = head
+	billboard.Parent = head
+
+	local textLabel = Instance.new("TextLabel")
+	textLabel.Size = UDim2.new(1, 0, 1, 0)
+	textLabel.BackgroundTransparency = 1
+	textLabel.Text = "会腾着"
+	textLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+	textLabel.TextStrokeTransparency = 0.1
+	textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	textLabel.Font = Enum.Font.GothamBlack
+	textLabel.TextSize = 42
+	textLabel.Parent = billboard
+
+	-- 竖着的红色长方形不明物体（仅本地视角可见）
+	local bigRed = Instance.new("Part")
+	bigRed.Name = "BigRedBlock"
+	bigRed.Size = Vector3.new(5, 16, 5)  -- 竖着的长方形
+	bigRed.Color = Color3.fromRGB(255, 0, 0)
+	bigRed.Material = Enum.Material.Neon
+	bigRed.Transparency = 0.1
+	bigRed.CanCollide = false
+	bigRed.CastShadow = false
+	bigRed.Parent = char
+
+	local weld = Instance.new("Weld")
+	weld.Part0 = hrp
+	weld.Part1 = bigRed
+	weld.C0 = CFrame.new(0, 0, 0)
+	weld.Parent = bigRed
+
+	-- 本地视角彻底隐藏原角色模型
+	local function hideOriginal()
+		for _, v in pairs(char:GetDescendants()) do
+			if v:IsA("BasePart") and v ~= bigRed then
+				v.LocalTransparencyModifier = 1
+			end
+			if v:IsA("Decal") or v:IsA("Texture") then
+				v.LocalTransparencyModifier = 1
+			end
+			if v:IsA("ParticleEmitter") or v:IsA("Trail") then
+				v.Enabled = false
+			end
+		end
+	end
+
+	hideOriginal()
+
+	-- 动态添加的部件也隐藏
+	char.DescendantAdded:Connect(function(desc)
+		if desc:IsA("BasePart") and desc ~= bigRed then
+			desc.LocalTransparencyModifier = 1
+		end
+		if desc:IsA("Decal") or desc:IsA("Texture") then
+			desc.LocalTransparencyModifier = 1
+		end
+		if desc:IsA("ParticleEmitter") or desc:IsA("Trail") then
+			desc.Enabled = false
+		end
+	end)
+
+	-- 持续确保隐藏（防某些游戏脚本重置）
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		if not char.Parent then
+			conn:Disconnect()
+			return
+		end
+		for _, v in pairs(char:GetDescendants()) do
+			if v:IsA("BasePart") and v ~= bigRed then
+				v.LocalTransparencyModifier = 1
+			end
+		end
+	end)
+end
+
+-- 初始化
+if player.Character then
+	setupCharacter(player.Character)
+end
+player.CharacterAdded:Connect(setupCharacter)
